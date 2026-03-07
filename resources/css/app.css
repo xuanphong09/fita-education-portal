@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&display=swap');
 @import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -6,8 +8,20 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    /* 1. Đặt font hệ thống làm mặc định (font-sans) */
+    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+    /* 2. Tạo font mới tên là 'font-barlow' dành riêng cho Tiêu đề/Menu */
+    --font-barlow: Barlow, sans-serif;
+    --color-mauchudao: #1D232A;
+    --color-base-content: #E5E7EB!important;
+    --color-warning: #f58646;
+    --color-success: #059669;
+    --color-danger: #EF4444;
+    --color-info: #049aad;
+    --color-primary: #0c83ff;
+    --color-fita: #0071BD;
+    --color-fita2: #0c83d8;
 }
 
 
@@ -32,11 +46,63 @@
 * Paginator - Traditional style
 * Because Laravel defaults does not match well the design of daisyUI.
 */
+h1, h2, h3, h4, h5, h6, .font-barlow {
+    font-family: var(--font-barlow);
+}
+
+.admin-menu .mary-active-menu {
+    @apply bg-gray-50/20  font-bold
+}
+
+.admin-menu summary.text-inherit.bg-base-300{
+    @apply bg-gray-50/10  font-bold
+}
 
 .mary-table-pagination span[aria-current="page"] > span {
-    @apply bg-primary text-base-100
+    @apply bg-primary font-bold mb-3 text-white
 }
 
 .mary-table-pagination button {
     @apply cursor-pointer
+}
+.mary-table-pagination select{
+    @apply border border-gray-300 bg-white rounded-md ps-3 pe-7
+}
+
+.mary-table-pagination select option:hover {
+    @apply  bg-gray-200/60
+}
+
+.card>div{
+    @apply pb-3
+}
+
+.card>div hr{
+    @apply border-t border-gray-300
+}
+
+.upload-img-facebook .btn-sm.btn-ghost.btn-circle[data-tip="Crop"] {
+    display: none !important;
+    /* 👇 THÊM CÁC DÒNG NÀY ĐỂ "TIÊU DIỆT" NÓ */
+    visibility: hidden !important; /* Tàng hình */
+    opacity: 0 !important;         /* Trong suốt */
+    width: 0 !important;           /* Chiều rộng bằng 0 */
+    height: 0 !important;          /* Chiều cao bằng 0 */
+    padding: 0 !important;         /* Không đệm */
+    margin: 0 !important;          /* Không lề */
+    border: none !important;       /* Không viền */
+    min-width: 0 !important;       /* Bỏ min-width mặc định của btn */
+    min-height: 0 !important;      /* Bỏ min-height mặc định */
+    position: absolute !important; /* Đẩy ra khỏi bố cục để không chiếm chỗ */
+    z-index: -9999 !important;
+}
+
+.ignore-drag button[data-tip="Crop"],
+.ignore-drag button[data-tip="Cắt ảnh"] {
+    display: none !important;
+}
+
+
+.form-login .fieldset-legend{
+    @apply text-[14px]
 }
