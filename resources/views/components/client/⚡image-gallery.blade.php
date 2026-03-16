@@ -36,7 +36,8 @@ new class extends Component
                     prevEl: '#prev-{{ $uuid }}',
                 },
                 breakpoints: {
-                    768: { slidesPerView: 2, spaceBetween: 20, grid: { rows: 2 } },
+                    400: { slidesPerView: 2, spaceBetween: 20, grid: { rows: 2 } },
+                    768: { slidesPerView: 4, spaceBetween: 20, grid: { rows: 2 } },
                     1024: { slidesPerView: 3, spaceBetween: 20, grid: { rows: 2 } }
                 }
             });
@@ -55,7 +56,7 @@ new class extends Component
 >
     {{-- SWIPER CONTAINER --}}
     {{-- Lưu ý: Phải set chiều cao cố định (h-[500px]) để chế độ Grid hoạt động --}}
-    <div id="{{ $uuid }}" x-ref="container" class="swiper w-75 lg:w-330 h-100! lg:h-125! pb-10!">
+    <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-100! lg:h-125! pb-10!">
         <div class="swiper-wrapper">
             @foreach($images as $image)
                 {{-- SWIPER SLIDE --}}
@@ -88,7 +89,7 @@ new class extends Component
     {{-- NÚT ĐIỀU HƯỚNG (NAVIGATION BUTTONS) --}}
     {{-- Nút Previous --}}
     <button id="prev-{{ $uuid }}"
-            class="absolute left-10 top-4/9 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-fita text-fita hover:text-white shadow-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 -ml-5">
+            class="absolute left-10 top-4/9 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-fita text-fita hover:text-white shadow-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 -ml-10 lg:-ml-5">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
         </svg>
@@ -96,7 +97,7 @@ new class extends Component
 
     {{-- Nút Next --}}
     <button id="next-{{ $uuid }}"
-            class="absolute right-10 top-4/9 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-fita text-fita hover:text-white shadow-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 -mr-5">
+            class="absolute right-10 top-4/9 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-fita text-fita hover:text-white shadow-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 -mr-10 lg:-mr-5">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
         </svg>

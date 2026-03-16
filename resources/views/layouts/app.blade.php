@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
     <title>{{ isset($title) ? $title.' | ' . __('Faculty of Information Technology') : __('Faculty of Information Technology') }}</title>
     <link rel="icon" type="image/png" href="{{asset('assets/images/LogoKhoaCNTT.png')}}" />
-
+    <script src="{{ asset('assets/js/tinymce/tinymce.min.js') }}" referrerpolicy="origin"></script>
     {{-- TinyMCE --}}
 {{--    <script src="{{ asset('assets/js/tinymce/tinymce.min.js') }}" referrerpolicy="origin"></script>--}}
 
@@ -92,19 +92,28 @@
             {{-- end logo sidebar mobile --}}
 
             <x-menu-item title="Trang chủ" icon="o-home" link="{{route('admin.dashboard')}}" :active="request()->routeIs('admin.dashboard')"/>
-{{--            <x-menu-item title="Trang chủ" icon="o-home" link="#" route="home"/>--}}
-{{--            <x-menu-item title="Danh sách bài viết" icon="o-document" link="#"/>--}}
-{{--            <x-menu-item title="Danh sách bài viết" icon="o-document" link="#" :active="request()->routeIs('posts.*')"/>--}}
-            <x-menu-sub title="{{__('Page configuration')}}" icon="o-document">
-                <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
-            </x-menu-sub>
-            <x-menu-sub title="{{__('Interface configuration')}}" icon="o-cog-6-tooth">
-                <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
-            </x-menu-sub>
+            @can('cai_dat_giao_dien')
+                <x-menu-sub title="{{__('Page configuration')}}" icon="o-document">
+                    <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
+                </x-menu-sub>
+                <x-menu-sub title="{{__('Interface configuration')}}" icon="o-cog-6-tooth">
+                    <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
+                </x-menu-sub>
+            @endcan
+
+            @can('quan_ly_nguoi_dung')
             <x-menu-sub title="{{__('User management')}}" icon="o-users">
                 <x-menu-item title="{{__('User list')}}" link="{{route('admin.user.user-list')}}" :active="request()->routeIs('admin.user.*')"/>
                 <x-menu-item title="{{__('Roles and Permissions')}}" link="{{route('admin.role.index')}}" :active="request()->routeIs('admin.role.*')"/>
             </x-menu-sub>
+            @endcan
+
+            @can('quan_ly_bai_viet')
+            <x-menu-sub title="Quản lý bài viết" icon="o-folder">
+                <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
+                <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
+            </x-menu-sub>
+            @endcan
         </x-menu>
     </x-slot:sidebar>
     {{-- end sidebar --}}

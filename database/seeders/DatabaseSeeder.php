@@ -27,10 +27,10 @@ class DatabaseSeeder extends Seeder
 
         $permissions = [
             ['name' => 'quan_ly_nguoi_dung', 'display_name' => 'Quản lý người dùng'],
-            ['name' => 'quan_ly_bai_viet', 'display_name' => 'Quản lý bài viết'],
-            ['name' => 'cai_dat_giao_dien', 'display_name' => 'Cài đặt giao diện'],
-            ['name' => 'nhap_diem', 'display_name' => 'Nhập điểm'],
-            ['name' => 'xem_diem', 'display_name' => 'Xem điểm'],
+            ['name' => 'quan_ly_bai_viet',   'display_name' => 'Quản lý bài viết'],
+            ['name' => 'cai_dat_giao_dien',  'display_name' => 'Cài đặt giao diện'],
+            ['name' => 'nhap_diem',          'display_name' => 'Nhập điểm'],
+            ['name' => 'xem_diem',           'display_name' => 'Xem điểm'],
         ];
 
         foreach ($permissions as $permission) {
@@ -43,33 +43,23 @@ class DatabaseSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        $roleSinhVien = Role::create([
-            'name' => 'sinh_vien',
-            'display_name' => 'Sinh viên'
-        ]);
+        Role::create(['name' => 'sinh_vien', 'display_name' => 'Sinh viên'])
+            ->givePermissionTo(['xem_diem']);
 
-        $roleSinhVien->givePermissionTo(['xem_diem']);
+        Role::create(['name' => 'giang_vien', 'display_name' => 'Giảng viên'])
+            ->givePermissionTo(['nhap_diem', 'xem_diem']);
 
-        $roleGiangVien = Role::create([
-            'name' => 'giang_vien',
-            'display_name' => 'Giảng viên'
-        ]);
+        // Ban chủ nhiệm: quản lý bài viết + điểm, không quản lý tài khoản
+        Role::create(['name' => 'ban_chu_nhiem', 'display_name' => 'Ban Chủ Nhiệm Khoa'])
+            ->givePermissionTo(['quan_ly_bai_viet', 'nhap_diem', 'xem_diem']);
 
-        $roleGiangVien->givePermissionTo(['nhap_diem', 'xem_diem']);
+        // Quản trị viên: quản lý người dùng + giao diện (không phải super admin)
+        Role::create(['name' => 'quan_tri_vien', 'display_name' => 'Quản trị viên'])
+            ->givePermissionTo(['quan_ly_nguoi_dung', 'cai_dat_giao_dien', 'quan_ly_bai_viet']);
 
-        $roleBanChuNhiem = Role::create([
-            'name' => 'ban_chu_nhiem',
-            'display_name' => 'Ban Chủ Nhiệm Khoa'
-        ]);
-
-        $roleBanChuNhiem->givePermissionTo(['quan_ly_bai_viet', 'nhap_diem', 'xem_diem']);
-
-        $roleSuperAdmin = Role::create([
-            'name' => 'super_admin',
-            'display_name' => 'Super Admin'
-        ]);
-
-        $roleSuperAdmin->givePermissionTo(Permission::all());
+        // Super Admin: bypass mọi permission qua Gate::before trong AppServiceProvider
+        // Không cần givePermissionTo — Gate::before trả về true cho mọi ability
+        Role::create(['name' => 'super_admin', 'display_name' => 'Super Admin']);
 
         /*
         |--------------------------------------------------------------------------
@@ -138,7 +128,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $admin->assignRole($roleSuperAdmin);
+        $admin->assignRole('super_admin');
 
         /*
         |--------------------------------------------------------------------------
@@ -154,7 +144,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $giangVien->assignRole([$roleGiangVien, $roleBanChuNhiem]);
+        $giangVien->assignRole(['giang_vien', 'ban_chu_nhiem']);
 
         Lecturer::create([
             'user_id' => $giangVien->id,
@@ -181,7 +171,7 @@ class DatabaseSeeder extends Seeder
             'is_active' => true,
         ]);
 
-        $sinhVien->assignRole($roleSinhVien);
+        $sinhVien->assignRole('sinh_vien');
 
         Student::create([
             'user_id' => $sinhVien->id,
@@ -193,6 +183,15 @@ class DatabaseSeeder extends Seeder
             'date_of_birth' => '2003-05-10',
             'phone' => '0912345678',
         ]);
+
+        // --- Categories & sample posts seeding ---
+        \App\Models\Category::insert([
+            ['name' => json_encode(['vi' => 'Tin tức', 'en' => 'News']), 'slug' => 'tin-tuc'],
+            ['name' => json_encode(['vi' => 'Thông báo', 'en' => 'Announcements']), 'slug' => 'thong-bao'],
+            ['name' => json_encode(['vi' => 'Sự kiện', 'en' => 'Events']), 'slug' => 'su-kien'],
+        ]);
+
+        $this->call(PostSeeder::class);
 
         $this->command->info('Seed dữ liệu mẫu thành công!');
     }

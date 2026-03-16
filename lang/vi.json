@@ -55,8 +55,34 @@
     "Username": "Tên đăng nhập",
     "Login": "Đăng nhập",
     "Register": "Đăng ký",
-    "Or log in using": "Hoặc đăng nhập bằng"
-
-
-
+    "Or log in using": "Hoặc đăng nhập bằng",
+    "Posts": "Tin tức",
+    "Categories": "Danh mục",
+    "All Posts": "Tất cả bài viết",
+    "Search posts...": "Tìm kiếm bài viết...",
+    "Reset Filters": "Đặt lại bộ lọc",
+    "Search results for": "Kết quả tìm kiếm cho",
+    "results": "kết quả",
+    "Showing" : "Hiển thị",
+    "to": "đến",
+    "of": "trong tổng số",
+    "No posts found": "Không tìm thấy bài viết nào",
+    "views": "lượt xem",
+    "Share this post": "Chia sẻ bài viết",
+    "Copy Link": "Sao chép liên kết",
+    "Link copied!": "Đã sao chép liên kết!",
+    "Related Posts": "Bài viết liên quan",
+    "Recent Posts": "Bài viết gần đây",
+    "Back to Posts": "Quay lại danh sách",
+    "More from": "Xem thêm từ",
+    "Read more": "Xem thêm",
+    "No related posts found": "Không tìm thấy bài viết liên quan nào",
+    "No recent posts found": "Không tìm thấy bài viết gần đây nào",
+    "Page not found": "Trang không tìm thấy",
+    "Go back to Home": "Quay lại trang chủ",
+    "An error occurred": "Đã xảy ra lỗi",
+    "Please try again later": "Vui lòng thử lại sau",
+    "Loading...": "Đang tải dữ liệu...",
+    "Featured News": "Tin nổi bật",
+    "Latest News": "Tin mới nhất"
 }

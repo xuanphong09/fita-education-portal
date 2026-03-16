@@ -44,7 +44,8 @@ new class extends Component
                     prevEl: '#prev-{{ $uuid }}',
                 },
                 breakpoints: {
-                    400: { slidesPerView: 2, spaceBetween: 40, grid: { rows: 1 } },
+                    400: { slidesPerView: 3, spaceBetween: 40, grid: { rows: 1 } },
+                    640: { slidesPerView: 4, spaceBetween: 40, grid: { rows: 1 } },
                     1024: { slidesPerView: 6, spaceBetween: 30, grid: { rows: 1 } }
                 }
             });
@@ -62,7 +63,7 @@ new class extends Component
     }"
 >
     {{-- Lưu ý: Phải set chiều cao cố định (h-[500px]) để chế độ Grid hoạt động --}}
-    <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-50! pb-10!">
+    <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-40! lg:h-50! pb-10!">
         <div class="swiper-wrapper">
             @foreach($images as $image)
                 {{-- SWIPER SLIDE --}}
@@ -83,20 +84,4 @@ new class extends Component
             @endforeach
         </div>
     </div>
-
-    {{-- Nút Previous --}}
-{{--    <button id="prev-{{ $uuid }}"--}}
-{{--            class="absolute left-10 top-4/9 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-fita text-fita hover:text-white shadow-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 -ml-5">--}}
-{{--        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">--}}
-{{--            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />--}}
-{{--        </svg>--}}
-{{--    </button>--}}
-
-{{--    --}}{{-- Nút Next --}}
-{{--    <button id="next-{{ $uuid }}"--}}
-{{--            class="absolute right-10 top-4/9 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/80 hover:bg-fita text-fita hover:text-white shadow-lg flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 -mr-5">--}}
-{{--        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">--}}
-{{--            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />--}}
-{{--        </svg>--}}
-{{--    </button>--}}
 </div>

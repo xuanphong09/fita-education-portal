@@ -5,57 +5,48 @@ use Livewire\Attributes\Validate;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use Mary\Traits\Toast;
+
 new
 #[Layout('layouts.auth')]
 class extends Component {
     use Toast;
 
-    public $email = '';
-    public $password = '';
-    public $remember = false;
+    public string $email = '';
+    public string $password = '';
+    public bool $remember = false;
 
-    #[Validate([
-        'email' => 'required|email',
-        'password' => 'required'
-    ],
-    as: [
-        'email' => 'Email',
-        'password' => 'Mật khẩu'
-    ],
-     message: [
-         'email.required' => 'Email không được để trống',
-         'email.email' => 'Email không hợp lệ',
-         'password.required' => 'Mật khẩu không được để trống',
-     ]
-    )]
+    protected array $rules = [
+        'email'    => 'required|email',
+        'password' => 'required',
+    ];
+
+    protected array $messages = [
+        'email.required'    => 'Email không được để trống',
+        'email.email'       => 'Email không hợp lệ',
+        'password.required' => 'Mật khẩu không được để trống',
+    ];
 
     public function login()
     {
-        $data = $this->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required']
-        ]);
+        $data = $this->validate();
 
-        if (!Auth::attempt($data, $this->remember)) {
+        if (!Auth::attempt(['email' => $data['email'], 'password' => $data['password']], $this->remember)) {
             $this->addError('fail', 'Email hoặc mật khẩu không đúng');
             $this->addError('email',' ');
             $this->addError('password',' ');
             $this->error('Email hoặc mật khẩu không đúng');
-            $this->reset('email', 'password');
+            $this->reset('password');
             return;
         }
 
-        session()->regenerate();
+        // Regenerate session ngay sau khi đăng nhập để đồng bộ CSRF/session ID.
+        request()->session()->regenerate();
 
-        $this->success('Đăng nhập thành công!',
-            redirectTo: route('client.home')
-        );
+        // Dùng full redirect sau login để tránh xung đột request khi navigate SPA.
+        return redirect()->route('client.home');
     }
 
-    public function updated($property)
-    {
-        $this->validateOnly($property);
-    }
+    // Form login chỉ validate lúc submit để tránh race-condition request nền.
 };
 ?>
 
@@ -71,8 +62,8 @@ class extends Component {
         <div class="text-center mb-6">
 
             <div class="flex justify-center gap-4 mb-4">
-                <img src="{{asset('assets/images/Logo Học viện.png')}}" class="w-16 h-16 object-contain">
-                <img src="{{asset('assets/images/FITA.png')}}" class="w-16 h-16 object-contain">
+                <img src="{{asset('assets/images/Logo Học viện.png')}}" alt="Logo Học viện" class="w-16 h-16 object-contain">
+                <img src="{{asset('assets/images/FITA.png')}}" alt="FITA logo" class="w-16 h-16 object-contain">
             </div>
 
             <h2 class="font-semibold text-xl">
@@ -90,17 +81,17 @@ class extends Component {
             @enderror
         </div>
 
-        <form wire:submit="login" class="space-y-4 form-login">
+        <form wire:submit.prevent="login" class="space-y-4 form-login">
             <x-input
                 label="Email"
-                wire:model.live.debounce.500ms="email"
+                wire:model.defer="email"
                 placeholder="Nhập email của bạn"
                 icon="o-user"
             />
 
             <x-password
                 label="{{__('Password')}}"
-                wire:model.live.debounce.500ms="password"
+                wire:model.defer="password"
                 password-icon="o-lock-closed"
                 password-visible-icon="o-lock-open"
                 placeholder="••••••••"

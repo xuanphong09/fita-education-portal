@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Models\Post;
+use App\Services\PostSearchService;
 use Livewire\Component;
 
 new class extends Component {
@@ -11,8 +13,8 @@ new class extends Component {
 
     public function updatedSearch(): void
     {
-        if (strlen($this->search) < 2) {
-            $this->reset('results');
+        if (mb_strlen(trim($this->search)) < 2) {
+            $this->results = ['posts' => [], 'users' => []];
             return;
         }
 
@@ -21,15 +23,37 @@ new class extends Component {
 
     public function performSearch(): void
     {
-        $this->results['users'] = User::search($this->search)
+        $isEn  = app()->getLocale() === 'en';
+        $search = trim(preg_replace('/\s+/u', ' ', $this->search) ?? '');
+        $terms  = PostSearchService::parseTerms($search);
+
+        $postQuery = Post::query()
+            ->with('category')
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
+        // Hide posts without EN content when locale is EN.
+        PostSearchService::applyLocaleFilter($postQuery, $isEn);
+
+        // Apply shared search terms (virtual cols → FULLTEXT → JSON fallback).
+        PostSearchService::applyTerms($postQuery, $terms, $isEn);
+
+        $this->results['posts'] = $postQuery
+            ->orderByDesc('is_featured')
+            ->orderByDesc('published_at')
+            ->take(5)
+            ->get();
+
+        $this->results['users'] = User::search($search)
             ->take(5)
             ->get();
     }
+
     public function searchAction()
     {
-        // Nếu có từ khóa thì chuyển sang trang tìm kiếm chi tiết
-        if ($this->search) {
-            return $this->redirect('/search?query=' . $this->search, navigate: true);
+        if (trim($this->search) !== '') {
+            return $this->redirect(route('client.posts.index', ['tim-kiem' => trim($this->search)]), navigate: true);
         }
     }
 
@@ -87,17 +111,21 @@ new class extends Component {
                             <div class="p-3 text-center text-xs text-gray-500">Không tìm thấy kết quả.</div>
                         @else
                             <div class="max-h-64 overflow-y-auto custom-scrollbar">
-{{--                                --}}{{-- Tin tức --}}
-{{--                                @if(count($results['posts']) > 0)--}}
-{{--                                    <div class="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase">Tin tức</div>--}}
-{{--                                    @foreach($results['posts'] as $post)--}}
-{{--                                        <a href="/tin-tuc/{{ $post->slug ?? '#' }}"--}}
-{{--                                           class="block px-2 py-2 hover:bg-blue-50 rounded-lg transition" wire:navigate>--}}
-{{--                                            <div--}}
-{{--                                                class="text-sm font-medium text-gray-700 truncate">{{ $post->title }}</div>--}}
-{{--                                        </a>--}}
-{{--                                    @endforeach--}}
-{{--                                @endif--}}
+                                {{-- Tin tức --}}
+                                @if(count($results['posts']) > 0)
+                                    <div class="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase">Tin tức</div>
+                                    @foreach($results['posts'] as $post)
+                                        <a href="{{ route('client.posts.show', $post->slug) }}"
+                                           class="block px-2 py-2 hover:bg-blue-50 rounded-lg transition" wire:navigate>
+                                            <div class="text-sm font-medium text-gray-700 truncate flex items-center gap-2">
+                                                @if($post->is_featured)
+                                                    <span class="inline-flex items-center rounded bg-warning/20 text-warning px-1.5 py-0.5 text-[10px] font-semibold">Hot</span>
+                                                @endif
+                                                <span>{{ $post->getTranslation('title', app()->getLocale()) }}</span>
+                                            </div>
+                                        </a>
+                                    @endforeach
+                                @endif
 
                                 {{-- Giảng viên --}}
                                 @if(count($results['users']) > 0)
@@ -121,7 +149,7 @@ new class extends Component {
                             </div>
 
                             {{-- Nút Xem tất cả --}}
-                            <a href="/tim-kiem?q={{ $search }}"
+                            <a href="{{ route('client.posts.index', ['tim-kiem' => $search]) }}"
                                class="block mt-2 text-center py-2 text-xs font-bold text-[#005aab] bg-blue-50 rounded-lg hover:bg-blue-100 transition"
                                wire:navigate>
                                 {{__('View all')}}

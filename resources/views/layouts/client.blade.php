@@ -4,8 +4,14 @@
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-    <title>{{ isset($title) ? $title.' | ' . __('Faculty of Information Technology') : __('Faculty of Information Technology') }}</title>
     <link rel="icon" type="image/png" href="{{asset('assets/images/LogoKhoaCNTT.png')}}" />
+
+    {{-- SEO Meta Tags -- truyền $post từ từng trang hoặc fallback về $title --}}
+    @if(isset($seo))
+        {{ $seo }}
+    @else
+        <x-seo :title="isset($title) ? $title : null"/>
+    @endif
 
     {{-- TinyMCE --}}
     {{--    <script src="{{ asset('assets/js/tinymce/tinymce.min.js') }}" referrerpolicy="origin"></script>--}}
@@ -30,7 +36,7 @@
     <div class="bg-fita text-white text-sm py-2 px-4 flex justify-between items-center h-8">
 
         {{-- Bên trái: Tên trường --}}
-        <div class="flex items-center gap-3 ms-10 text-[14px]">
+        <div class="flex items-center gap-3 lg:ms-10 text-[14px]">
             <a href="@if(app()->getLocale() == 'vi') https://vnua.edu.vn  @else https://eng.vnua.edu.vn/ @endif" class="">{{__('Vietnam National University of Agriculture')}}</a>
         </div>
 
@@ -49,8 +55,17 @@
                              after:content-[''] after:inline-block after:align-[0.255em]
                              after:border-t-5 after:border-r-5 after:border-r-transparent
                              after:border-b-0 after:border-l-5 after:border-l-transparent
-                             hover:after:border-t-white">
+                             hover:after:border-t-white hidden lg:block">
                         {{ auth()->user()->name }}
+                    </div>
+
+                    <div tabindex="0" role="button"
+                         class="hover:cursor-pointer hover:opacity-90 hover:text-white
+                             after:content-[''] after:inline-block after:align-[0.255em]
+                             after:border-t-5 after:border-r-5 after:border-r-transparent
+                             after:border-b-0 after:border-l-5 after:border-l-transparent
+                             hover:after:border-t-white lg:hidden">
+                        <x-icon name="s-user-circle" class="lg:hidden"></x-icon>
                     </div>
 
                     <ul tabindex="0"
@@ -134,6 +149,14 @@
                 </ul>
             </div>
 
+            <x-button
+                link="{{route('client.posts.index')}}"
+                class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow"
+                responsive
+            >
+                {{__('Posts')}}
+            </x-button>
+
 {{--            <x-button--}}
 {{--                link="###"--}}
 {{--                class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"--}}
@@ -189,16 +212,14 @@
 {{-- start main layout --}}
 <x-main with-nav full-width>
 
-    <x-slot:sidebar drawer="main-drawer" collapsible class="bg-base-100 lg:bg-inherit lg:hidden pt-26 h-full! text-[15px] font-medium">
+    <x-slot:sidebar drawer="main-drawer" collapsible class="client-menu bg-base-100 lg:bg-inherit lg:hidden pt-26 h-full! text-[15px] font-medium">
         {{-- MENU --}}
-        <x-menu activate-by-route>
-            <x-menu-item title="Hello" link="###" class="rounded-none hover:bg-fita hover:text-white"/>
-            <div class="[&_summary]:hover:bg-fita! [&_summary]:hover:text-white! [&_summary]:rounded-none!">
-                <x-menu-sub title="Settings" class="">
-                    <x-menu-item title="Wifi" link="####" class="rounded-none hover:bg-fita hover:text-white"/>
-                    <x-menu-item title="Archives" link="####" class="rounded-none  hover:bg-fita hover:text-white"/>
-                </x-menu-sub>
-            </div>
+        <x-menu>
+            <x-menu-item title="{{__('Home page')}}" link="{{route('client.home')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.home')"/>
+            <x-menu-sub title="{{__('Introduction')}}" class="rounded-none hover:bg-fita! hover:text-white!" >
+                <x-menu-item title="{{__('General Introduction')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
+            </x-menu-sub>
+            <x-menu-item title="{{__('Posts')}}" link="{{route('client.posts.index')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.posts.index')"/>
         </x-menu>
     </x-slot:sidebar>
 
@@ -217,10 +238,10 @@
                     />
                 </div>
                 <div class="relative z-20">
-                    <h2 class="text-center text-[40px]/[50px]">@if(isset($titleBreadcrumb)){{$titleBreadcrumb}}@endif</h2>
+                    <h2 class="text-center text-[40px]/[50px] font-semibold">@if(isset($titleBreadcrumb)){{$titleBreadcrumb}}@endif</h2>
                     @if(isset($breadcrumb))
                         <div class="flex items-center gap-1 text-gray-500 justify-center w-full">
-                            <a href="{{route('client.home')}}" wire:navigate class="hover:text-fita font-semibold text-slate-700">{{__('Home page')}}</a>
+                            <a href="{{route('client.home')}}" wire:navigate class="whitespace-nowrap hover:text-fita font-semibold text-slate-700">{{__('Home page')}}</a>
                             <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
                             {{$breadcrumb}}
                         </div>
