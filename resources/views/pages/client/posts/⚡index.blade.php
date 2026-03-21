@@ -179,9 +179,14 @@ class extends Component {
 
     public function filterByCategory(?string $categorySlug)
     {
-        $this->categorySlug = $categorySlug;
-        $this->search = '';  // Clear search when switching category
-        $this->resetPage();
+        $params = [];
+
+        if ($categorySlug) {
+            $params['danh-muc'] = $categorySlug;
+        }
+
+        // Navigate to canonical URL so layout slots (title/breadcrumb) always re-hydrate.
+        $this->redirectRoute('client.posts.index', $params, navigate: true);
     }
 
     public function updatedSearch()
@@ -191,25 +196,27 @@ class extends Component {
 
     public function resetFilters()
     {
-        $this->categorySlug = null;
-        $this->search = '';
-        $this->resetPage();
+        $this->redirectRoute('client.posts.index', [], navigate: true);
     }
 };
 ?>
 
 <div class="container mx-auto px-4 py-8">
     <x-slot:title>
-        {{ $currentCategory ? $currentCategory->getTranslation('name', app()->getLocale()) : __('Posts') }}
+        {{ $currentCategory ? $currentCategory->getTranslation('name', app()->getLocale()) : __('Post list') }}
     </x-slot:title>
 
     {{-- Breadcrumb --}}
     <x-slot:breadcrumb>
-        <span>{{__('Posts')}}</span>
+        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Post list')}}</a>
+        @if($currentCategory)
+        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
+        <span>{{ $currentCategory->getTranslation('name', app()->getLocale()) }}</span>
+        @endif
     </x-slot:breadcrumb>
 
     <x-slot:titleBreadcrumb>
-        {{__('Posts')}}
+        @if($currentCategory) {{ $currentCategory->getTranslation('name', app()->getLocale()) }} @else {{__('Post list')}} @endif
     </x-slot:titleBreadcrumb>
 
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -222,7 +229,7 @@ class extends Component {
             >
                 <div class="sticky top-[50vh] w-full flex flex-col items-center gap-2 mt-10">
                     <x-loading class="text-primary loading-lg" />
-                    <span class="text-md font-medium text-gray-500">{{__('Loading...')}}</span>
+                    <span class="text-md font-medium text-gray-500">{{__('Loading data...')}}</span>
                 </div>
             </div>
 

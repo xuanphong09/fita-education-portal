@@ -109,11 +109,19 @@
             @endcan
 
             @can('quan_ly_bai_viet')
-            <x-menu-sub title="Quản lý bài viết" icon="o-folder">
+            <x-menu-sub title="Quản lý bài viết" icon="o-newspaper">
                 <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
                 <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
             </x-menu-sub>
             @endcan
+
+            @canany(['quan_ly_dao_tao', 'quan_ly_bai_viet'])
+                <x-menu-sub title="Quản lý đào tạo" icon="o-book-open">
+                    <x-menu-item title="Chương trình đào tạo" link="{{route('admin.training-program.index')}}" :active="request()->routeIs('admin.training-program.*')"/>
+                    <x-menu-item title="Nhóm môn học" link="{{route('admin.group-subject.index')}}" :active="request()->routeIs('admin.group-subject.*')"/>
+                    <x-menu-item title="Môn học" link="{{route('admin.subject.index')}}" :active="request()->routeIs('admin.subject.*')"/>
+                </x-menu-sub>
+            @endcanany
         </x-menu>
     </x-slot:sidebar>
     {{-- end sidebar --}}

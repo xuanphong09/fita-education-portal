@@ -1,0 +1,707 @@
+<?php
+
+use App\Models\Major;
+use App\Models\TrainingProgram;
+use Illuminate\Support\Str;
+use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
+use Livewire\Component;
+
+new
+#[Layout('layouts.client')]
+class extends Component {
+    public Major $major;
+
+    #[Url(as: 'phien-ban')]
+    public ?string $version = null;
+
+    #[Url(as: 'hoc-ky')]
+    public ?int $semesterNo = null;
+
+    #[Url(as: 'kieu')]
+    public string $viewMode = 'semester';
+
+    #[Url(as: 'tim')]
+    public string $search = '';
+
+    public function mount(Major $major): void
+    {
+        $this->major = $major;
+    }
+
+    public function updatedVersion(): void
+    {
+        $this->semesterNo = null;
+    }
+
+    public function setViewMode(string $mode): void
+    {
+        if (!in_array($mode, ['semester', 'group'], true)) {
+            return;
+        }
+
+        $this->viewMode = $mode;
+    }
+
+    protected function localizedName(mixed $model, string $field = 'name'): string
+    {
+        if (!$model) {
+            return 'N/A';
+        }
+
+        if (method_exists($model, 'getTranslation')) {
+            $locale = app()->getLocale();
+
+            return trim((string) ($model->getTranslation($field, $locale, false)
+                ?: $model->getTranslation($field, 'vi', false)
+                ?: $model->getTranslation($field, 'en', false)
+                ?: 'N/A'));
+        }
+
+        return trim((string) data_get($model, $field, 'N/A')) ?: 'N/A';
+    }
+
+    protected function normalizeSearchText(?string $value): string
+    {
+        return Str::lower(Str::ascii(trim((string) $value)));
+    }
+
+
+    protected function highlightMatch(?string $value): string
+    {
+        $text = trim((string) $value);
+
+        if ($text === '') {
+            return '—';
+        }
+
+        $normalizedKeyword = $this->normalizeSearchText($this->search);
+        if ($normalizedKeyword === '') {
+            return e($text);
+        }
+
+        $tokens = collect(preg_split('/\s+/u', $normalizedKeyword) ?: [])
+            ->map(fn ($token) => trim((string) $token))
+            ->filter(fn ($token) => $token !== '')
+            ->unique()
+            ->sortByDesc(fn ($token) => mb_strlen($token))
+            ->values()
+            ->all();
+
+        if (empty($tokens)) {
+            return e($text);
+        }
+
+        [$chars, $normalizedText, $normalizedToOriginal] = $this->buildNormalizedIndexMap($text);
+
+        if ($normalizedText === '' || empty($normalizedToOriginal)) {
+            return e($text);
+        }
+
+        $ranges = [];
+
+        foreach ($tokens as $token) {
+            $tokenLength = mb_strlen($token, 'UTF-8');
+            if ($tokenLength <= 0) {
+                continue;
+            }
+
+            $offset = 0;
+
+            while (($position = mb_strpos($normalizedText, $token, $offset, 'UTF-8')) !== false) {
+                $normalizedStart = (int) $position;
+                $normalizedEnd = $normalizedStart + $tokenLength - 1;
+
+                if (!isset($normalizedToOriginal[$normalizedStart], $normalizedToOriginal[$normalizedEnd])) {
+                    $offset = $normalizedStart + 1;
+                    continue;
+                }
+
+                $ranges[] = [
+                    'start' => (int) $normalizedToOriginal[$normalizedStart],
+                    'end' => (int) $normalizedToOriginal[$normalizedEnd],
+                ];
+
+                $offset = $normalizedStart + 1;
+            }
+        }
+
+        if (empty($ranges)) {
+            return e($text);
+        }
+
+        usort($ranges, function (array $left, array $right): int {
+            if ($left['start'] === $right['start']) {
+                return $left['end'] <=> $right['end'];
+            }
+
+            return $left['start'] <=> $right['start'];
+        });
+
+        $mergedRanges = [];
+        foreach ($ranges as $range) {
+            $lastIndex = count($mergedRanges) - 1;
+            if ($lastIndex < 0 || $range['start'] > ($mergedRanges[$lastIndex]['end'] + 1)) {
+                $mergedRanges[] = $range;
+                continue;
+            }
+
+            $mergedRanges[$lastIndex]['end'] = max($mergedRanges[$lastIndex]['end'], $range['end']);
+        }
+
+        $result = '';
+        $cursor = 0;
+
+        foreach ($mergedRanges as $range) {
+            if ($range['start'] > $cursor) {
+                $result .= e(implode('', array_slice($chars, $cursor, $range['start'] - $cursor)));
+            }
+
+            $result .= '<mark class="rounded bg-amber-200 px-1 text-black">'
+                . e(implode('', array_slice($chars, $range['start'], $range['end'] - $range['start'] + 1)))
+                . '</mark>';
+
+            $cursor = $range['end'] + 1;
+        }
+
+        if ($cursor < count($chars)) {
+            $result .= e(implode('', array_slice($chars, $cursor)));
+        }
+
+        return $result;
+    }
+
+    protected function buildNormalizedIndexMap(string $text): array
+    {
+        $chars = preg_split('//u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $normalizedText = '';
+        $normalizedToOriginal = [];
+
+        foreach ($chars as $index => $char) {
+            $normalizedChar = $this->normalizeSearchText((string) $char);
+            if ($normalizedChar === '') {
+                continue;
+            }
+
+            $normalizedParts = preg_split('//u', $normalizedChar, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            foreach ($normalizedParts as $part) {
+                $normalizedText .= $part;
+                $normalizedToOriginal[] = $index;
+            }
+        }
+
+        return [$chars, $normalizedText, $normalizedToOriginal];
+    }
+
+    public function semesterHeaders(): array
+    {
+        return [
+            ['key' => 'no', 'label' => __('No.'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'code', 'label' => __('Subject code'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'name', 'label' => __('Subject name'), 'sortable' => false, 'class' => 'w-70'],
+            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'prerequisite_subjects_codes', 'label' => __('Prerequisite subjects codes'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
+            ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
+        ];
+    }
+
+    public function groupHeaders(): array
+    {
+        return [
+            ['key' => 'no', 'label' => __('No.'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'semester_no', 'label' => __('Semester'), 'sortable' => false],
+            ['key' => 'code', 'label' => __('Subject code'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'name', 'label' => __('Subject name'), 'sortable' => false, 'class' => 'w-70'],
+            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'prerequisite_subjects_codes', 'label' => __('Prerequisite subjects codes'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
+            ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
+        ];
+    }
+
+    public function with(): array
+    {
+        $normalizedKeyword = $this->normalizeSearchText($this->search);
+
+        $programs = TrainingProgram::query()
+            ->where('major_id', $this->major->id)
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->with(['major', 'intake'])
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->get();
+
+        $versionOptions = $programs
+            ->pluck('version')
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->unique()
+            ->map(fn ($value) => ['code' => (string) $value, 'name' => (string) $value])
+            ->toArray();
+
+        $version_tmp = $programs
+            ->pluck('version')
+            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
+            ->unique()
+            ->values();
+
+        if (!$this->version && $version_tmp->isNotEmpty()) {
+            $this->version = (string) $version_tmp->first();
+        }
+
+        if ($this->version && !$version_tmp->contains($this->version)) {
+            $this->version = $version_tmp->isNotEmpty() ? (string) $version_tmp->first() : null;
+            $this->semesterNo = null;
+        }
+
+        $activeProgram = null;
+        $semesterBlocks = collect();
+        $groupBlocks = collect();
+
+        if ($this->version) {
+            $activeProgram = TrainingProgram::query()
+                ->where('major_id', $this->major->id)
+                ->where('version', $this->version)
+                ->where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now())
+                ->with([
+                    'major',
+                    'intake',
+                    'semesters' => function ($semesterQuery) {
+                        $semesterQuery->orderBy('semester_no')
+                            ->with(['subjects' => function ($subjectQuery) {
+                                $subjectQuery
+                                    ->where('subjects.is_active', true)
+                                    ->with(['groupSubject', 'prerequisites'])
+                                    ->orderBy('program_semester_subjects.order');
+                            }]);
+                    },
+                ])
+                ->first();
+        }
+
+        if ($activeProgram) {
+            $semesterCollection = $activeProgram->semesters;
+
+            if ($this->semesterNo) {
+                $semesterCollection = $semesterCollection
+                    ->where('semester_no', $this->semesterNo)
+                    ->values();
+            }
+
+            $semesterBlocks = $semesterCollection
+                ->map(function ($semester) use ($activeProgram, $normalizedKeyword) {
+                    $subjects = $semester->subjects
+                        ->map(function ($subject) use ($semester, $activeProgram) {
+                            $prerequisites = $subject->prerequisites
+                                ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                                ->values();
+
+                            $prerequisiteNames = $prerequisites
+                                ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
+                                ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
+                                ->implode(', ');
+
+                            $prerequisiteCodes = $prerequisites
+                                ->map(fn ($prerequisite) => (string) $prerequisite->code)
+                                ->filter(fn ($code) => trim($code) !== '')
+                                ->implode(', ');
+
+                            $prerequisiteSearchText = $prerequisites
+                                ->flatMap(function ($prerequisite) {
+                                    return [
+                                        (string) $prerequisite->code,
+                                        $this->localizedName($prerequisite),
+                                        trim((string) $prerequisite->getTranslation('name', 'vi', false)),
+                                        trim((string) $prerequisite->getTranslation('name', 'en', false)),
+                                    ];
+                                })
+                                ->implode(' ');
+
+                            $subjectNameVi = trim((string) $subject->getTranslation('name', 'vi', false));
+                            $subjectNameEn = trim((string) $subject->getTranslation('name', 'en', false));
+
+                            return [
+                                'id' => (int) $subject->id,
+                                'code' => (string) $subject->code,
+                                'name' => $this->localizedName($subject),
+                                'credits' => (int) ($subject->credits ?? 0),
+                                'theory' => (int) ($subject->credits_theory ?? 0),
+                                'practice' => (int) ($subject->credits_practice ?? 0),
+                                'credits_theory' => (int) ($subject->credits_theory ?? 0),
+                                'credits_practice' => (int) ($subject->credits_practice ?? 0),
+                                'prerequisite_subjects' => $prerequisiteNames,
+                                'prerequisite_subjects_codes' => $prerequisiteCodes,
+                                'type' => (string) ($subject->pivot->type ?? 'required'),
+                                'note' => (string) ($subject->pivot->notes ?? ''),
+                                'order' => (int) ($subject->pivot->order ?? 0),
+                                'semester_no' => (int) $semester->semester_no,
+                                'group_name' => $subject->groupSubject
+                                    ? $this->localizedName($subject->groupSubject)
+                                    : __('Uncategorized Group'),
+                                'group_sort_order' => (int) ($subject->groupSubject->sort_order ?? 9999),
+                                'search_index' => $this->normalizeSearchText(implode(' ', [
+                                    (string) $subject->code,
+                                    $this->localizedName($subject),
+                                    $subjectNameVi,
+                                    $subjectNameEn,
+                                    $prerequisiteSearchText,
+                                ])),
+                            ];
+                        })
+                        ->when($normalizedKeyword !== '', function ($collection) use ($normalizedKeyword) {
+                            return $collection->filter(function ($subject) use ($normalizedKeyword) {
+                                return str_contains((string) ($subject['search_index'] ?? ''), $normalizedKeyword);
+                            });
+                        })
+                        ->sortBy('order')
+                        ->values()
+                        ->map(function ($subject, $index) {
+                            $subject['row_index'] = $index + 1;
+                            unset($subject['search_index']);
+                            return $subject;
+                        });
+
+                    return [
+                        'semester_no' => (int) $semester->semester_no,
+                        'total_credits' => (int) $subjects->sum('credits'),
+                        'subjects' => $subjects,
+                    ];
+                })
+                ->values();
+
+            if ($normalizedKeyword !== '') {
+                $semesterBlocks = $semesterBlocks
+                    ->filter(fn ($block) => $block['subjects']->isNotEmpty())
+                    ->values();
+            }
+
+            $groupBlocks = $semesterBlocks
+                ->flatMap(fn ($semesterBlock) => $semesterBlock['subjects'])
+                ->groupBy('group_name')
+                ->map(function ($subjects, $groupName) {
+                    $sorted = collect($subjects)
+                        ->sortBy([['semester_no', 'asc'], ['order', 'asc']])
+                        ->values()
+                        ->map(function ($subject, $index) {
+                            $subject['row_index'] = $index + 1;
+                            return $subject;
+                        });
+
+                    return [
+                        'group_name' => (string) $groupName,
+                        'group_sort_order' => (int) ($sorted->first()['group_sort_order'] ?? 9999),
+                        'total_subjects' => (int) $sorted->count(),
+                        'total_credits' => (int) $sorted->sum('credits'),
+                        'subjects' => $sorted,
+                    ];
+                })
+                ->sortBy('group_sort_order')
+                ->values();
+        }
+
+        return [
+            'programs' => $programs,
+            'versionOptions' => $versionOptions,
+            'activeProgram' => $activeProgram,
+            'semesterBlocks' => $semesterBlocks,
+            'groupBlocks' => $groupBlocks,
+        ];
+    }
+};
+?>
+
+<div class="container mx-auto px-4 py-8">
+    @php
+        $majorLabel = $this->localizedName($major);
+    @endphp
+
+    <x-slot:title>{{ __('Training Programs') }} - {{ $majorLabel }}</x-slot:title>
+
+    <x-slot:breadcrumb>
+        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>
+        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
+        <span class="whitespace-nowrap line-clamp-1">{{ $majorLabel }}</span>
+    </x-slot:breadcrumb>
+
+    <x-slot:titleBreadcrumb>
+        {{ $majorLabel }}
+    </x-slot:titleBreadcrumb>
+
+    <div class="space-y-4">
+        <x-card shadow>
+            <div class="flex flex-wrap items-end gap-4">
+                <div class="w-full sm:w-50">
+                    <x-select label="{{__('Version')}}" wire:model.live.debounce.300ms="version" :options="$versionOptions" option-value="code" option-label="code" />
+                </div>
+
+                <div class="w-full sm:w-50">
+                    @php
+                        $semesterOptions = $activeProgram
+                            ? $activeProgram->semesters->map(fn ($semester) => ['value' => $semester->semester_no, 'label' => __('Semester') . ' ' . $semester->semester_no])->toArray()
+                            : [];
+                    @endphp
+                    <x-select
+                        label="{{__('Filter by semester')}}"
+                        wire:model.live="semesterNo"
+                        :options="$semesterOptions"
+                        option-value="value"
+                        option-label="label"
+                        placeholder="{{__('All semesters')}}"
+                        :disabled="!$activeProgram"
+                    />
+                </div>
+
+                <div class="w-full sm:w-50">
+                    <x-select label="{{__('Group by')}}" :options="[
+                            ['value' => 'semester', 'label' => __('Semester')],
+                            ['value' => 'group', 'label' => __('Subject Group')],
+                        ]"
+                        option-value="value"
+                        option-label="label"
+                        wire:model.live="viewMode"
+                    />
+
+                </div>
+
+                <div class="w-full sm:flex-1 sm:min-w-60">
+                    <x-input
+                        label="{{ __('Search by subject name/code') }}"
+                        wire:model.live.debounce.350ms="search"
+                        placeholder="{{ __('Enter subject code or name...') }}"
+                        clearable
+                    />
+                </div>
+            </div>
+        </x-card>
+
+        @if(!$activeProgram)
+            <x-card shadow>
+                <div class="text-center py-10 text-gray-500">
+                    {{ __('This major has no published training programs.') }}
+                </div>
+            </x-card>
+        @else
+            @php
+                $programTitle = $activeProgram->getTranslation('name', app()->getLocale(), false)
+                    ?: $activeProgram->getTranslation('name', 'vi', false)
+                    ?: $activeProgram->getTranslation('name', 'en', false)
+                    ?: 'N/A';
+                $programLevel = $this->localizedName($activeProgram, 'level');
+                $programType = $this->localizedName($activeProgram, 'type');
+                $programLanguage = $this->localizedName($activeProgram, 'language');
+                $programDuration = $activeProgram->duration_time
+                    ? ($activeProgram->duration_time . ' ' . (app()->getLocale() === 'en' ? 'years' : 'năm'))
+                    : 'N/A';
+                $majorCode = $activeProgram->major?->code ?: 'N/A';
+            @endphp
+
+            <x-card shadow>
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-bold">{{ $programTitle }}</h2>
+                        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[16px] text-gray-800">
+                            <div><span class="font-medium">{{__('Level of Education')}}:</span> {{ $programLevel }}</div>
+                            <div><span class="font-medium">{{__('Code')}}:</span> {{ $majorCode }}</div>
+                            <div><span class="font-medium">{{__('Type of Education')}}:</span> {{ $programType }}</div>
+                            <div><span class="font-medium">{{__('Duration time')}}:</span> {{ $programDuration }}</div>
+                            <div class="sm:col-span-2"><span class="font-medium">{{__('Language')}}:</span> {{ $programLanguage }}</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 text-[16px]">
+                        <x-badge value="{{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
+                        <x-badge value="{{ $activeProgram->total_credits }} {{__('Credits ')}}" class="badge-outline badge-md" />
+                    </div>
+                </div>
+            </x-card>
+
+            <div class="relative min-h-60">
+                <div
+                    wire:loading.delay.short
+                    wire:target="version,semesterNo,viewMode,search"
+                    class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
+                >
+                    <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
+                        <x-loading class="text-primary loading-lg" />
+                        <span class="text-sm text-gray-600">{{ __('Loading data...') }}</span>
+                    </div>
+                </div>
+
+                <div
+                    wire:loading.class="opacity-60 pointer-events-none"
+                    wire:loading.class.remove="opacity-100"
+                    wire:target="version,semesterNo,viewMode,search"
+                    class="transition-opacity duration-150"
+                >
+                    @if($viewMode === 'semester')
+                        <div class="space-y-4">
+                            @forelse($semesterBlocks as $semesterBlock)
+                                <x-card shadow class="p-0!">
+                                    <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                        <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }}</h3>
+                                        <span
+                                            class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{$semesterBlock['total_credits'] }} {{__('Credits ')}}</span>
+                                    </div>
+
+                                    @if($semesterBlock['subjects']->isEmpty())
+                                        <div class="text-sm text-gray-500">Không có môn học trong học kỳ này.</div>
+                                    @else
+                                        <div class="overflow-x-auto">
+                                            <x-table
+                                                :headers="$this->semesterHeaders()"
+                                                :rows="$semesterBlock['subjects']"
+                                                striped
+                                                class="
+                                            bg-white
+                                            text-[16px]!
+                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:text-[16px]!
+                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
+                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                        "
+                                            >
+                                                @scope('cell_no', $subject)
+                                                {{ $subject['row_index'] }}
+                                                @endscope
+
+                                                @scope('cell_code', $subject)
+                                                <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                                @endscope
+
+                                                @scope('cell_name', $subject)
+                                                {!! $this->highlightMatch($subject['name']) !!}
+                                                @endscope
+
+                                                @scope('cell_credits', $subject)
+                                                {{ $subject['credits'] }}
+                                                @endscope
+
+                                                @scope('cell_theory', $subject)
+                                                {{ $subject['theory'] }}
+                                                @endscope
+
+                                                @scope('cell_practice', $subject)
+                                                {{ $subject['practice'] }}
+                                                @endscope
+
+                                                @scope('cell_prerequisite_subjects', $subject)
+                                                {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                                @endscope
+
+                                                @scope('cell_prerequisite_subjects_codes', $subject)
+                                                {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                                @endscope
+
+                                                @scope('cell_type', $subject)
+                                                <x-badge
+                                                    value="{{ $subject['type'] === 'required' ? __('Required') : __('Elective') }}"
+                                                    class="{{ $subject['type'] === 'required' ? 'badge-error' : 'badge-success' }} text-white font-semibold badge-md whitespace-nowrap"
+                                                />
+                                                @endscope
+                                            </x-table>
+                                        </div>
+                                    @endif
+                                </x-card>
+                            @empty
+                                <x-card shadow>
+                                    <div class="text-sm text-gray-500">Không có dữ liệu môn học theo học kỳ.</div>
+                                </x-card>
+                            @endforelse
+                        </div>
+                    @else
+                        <div class="space-y-4">
+                            @forelse($groupBlocks as $groupBlock)
+                                <x-card shadow class="p-0!">
+                                    <div class="flex flex-wrap items-center justify-between mb-3 gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                        <h3 class="text-lg font-semibold">{{ $groupBlock['group_name'] }}</h3>
+                                        <div class="text-md">
+                                            {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ $groupBlock['total_credits'] }}
+                                            {{__('Credits ')}}
+                                        </div>
+                                    </div>
+
+                                    <div class="overflow-x-auto">
+                                        <x-table
+                                            :headers="$this->groupHeaders()"
+                                            :rows="$groupBlock['subjects']"
+                                            striped
+                                            class="
+                                        bg-white text-[16px]!
+                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:text-[16px]!
+                                        [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
+                                        [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                        [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                    "
+                                        >
+                                            @scope('cell_no', $subject)
+                                            {{ $subject['row_index'] }}
+                                            @endscope
+
+                                            @scope('cell_semester_no', $subject)
+                                            HK {{ $subject['semester_no'] }}
+                                            @endscope
+
+                                            @scope('cell_code', $subject)
+                                            <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                            @endscope
+
+                                            @scope('cell_name', $subject)
+                                            {!! $this->highlightMatch($subject['name']) !!}
+                                            @endscope
+
+                                            @scope('cell_credits', $subject)
+                                            {{ $subject['credits'] }}
+                                            @endscope
+
+                                            @scope('cell_theory', $subject)
+                                            {{ $subject['theory'] }}
+                                            @endscope
+
+                                            @scope('cell_practice', $subject)
+                                            {{ $subject['practice'] }}
+                                            @endscope
+
+                                            @scope('cell_prerequisite_subjects', $subject)
+                                            {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                            @endscope
+
+                                            @scope('cell_prerequisite_subjects_codes', $subject)
+                                            {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                            @endscope
+
+                                            @scope('cell_type', $subject)
+                                            <x-badge
+                                                value="{{ $subject['type'] === 'required' ? __('Required') : __('Elective') }}"
+                                                class="{{ $subject['type'] === 'required' ? 'badge-error' : 'badge-success' }} text-white font-semibold badge-md whitespace-nowrap"
+                                            />
+                                            @endscope
+
+                                            @scope('cell_note', $subject)
+                                            {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                            @endscope
+                                        </x-table>
+                                    </div>
+                                </x-card>
+                            @empty
+                                <x-card shadow>
+                                    <div class="text-sm text-gray-500">Không có dữ liệu môn học theo nhóm môn.</div>
+                                </x-card>
+                            @endforelse
+                        </div>
+                    @endif
+                </div>
+            </div>
+        @endif
+    </div>
+</div>
+

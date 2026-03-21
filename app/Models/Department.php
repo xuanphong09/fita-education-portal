@@ -13,7 +13,7 @@ class Department extends Model
 
     public function lecturer():HasMany
     {
-        return $this->hasMany(Lecturer::class, 'major_id');
+        return $this->hasMany(Lecturer::class, 'department_id');
     }
 
 }

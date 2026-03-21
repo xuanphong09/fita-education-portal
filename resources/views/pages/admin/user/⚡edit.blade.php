@@ -146,7 +146,7 @@ new class extends Component {
         'phone.regex' => 'Số điện thoại phải có dạng 0xx.xxxx.xxx.',
 
         'intake_id.exists' => 'Khóa học không tồn tại.',
-        'major_id.exists' => 'Chuyên ngành không tồn tại.',
+        'major_id.exists' => __('Major does not exist.'),
 
         // LECTURER
         'staff_code.required' => 'Mã giảng viên không được để trống.',
@@ -169,7 +169,18 @@ new class extends Component {
 
     public function getMajorsProperty()
     {
-        return Major::select('id', 'name')->get();
+        return Major::query()
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get(['id', 'name', 'slug'])
+            ->map(function (Major $major) {
+                return [
+                    'id' => $major->id,
+                    'name' => $major->getTranslation('name', app()->getLocale(), false)
+                        ?: $major->getTranslation('name', 'vi', false)
+                        ?: $major->getTranslation('name', 'en', false)
+                        ?: $major->slug,
+                ];
+            });
     }
 
     public function getIntakesProperty()
@@ -445,10 +456,10 @@ new class extends Component {
                                 required
                             />
                             <x-select
-                                label="Chuyên ngành"
+                                label="{{ __('Major') }}"
                                 wire:model.live.debounce.500ms="major_id"
                                 :options="$this->majors"
-                                placeholder="Chọn Chuyên ngành"
+                                placeholder="{{ __('Select major') }}"
                                 required
                             />
                         </div>

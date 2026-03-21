@@ -13,8 +13,12 @@ return new class extends Migration
     {
         Schema::create('majors', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
+            $table->json('name');
+            $table->string('code')->nullable();
+            $table->string('slug')->unique();
             $table->timestamps();
+
+            $table->index('slug');
         });
     }
 

@@ -255,6 +255,10 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     @apply rounded-none hover:bg-fita hover:text-white
 }
 
+.modalAddSubject div.modal-box{
+    @apply lg:w-200 max-w-[90%] lg:max-h-169
+}
+
 .mary-table-pagination span[aria-current="page"] > span {
     @apply bg-primary font-bold mb-3 text-white
 }

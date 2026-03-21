@@ -28,13 +28,22 @@ class DatabaseSeeder extends Seeder
         $permissions = [
             ['name' => 'quan_ly_nguoi_dung', 'display_name' => 'Quản lý người dùng'],
             ['name' => 'quan_ly_bai_viet',   'display_name' => 'Quản lý bài viết'],
+            ['name' => 'quan_ly_dao_tao',    'display_name' => 'Quản lý đào tạo'],
             ['name' => 'cai_dat_giao_dien',  'display_name' => 'Cài đặt giao diện'],
             ['name' => 'nhap_diem',          'display_name' => 'Nhập điểm'],
             ['name' => 'xem_diem',           'display_name' => 'Xem điểm'],
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create($permission);
+            Permission::updateOrCreate(
+                [
+                    'name' => $permission['name'],
+                    'guard_name' => 'web',
+                ],
+                [
+                    'display_name' => $permission['display_name'],
+                ]
+            );
         }
 
         /*
@@ -43,23 +52,34 @@ class DatabaseSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        Role::create(['name' => 'sinh_vien', 'display_name' => 'Sinh viên'])
-            ->givePermissionTo(['xem_diem']);
+        Role::updateOrCreate(
+            ['name' => 'sinh_vien', 'guard_name' => 'web'],
+            ['display_name' => 'Sinh viên']
+        )->syncPermissions(['xem_diem']);
 
-        Role::create(['name' => 'giang_vien', 'display_name' => 'Giảng viên'])
-            ->givePermissionTo(['nhap_diem', 'xem_diem']);
+        Role::updateOrCreate(
+            ['name' => 'giang_vien', 'guard_name' => 'web'],
+            ['display_name' => 'Giảng viên']
+        )->syncPermissions(['nhap_diem', 'xem_diem']);
 
         // Ban chủ nhiệm: quản lý bài viết + điểm, không quản lý tài khoản
-        Role::create(['name' => 'ban_chu_nhiem', 'display_name' => 'Ban Chủ Nhiệm Khoa'])
-            ->givePermissionTo(['quan_ly_bai_viet', 'nhap_diem', 'xem_diem']);
+        Role::updateOrCreate(
+            ['name' => 'ban_chu_nhiem', 'guard_name' => 'web'],
+            ['display_name' => 'Ban Chủ Nhiệm Khoa']
+        )->syncPermissions(['quan_ly_bai_viet', 'quan_ly_dao_tao', 'nhap_diem', 'xem_diem']);
 
         // Quản trị viên: quản lý người dùng + giao diện (không phải super admin)
-        Role::create(['name' => 'quan_tri_vien', 'display_name' => 'Quản trị viên'])
-            ->givePermissionTo(['quan_ly_nguoi_dung', 'cai_dat_giao_dien', 'quan_ly_bai_viet']);
+        Role::updateOrCreate(
+            ['name' => 'quan_tri_vien', 'guard_name' => 'web'],
+            ['display_name' => 'Quản trị viên']
+        )->syncPermissions(['quan_ly_nguoi_dung', 'cai_dat_giao_dien', 'quan_ly_bai_viet', 'quan_ly_dao_tao']);
 
         // Super Admin: bypass mọi permission qua Gate::before trong AppServiceProvider
         // Không cần givePermissionTo — Gate::before trả về true cho mọi ability
-        Role::create(['name' => 'super_admin', 'display_name' => 'Super Admin']);
+        Role::updateOrCreate(
+            ['name' => 'super_admin', 'guard_name' => 'web'],
+            ['display_name' => 'Super Admin']
+        );
 
         /*
         |--------------------------------------------------------------------------
@@ -84,17 +104,24 @@ class DatabaseSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        Major::insert([
-            ['name' => 'Công nghệ thông tin'],
-            ['name' => 'Công nghệ phần mềm'],
-            ['name' => 'Hệ thống thông tin'],
-            ['name' => 'An toàn thông tin'],
-            ['name' => 'Mạng máy tính'],
-            ['name' => 'Truyền thông'],
-            ['name' => 'Khoa học dữ liệu và Trí tuệ nhân tạo'],
-        ]);
+        $majors = [
+            ['code' => '7480201', 'slug' => 'cong-nghe-thong-tin', 'name' => ['vi' => 'Công nghệ thông tin', 'en' => 'Information Technology']],
+            ['code' => '7480201', 'slug' => 'cong-nghe-phan-mem', 'name' => ['vi' => 'Công nghệ phần mềm', 'en' => 'Software Engineering']],
+            ['code' => '7480201', 'slug' => 'he-thong-thong-tin', 'name' => ['vi' => 'Hệ thống thông tin', 'en' => 'Information Systems']],
+            ['code' => '7480201', 'slug' => 'an-toan-thong-tin', 'name' => ['vi' => 'An toàn thông tin', 'en' => 'Cybersecurity']],
+            ['code' => '7480102', 'slug' => 'mang-may-tinh', 'name' => ['vi' => 'Mạng máy tính', 'en' => 'Computer Networks']],
+            ['code' => '7480102', 'slug' => 'truyen-thong', 'name' => ['vi' => 'Truyền thông', 'en' => 'Communication']],
+            ['code' => '7480112', 'slug' => 'khoa-hoc-du-lieu-va-tri-tue-nhan-tao', 'name' => ['vi' => 'Khoa học dữ liệu và Trí tuệ nhân tạo', 'en' => 'Data Science and Artificial Intelligence']],
+        ];
 
-        $majorCNTT = Major::where('name', 'Công nghệ thông tin')->first();
+        foreach ($majors as $major) {
+            Major::updateOrCreate(
+                ['slug' => $major['slug']],
+                ['name' => $major['name'], 'code' => $major['code']]
+            );
+        }
+
+        $majorCNTT = Major::where('slug', 'cong-nghe-thong-tin')->first();
 
         /*
         |--------------------------------------------------------------------------
@@ -192,6 +219,10 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call(PostSeeder::class);
+        $this->call(GroupSubjectSeeder::class);
+        $this->call(SubjectSeeder::class);
+        $this->call(TrainingProgramSeeder::class);
+        $this->call(TrainingProgramExplorerSeeder::class);
 
         $this->command->info('Seed dữ liệu mẫu thành công!');
     }

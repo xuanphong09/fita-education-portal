@@ -106,6 +106,17 @@
     </div>
     {{-- start end nav bar--}}
     {{-- start bottom nav bar--}}
+    @php
+        $trainingMajors = \App\Models\Major::query()
+            ->whereHas('trainingPrograms', function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            })
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get(['id', 'name', 'slug']);
+    @endphp
+
     <x-nav full-width class="h-19 bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none">
 
         {{--  start navbar right  --}}
@@ -134,63 +145,65 @@
                             link="{{route('client.information')}}"
                         ></x-button>
                     </li>
-                    <li class="w-full">
-                        <x-button
-                            class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"
-                            label="Khoa Công nghệ"
-                        ></x-button>
-                    </li>
-                    <li class="w-full">
-                        <x-button
-                            class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"
-                            label="Khoa Công nghệ thông tin và Truyền thông"
-                        ></x-button>
-                    </li>
+{{--                    <li class="w-full">--}}
+{{--                        <x-button--}}
+{{--                            class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"--}}
+{{--                            label="Khoa Công nghệ"--}}
+{{--                        ></x-button>--}}
+{{--                    </li>--}}
+{{--                    <li class="w-full">--}}
+{{--                        <x-button--}}
+{{--                            class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"--}}
+{{--                            label="Khoa Công nghệ thông tin và Truyền thông"--}}
+{{--                        ></x-button>--}}
+{{--                    </li>--}}
+                </ul>
+            </div>
+
+            <div class="dropdown dropdown-hover h-full group">
+                <x-button
+                    link="{{ route('client.training-programs.index') }}"
+                    tabindex="0"
+                    class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
+                    responsive
+                >
+                    Đào tạo
+                </x-button>
+
+                <ul tabindex="0" class="text-black dropdown-content z-50 px-0 menu shadow-lg bg-base-100 rounded-b-box border border-gray-300 border-t-transparent w-max min-w-full max-h-80 overflow-auto">
+{{--                    <li class="w-full">--}}
+{{--                        <x-button--}}
+{{--                            class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"--}}
+{{--                            label="Chương trình đào tạo"--}}
+{{--                            link="{{ route('client.training-programs.index') }}"--}}
+{{--                        />--}}
+{{--                    </li>--}}
+                    @forelse($trainingMajors as $major)
+                        @php
+                            $majorLabel = $major->getTranslation('name', app()->getLocale(), false)
+                                ?: $major->getTranslation('name', 'vi', false)
+                                ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug;
+                        @endphp
+                        <li class="w-full">
+                            <x-button
+                                class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"
+                                label="{{ $majorLabel }}"
+                                link="{{ route('client.training-programs.major', $major) }}"
+                            />
+                        </li>
+                    @empty
+{{--                        <li class="px-5 py-3 text-sm text-gray-500">Chưa có CTĐT đã công bố</li>--}}
+                    @endforelse
                 </ul>
             </div>
 
             <x-button
-                link="{{route('client.posts.index')}}"
+                link="{{route('client.posts.index',['danh-muc' => 'tin-tuc'])}}"
                 class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow"
                 responsive
             >
-                {{__('Posts')}}
-            </x-button>
-
-{{--            <x-button--}}
-{{--                link="###"--}}
-{{--                class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"--}}
-{{--                responsive--}}
-{{--            >--}}
-{{--                Giới thiệu--}}
-{{--            </x-button>--}}
-            <x-button
-                link="###"
-                class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
-                responsive
-            >
-                Đào tạo
-            </x-button>
-            <x-button
-                link="###"
-                class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
-                responsive
-            >
-                Đào tạo
-            </x-button>
-            <x-button
-                link="###"
-                class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
-                responsive
-            >
-                Đào tạo
-            </x-button>
-            <x-button
-                link="###"
-                class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
-                responsive
-            >
-                Đào tạo
+                {{__('News')}}
             </x-button>
         </x-slot:actions>
         {{--  end navbar left  --}}
@@ -214,12 +227,35 @@
 
     <x-slot:sidebar drawer="main-drawer" collapsible class="client-menu bg-base-100 lg:bg-inherit lg:hidden pt-26 h-full! text-[15px] font-medium">
         {{-- MENU --}}
+        @php
+            $currentMajorRoute = request()->route('major');
+            $currentMajorKey = is_object($currentMajorRoute)
+                ? (string) data_get($currentMajorRoute, 'slug', data_get($currentMajorRoute, 'id'))
+                : (string) $currentMajorRoute;
+        @endphp
         <x-menu>
             <x-menu-item title="{{__('Home page')}}" link="{{route('client.home')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.home')"/>
             <x-menu-sub title="{{__('Introduction')}}" class="rounded-none hover:bg-fita! hover:text-white!" >
                 <x-menu-item title="{{__('General Introduction')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
             </x-menu-sub>
             <x-menu-item title="{{__('Posts')}}" link="{{route('client.posts.index')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.posts.index')"/>
+            <x-menu-sub title="{{__('Training Programs')}}" class="rounded-none hover:bg-fita! hover:text-white!" :active="request()->routeIs('client.training-programs.*')">
+                <x-menu-item title="Tất cả chương trình đào tạo" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.training-programs.index')}}" :active="request()->routeIs('client.training-programs.index')"/>
+                @foreach($trainingMajors as $major)
+                    @php
+                        $majorLabel = $major->getTranslation('name', app()->getLocale(), false)
+                            ?: $major->getTranslation('name', 'vi', false)
+                            ?: $major->getTranslation('name', 'en', false)
+                            ?: $major->slug;
+                    @endphp
+                    <x-menu-item
+                        title="{{ $majorLabel }}"
+                        class="rounded-none hover:bg-fita hover:text-white"
+                        link="{{ route('client.training-programs.major', $major) }}"
+                        :active="request()->routeIs('client.training-programs.major') && $currentMajorKey === (string) $major->getRouteKey()"
+                    />
+                @endforeach
+            </x-menu-sub>
         </x-menu>
     </x-slot:sidebar>
 
