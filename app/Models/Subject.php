@@ -1,0 +1,143 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Translatable\HasTranslations;
+
+class Subject extends Model
+{
+    use HasTranslations, SoftDeletes;
+
+    protected $fillable = [
+        'code',
+        'name',
+        'credits',
+        'credits_theory',
+        'credits_practice',
+        'group_subject_id',
+        'is_active',
+    ];
+
+    public array $translatable = [
+        'name',
+    ];
+
+    protected $casts = [
+        'credits' => 'integer',
+        'credits_theory' => 'integer',
+        'credits_practice' => 'integer',
+        'group_subject_id' => 'integer',
+        'is_active' => 'boolean',
+    ];
+
+    public function groupSubject(): BelongsTo
+    {
+        return $this->belongsTo(GroupSubject::class);
+    }
+
+    public function programSemesters(): BelongsToMany
+    {
+        return $this->belongsToMany(ProgramSemester::class, 'program_semester_subjects')
+            ->withPivot(['type', 'notes', 'order'])
+            ->withTimestamps();
+    }
+
+    // Mon tien quyet cua mon hien tai (A -> B)
+    public function prerequisites(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Subject::class,
+            'subject_prerequisites',
+            'subject_id',
+            'prerequisite_subject_id'
+        )
+            ->using(SubjectPrerequisite::class)
+            ->withPivot(['id', 'training_program_id'])
+            ->withTimestamps();
+    }
+
+    // Cac mon yeu cau mon hien tai lam tien quyet (B <- A)
+    public function requiredBy(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Subject::class,
+            'subject_prerequisites',
+            'prerequisite_subject_id',
+            'subject_id'
+        )
+            ->using(SubjectPrerequisite::class)
+            ->withPivot(['id', 'training_program_id'])
+            ->withTimestamps();
+    }
+
+    public function prerequisiteLinks(): HasMany
+    {
+        return $this->hasMany(SubjectPrerequisite::class, 'subject_id');
+    }
+
+    public function requiredByLinks(): HasMany
+    {
+        return $this->hasMany(SubjectPrerequisite::class, 'prerequisite_subject_id');
+    }
+
+    public function prerequisitesForProgram(int $trainingProgramId): BelongsToMany
+    {
+        return $this->prerequisites()->wherePivot('training_program_id', $trainingProgramId);
+    }
+
+    public function requiredByForProgram(int $trainingProgramId): BelongsToMany
+    {
+        return $this->requiredBy()->wherePivot('training_program_id', $trainingProgramId);
+    }
+
+    public function scopeOrdered(Builder $query): Builder
+    {
+        return $query->orderBy('code');
+    }
+
+    public function scopeSearch(Builder $query, ?string $search): Builder
+    {
+        $search = trim((string) $search);
+
+        if ($search === '') {
+            return $query;
+        }
+
+        $terms = preg_split('/\s+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        foreach ($terms as $term) {
+            $keyword = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term) . '%';
+
+            $query->where(function (Builder $inner) use ($keyword) {
+                $inner->where('code', 'like', $keyword)
+                    ->orWhereRaw(
+                        "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                        [$keyword]
+                    )
+                    ->orWhereRaw(
+                        "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                        [$keyword]
+                    )
+                    ->orWhereHas('groupSubject', function (Builder $groupQuery) use ($keyword) {
+                        $groupQuery->whereRaw(
+                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                            [$keyword]
+                        )->orWhereRaw(
+                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                            [$keyword]
+                        );
+                    });
+            });
+        }
+
+        return $query;
+    }
+}
+
+

@@ -6,6 +6,8 @@ use App\Http\Middleware\SetAdminLocale;
 Route::livewire('/', 'pages::client.home')->name('client.home');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
 Route::livewire('/search', 'pages::client.search')->name('client.search');
+Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');
+Route::livewire('/dao-tao/chuyen-nganh/{major}', 'pages::client.training-programs.major')->name('client.training-programs.major');
 
 // Posts
 Route::livewire('/bai-viet', 'pages::client.posts.index')->name('client.posts.index');
@@ -51,6 +53,24 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/post/index', 'pages::admin.post.index')->name('admin.post.index');
         Route::livewire('/post/create', 'pages::admin.post.create')->name('admin.post.create');
         Route::livewire('/post/edit/{id}', 'pages::admin.post.edit')->name('admin.post.edit');
+    });
+
+    // ---- Quản lý đào tạo ----
+    Route::middleware('permission:quan_ly_dao_tao|quan_ly_bai_viet')->group(function () {
+        Route::livewire('/training-program/index', 'pages::admin.training-program.index')->name('admin.training-program.index');
+        Route::livewire('/training-program/trash', 'pages::admin.training-program.trash')->name('admin.training-program.trash');
+        Route::livewire('/training-program/create', 'pages::admin.training-program.create')->name('admin.training-program.create');
+        Route::livewire('/training-program/edit/{id}', 'pages::admin.training-program.edit')->name('admin.training-program.edit');
+        Route::livewire('/training-program/{id}/semesters', 'pages::admin.training-program.semesters')->name('admin.training-program.semesters');
+
+        Route::livewire('/group-subject/index', 'pages::admin.group-subject.index')->name('admin.group-subject.index');
+        Route::livewire('/group-subject/create', 'pages::admin.group-subject.create')->name('admin.group-subject.create');
+        Route::livewire('/group-subject/edit/{id}', 'pages::admin.group-subject.edit')->name('admin.group-subject.edit');
+
+        Route::livewire('/subject/index', 'pages::admin.subject.index')->name('admin.subject.index');
+        Route::livewire('/subject/trash', 'pages::admin.subject.trash')->name('admin.subject.trash');
+        Route::livewire('/subject/create', 'pages::admin.subject.create')->name('admin.subject.create');
+        Route::livewire('/subject/edit/{id}', 'pages::admin.subject.edit')->name('admin.subject.edit');
     });
 
     // ---- Preview (chỉ cần auth, không cần permission riêng) ----

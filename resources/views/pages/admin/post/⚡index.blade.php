@@ -108,6 +108,25 @@ new class extends Component {
     public function updatedFilterLanguage(): void { $this->resetPage(); }
     public function updatedPerPage(): void { $this->resetPage(); }
 
+    public function resetFilters(): void
+    {
+        $this->search = '';
+        $this->filterStatus = '';
+        $this->filterCategory = null;
+        $this->filterLanguage = '';
+        $this->filterFeatured = '';
+        $this->resetPage();
+    }
+
+    public function getHasActiveFiltersProperty(): bool
+    {
+        return trim($this->search) !== ''
+            || !is_null($this->filterCategory)
+            || $this->filterStatus !== ''
+            || $this->filterFeatured !== ''
+            || $this->filterLanguage !== '';
+    }
+
     public function delete(int $id): void
     {
         $this->dispatch('modal:confirm', [
@@ -198,7 +217,7 @@ new class extends Component {
             ]"
             option-value="id"
             option-label="name"
-            class="select-sm w-48"
+            class="select-md w-48"
         />
         <x-select
             wire:model.live="filterStatus"
@@ -211,7 +230,7 @@ new class extends Component {
             ]"
             option-value="id"
             option-label="name"
-            class="select-sm w-48"
+            class="select-md w-48"
         />
         <x-select
             wire:model.live="filterCategory"
@@ -220,7 +239,7 @@ new class extends Component {
             :options="$this->categories"
             option-value="id"
             option-label="name"
-            class="select-sm w-48"
+            class="select-md w-48"
         />
         <x-select
             wire:model.live="filterFeatured"
@@ -232,8 +251,17 @@ new class extends Component {
             ]"
             option-value="id"
             option-label="name"
-            class="select-sm w-48"
+            class="select-md w-48"
         />
+        @if($this->hasActiveFilters)
+            <x-button
+                label="Xóa bộ lọc"
+                icon="o-funnel"
+                class="btn-outline btn-error"
+                wire:click="resetFilters"
+                spinner="resetFilters"
+            />
+        @endif
     </div>
 
     <div class="shadow-md ring-1 ring-gray-200 rounded-md relative"

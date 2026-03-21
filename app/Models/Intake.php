@@ -15,4 +15,9 @@ class Intake extends Model
     {
         return $this->hasMany(Student::class, 'major_id');
     }
+
+    public function trainingPrograms(): HasMany
+    {
+        return $this->hasMany(TrainingProgram::class);
+    }
 }
