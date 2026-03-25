@@ -15,9 +15,17 @@ Route::livewire('/bai-viet/{slug}', 'pages::client.posts.show')
     ->middleware('throttle:60,1') // Giới hạn 60 requests/phút để chống bot spam
     ->name('client.posts.show');
 
+Route::livewire('/giang-vien', 'pages::client.lecturers.index')->name('client.lecturers.index');
+Route::livewire('/giang-vien/{slug}', 'pages::client.lecturers.profile')->name('client.lecturers.profile');
+
+
+
+
+
 // Auth
 Route::livewire('/login', 'pages::client.auth.login')->name('login');
 Route::get('/logout', [AuthenticateController::class, 'logout'])->name('handleLogout');
+
 
 // ============================================================
 // ADMIN — middleware chung: auth + locale
@@ -31,6 +39,10 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::middleware('permission:cai_dat_giao_dien')->group(function () {
         Route::livewire('/configuration/introduction-page', 'pages::admin.configuration.introduction')->name('admin.configuration.introduction');
         Route::livewire('/configuration/footer', 'pages::admin.configuration.footer')->name('admin.configuration.footer');
+        Route::livewire('/banner/index', 'pages::admin.banner.index')->name('admin.banner.index');
+        Route::livewire('/banner/trash', 'pages::admin.banner.trash')->name('admin.banner.trash');
+        Route::livewire('/partner/index', 'pages::admin.partner.index')->name('admin.partner.index');
+        Route::livewire('/partner/trash', 'pages::admin.partner.trash')->name('admin.partner.trash');
     });
 
     // ---- Quản lý người dùng & vai trò ----

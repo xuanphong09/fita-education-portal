@@ -6,7 +6,6 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
 use App\Models\Student;
-use App\Models\Lecturer;
 use App\Models\Department;
 use App\Models\Major;
 use App\Models\Intake;
@@ -88,15 +87,13 @@ class DatabaseSeeder extends Seeder
         */
 
         Department::insert([
-            ['name' => 'Bộ môn Công nghệ phần mềm'],
-            ['name' => 'Bộ môn Khoa học máy tính'],
-            ['name' => 'Bộ môn Mạng và Hệ thống thông tin'],
-            ['name' => 'Bộ môn Toán'],
-            ['name' => 'Bộ môn Vật lý'],
-            ['name' => 'Tổ văn phòng'],
+            ['name' => json_encode(['vi' => 'Bộ môn Công nghệ phần mềm', 'en' => 'Department of Software Engineering'], JSON_UNESCAPED_UNICODE)],
+            ['name' => json_encode(['vi' => 'Bộ môn Khoa học máy tính', 'en' => 'Department of Computer Science'], JSON_UNESCAPED_UNICODE)],
+            ['name' => json_encode(['vi' => 'Bộ môn Mạng và Hệ thống thông tin', 'en' => 'Department of Networks and Information Systems'], JSON_UNESCAPED_UNICODE)],
+            ['name' => json_encode(['vi' => 'Bộ môn Toán', 'en' => 'Department of Mathematics'], JSON_UNESCAPED_UNICODE)],
+            ['name' => json_encode(['vi' => 'Bộ môn Vật lý', 'en' => 'Department of Physics'], JSON_UNESCAPED_UNICODE)],
+            ['name' => json_encode(['vi' => 'Tổ văn phòng', 'en' => 'Office Team'], JSON_UNESCAPED_UNICODE)],
         ]);
-
-        $deptCNTT = Department::where('name', 'Bộ môn Công nghệ phần mềm')->first();
 
         /*
         |--------------------------------------------------------------------------
@@ -157,32 +154,8 @@ class DatabaseSeeder extends Seeder
 
         $admin->assignRole('super_admin');
 
-        /*
-        |--------------------------------------------------------------------------
-        | LECTURER USER
-        |--------------------------------------------------------------------------
-        */
-
-        $giangVien = User::create([
-            'name' => 'Nguyễn Văn Thầy',
-            'email' => 'thaynguyen@vnua.edu.vn',
-            'password' => Hash::make('12345678'),
-            'user_type' => 'lecturer',
-            'is_active' => true,
-        ]);
-
-        $giangVien->assignRole(['giang_vien', 'ban_chu_nhiem']);
-
-        Lecturer::create([
-            'user_id' => $giangVien->id,
-            'staff_code' => 'GV001',
-            'gender' => 'male',
-            'department_id' => $deptCNTT->id,
-            'academic_title' => 'PGS',
-            'degree' => 'TS',
-            'phone' => '0988123456',
-            'positions' => 'Trưởng bộ môn',
-        ]);
+        // Seed danh sách giảng viên mẫu
+        $this->call(LecturerSeeder::class);
 
         /*
         |--------------------------------------------------------------------------

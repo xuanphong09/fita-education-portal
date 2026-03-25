@@ -256,7 +256,6 @@ new class extends Component {
         <div class="col-span-12 lg:col-span-3 flex flex-col gap-5">
             <x-card title="Hành động" shadow separator class="p-3!">
                 <x-button label="Lưu" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
-                <x-button label="Trở lại" class="bg-warning text-white w-full my-1" link="{{ route('admin.training-program.index') }}"/>
             </x-card>
 
             <x-card title="Xuất bản" shadow class="p-3!">

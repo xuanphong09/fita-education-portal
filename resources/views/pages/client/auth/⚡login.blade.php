@@ -26,15 +26,39 @@ class extends Component {
         'password.required' => 'Mật khẩu không được để trống',
     ];
 
+    private function getTranslatedMessages(): array
+    {
+        $locale = app()->getLocale();
+
+        if ($locale === 'vi') {
+            return [
+                'email.required' => 'Email không được để trống',
+                'email.email' => 'Email không hợp lệ',
+                'password.required' => 'Mật khẩu không được để trống',
+            ];
+        }
+
+        return [
+            'email.required' => 'Email is required',
+            'email.email' => 'Email is not valid',
+            'password.required' => 'Password is required',
+        ];
+    }
+
     public function login()
     {
-        $data = $this->validate();
+        $data = $this->validate($this->rules, $this->getTranslatedMessages());
 
         if (!Auth::attempt(['email' => $data['email'], 'password' => $data['password']], $this->remember)) {
-            $this->addError('fail', 'Email hoặc mật khẩu không đúng');
+            $locale = app()->getLocale();
+            $errorMsg = $locale === 'vi'
+                ? 'Email hoặc mật khẩu không đúng'
+                : 'Email or password is incorrect';
+
+            $this->addError('fail', $errorMsg);
             $this->addError('email',' ');
             $this->addError('password',' ');
-            $this->error('Email hoặc mật khẩu không đúng');
+            $this->error($errorMsg);
             $this->reset('password');
             return;
         }
@@ -53,7 +77,7 @@ class extends Component {
 <div class="min-h-screen flex items-center justify-center px-4">
 
     <x-slot:title>
-        Đăng nhập
+        {{__('Login')}}
     </x-slot:title>
 
     <x-card class="w-full max-w-md shadow-xl p-8">
@@ -66,7 +90,7 @@ class extends Component {
                 <img src="{{asset('assets/images/FITA.png')}}" alt="FITA logo" class="w-16 h-16 object-contain">
             </div>
 
-            <h2 class="font-semibold text-xl">
+            <h2 class="font-semibold text-xl whitespace-nowrap">
                 {{__('Vietnam National University of Agriculture')}}
             </h2>
 
@@ -85,7 +109,7 @@ class extends Component {
             <x-input
                 label="Email"
                 wire:model.defer="email"
-                placeholder="Nhập email của bạn"
+                placeholder="{{__('Enter your email')}}"
                 icon="o-user"
             />
 
@@ -114,7 +138,7 @@ class extends Component {
 
 
             <x-button
-                label="Đăng nhập"
+                label="{{__('Login')}}"
                 class="w-full bg-fita text-white"
                 type="submit"
                 spinner="login"
@@ -138,7 +162,7 @@ class extends Component {
 
 
         <x-button
-            label="Hệ thống ST Single Sign-On"
+            label="{{__('Login with ST SSO')}}"
             class="w-full bg-white text-blue-500 border border-blue-500"
             link="/sso/login"
         />

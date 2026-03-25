@@ -15,13 +15,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->string('staff_code', 20)->unique(); // Mã cán bộ
-//            $table->string('full_name');
+            $table->string('slug')->unique();
             $table->string('gender')->nullable(); // Giới tính
             $table->foreignId('department_id')->nullable()->constrained('departments'); // Bộ môn (VD: KTPM, MMT)
             $table->string('degree')->nullable(); // Học vị (ThS, TS...)
             $table->string('academic_title')->nullable(); // Học hàm (PGS, GS...)
             $table->string('phone', 20)->nullable();
-            $table->string('positions')->nullable();
+            $table->json('positions')->nullable();
             $table->timestamps();
         });
     }

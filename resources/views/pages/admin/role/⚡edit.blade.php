@@ -70,18 +70,6 @@ new class extends Component {
             return;
         }
 
-        $this->dispatch('modal:confirm', [
-            'title' => 'Bạn có chắc muốn lưu chỉnh sửa vai trò này không?',
-            'icon' => 'question',
-            'confirmButtonText' => 'Xác nhận',
-            'cancelButtonText' => 'Hủy',
-            'method' => 'confirmSave'
-        ]);
-    }
-
-    #[On('confirmSave')]
-    public function confirmSave()
-    {
         $slug = Str::slug($this->display_name, '_');
         $count = Role::where('name', 'like', "{$slug}%")->count();
         $name = $count ? "{$slug}_{$count}" : $slug;
@@ -94,7 +82,6 @@ new class extends Component {
         $role->syncPermissions($this->selectedPermissions);
         $this->success(
             'Cập nhật vai trò thành công!',
-            redirectTo: route('admin.role.index')
         );
 
     }
@@ -152,7 +139,6 @@ new class extends Component {
 
         <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
             <x-button label="{{__('Save')}}" class="bg-primary text-white my-1 w-full" wire:click="save" spinner/>
-            <x-button label="Trở lại" class="bg-warning text-white my-1 w-full" link="{{route('admin.role.index')}}"/>
         </x-card>
     </div>
 </div>

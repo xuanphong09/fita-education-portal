@@ -1,27 +1,32 @@
 <?php
 
+use App\Models\Partner;
 use Livewire\Component;
+use Illuminate\Support\Str;
 
 new class extends Component
 {
     public string $uuid;
 
     public function __construct(
-        public array $images = [
-            '/assets/images/LogoKhoaCNTT.png',
-            '/assets/images/FITA.png',
-            '/assets/images/logoST.jpg',
-            '/assets/images/Logo Học viện.png',
-            '/assets/images/empty-calendar.png',
-            '/assets/images/logoST.jpg',
-            '/assets/images/Logo Học viện.png',
-            '/assets/images/empty-calendar.png',
-            '/assets/images/logoST.jpg',
-        ],
         public ?string $id = null,
     ) {
-        // Tạo ID ngẫu nhiên cho Swiper và PhotoSwipe
         $this->uuid = 'gallery-' . Str::random(10);
+    }
+
+    public function with(): array
+    {
+        $images = Partner::query()
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->pluck('logo')
+            ->filter()
+            ->values()
+            ->all();
+
+        return [
+            'images' => $images
+        ];
     }
 };
 ?>
@@ -71,7 +76,7 @@ new class extends Component
                 <div class="swiper-slide h-full rounded-md overflow-hidden">
 
                     <img
-                        src="{{ $image }}"
+                        src="{{Storage::url($image) }}"
                         class="w-full h-full object-contain transition-transform duration-500 group-hover/img:scale-110"
                         onload="this.parentNode.setAttribute('data-pswp-width', this.naturalWidth); this.parentNode.setAttribute('data-pswp-height', this.naturalHeight)"
                         loading="lazy"

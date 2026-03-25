@@ -47,7 +47,7 @@
 * Because Laravel defaults does not match well the design of daisyUI.
 */
 h1, h2, h3, h4, h5, h6, .font-barlow {
-    font-family: var(--font-barlow);
+    /*font-family: var(--font-barlow);*/
 }
 
 /* Prose content styling for post content */
@@ -256,12 +256,21 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
 }
 
 .modalAddSubject div.modal-box{
-    @apply lg:w-200 max-w-[90%] lg:max-h-169
+    @apply lg:w-200 max-w-[90%] lg:max-h-169 py-4
+}
+.modalAddBanner div.modal-box{
+    @apply lg:w-200 max-w-[90%] lg:max-h-169 py-4
 }
 
 .mary-table-pagination span[aria-current="page"] > span {
     @apply bg-primary font-bold mb-3 text-white
 }
+span[aria-current="page"] > span {
+    @apply bg-fita font-bold mb-3 text-white
+}
+span.relative.inline-flex.rounded-md {
+    @apply shadow-none
+ }
 
 .mary-table-pagination button {
     @apply cursor-pointer

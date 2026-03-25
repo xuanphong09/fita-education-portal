@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Models\Student;
 use App\Models\Lecturer;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 new class extends Component {
     use Toast, WithFileUploads;
@@ -31,10 +32,24 @@ new class extends Component {
         ['id' => 'other', 'name' => 'Khác'],
     ];
 
+    public $academicTitleOptions = [
+        ['id' => 'gs', 'name' => 'GS'],
+        ['id' => 'pgs', 'name' => 'PGS'],
+        ['id' => 'other', 'name' => 'Khác'],
+    ];
+
+    public $degreeOptions = [
+        ['id' => 'cn', 'name' => 'Cử nhân'],
+        ['id' => 'ths', 'name' => 'ThS'],
+        ['id' => 'ts', 'name' => 'TS'],
+        ['id' => 'tsk', 'name' => 'TSKH'],
+        ['id' => 'other', 'name' => 'Khác'],
+    ];
+
     public $user_type;
     public $name;
     public $email;
-    public $password;
+    public $password = '@FITA-2015$';
     public $selectedRoles = [];
     public $avatar;
 
@@ -50,7 +65,12 @@ new class extends Component {
 //    lecturer
     public $staff_code;
     public $department_id;
-    public $position;
+    public $position_vi;
+    public $position_en;
+    public $academic_title;
+    public $degree;
+    public $academic_title_other;
+    public $degree_other;
 
     #[Validate([
         'name' => 'required|string|max:255',
@@ -69,7 +89,12 @@ new class extends Component {
 
         'staff_code' => 'exclude_unless:user_type,lecturer|required|string|max:100|unique:lecturers,staff_code',
         'department_id' => 'exclude_unless:user_type,lecturer|nullable|exists:departments,id',
-        'position' => 'exclude_unless:user_type,lecturer|nullable|string|max:255',
+        'position_vi' => 'exclude_unless:user_type,lecturer|nullable|string|max:255',
+        'position_en' => 'exclude_unless:user_type,lecturer|nullable|string|max:255',
+        'academic_title' => 'exclude_unless:user_type,lecturer|nullable|in:gs,pgs,other',
+        'academic_title_other' => 'exclude_unless:user_type,lecturer|nullable|required_if:academic_title,other|string|max:100',
+        'degree' => 'exclude_unless:user_type,lecturer|nullable|in:cn,ths,ts,tsk,other',
+        'degree_other' => 'exclude_unless:user_type,lecturer|nullable|required_if:degree,other|string|max:100',
         'selectedRoles' => 'nullable|array',
         'selectedRoles.*' => 'exists:roles,name',
 
@@ -111,7 +136,7 @@ new class extends Component {
             'phone.regex' => 'Số điện thoại phải có dạng 0xx.xxxx.xxx.',
 
             'intake_id.exists' => 'Khóa học không tồn tại.',
-            'major_id.exists' => __('Major does not exist.'),
+            'major_id.exists' => 'Ngành học không tồn tại.',
 
             // LECTURER
             'staff_code.required' => 'Mã giảng viên không được để trống.',
@@ -121,8 +146,18 @@ new class extends Component {
 
             'department_id.exists' => 'Bộ môn không tồn tại.',
 
-            'position.string' => 'Chức vụ phải là một chuỗi.',
-            'position.max' => 'Chức vụ không được vượt quá 255 ký tự.',
+            'position_vi.string' => 'Chức vụ (VI) phải là một chuỗi.',
+            'position_vi.max' => 'Chức vụ (VI) không được vượt quá 255 ký tự.',
+            'position_en.string' => 'Chức vụ (EN) phải là một chuỗi.',
+            'position_en.max' => 'Chức vụ (EN) không được vượt quá 255 ký tự.',
+            'academic_title.in' => 'Học hàm không hợp lệ.',
+            'academic_title_other.required_if' => 'Vui lòng nhập học hàm khác.',
+            'academic_title_other.string' => 'Học hàm khác phải là một chuỗi.',
+            'academic_title_other.max' => 'Học hàm khác không được vượt quá 100 ký tự.',
+            'degree.in' => 'Học vị không hợp lệ.',
+            'degree_other.required_if' => 'Vui lòng nhập học vị khác.',
+            'degree_other.string' => 'Học vị khác phải là một chuỗi.',
+            'degree_other.max' => 'Học vị khác không được vượt quá 100 ký tự.',
             'selectedRoles.array' => 'Danh sách vai trò không hợp lệ.',
             'selectedRoles.*.exists' => 'Vai trò không tồn tại trong hệ thống.',
         ]
@@ -171,12 +206,40 @@ new class extends Component {
                 'major_id',
                 'staff_code',
                 'department_id',
-                'position'
+                'position_vi',
+                'position_en',
+                'academic_title',
+                'degree',
+                'academic_title_other',
+                'degree_other'
             );
+        }
+
+        if ($property === 'academic_title' && $this->academic_title !== 'other') {
+            $this->academic_title_other = null;
+        }
+
+        if ($property === 'degree' && $this->degree !== 'other') {
+            $this->degree_other = null;
         }
 
         $this->validateOnly($property);
 
+    }
+
+    protected function buildPositionsPayload(): ?array
+    {
+        $vi = trim((string) ($this->position_vi ?? ''));
+        $en = trim((string) ($this->position_en ?? ''));
+
+        if ($vi === '' && $en === '') {
+            return null;
+        }
+
+        return [
+            'vi' => $vi !== '' ? $vi : null,
+            'en' => $en !== '' ? $en : null,
+        ];
     }
 
     public function save()
@@ -204,7 +267,7 @@ new class extends Component {
                     'email' => $this->email,
                     'password' => Hash::make($this->password),
                     'user_type' => $this->user_type,
-                    'avatar' => '/storage/' . $avatarPath,
+                    'avatar' => $avatarPath ? '/storage/' . $avatarPath : null,
                     'is_active' => true
                 ]);
 
@@ -238,14 +301,24 @@ new class extends Component {
                 |--------------------------------------------------------------------------
                 */
                 if ($this->user_type === 'lecturer') {
+                    $academicTitleValue = $this->academic_title === 'other'
+                        ? trim((string) $this->academic_title_other)
+                        : $this->academic_title;
+
+                    $degreeValue = $this->degree === 'other'
+                        ? trim((string) $this->degree_other)
+                        : $this->degree;
 
                     Lecturer::create([
                         'user_id' => $user->id,
                         'staff_code' => $this->staff_code,
+                        'slug' => Str::slug($this->name) . '-' . Str::lower($this->staff_code),
                         'gender' => $this->gender,
                         'department_id' => $this->department_id,
                         'phone' => $this->phone,
-                        'positions' => $this->position
+                        'positions' => $this->buildPositionsPayload(),
+                        'academic_title' => $academicTitleValue ?: null,
+                        'degree' => $degreeValue ?: null,
                     ]);
                 }
 
@@ -308,11 +381,13 @@ new class extends Component {
 
                 {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                 <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                    <x-input label="Họ và tên" wire:model.live.debounce.500ms="name"
-                             required/>
-                    <x-input label="Email" wire:model.live.debounce.500ms="email"
-                             required/>
-                    <x-input label="Mật khẩu" wire:model.live.debounce.500ms="password" required/>
+                    <x-input label="Họ và tên" wire:model.live.debounce.500ms="name" required
+                        placeholder="Nhập họ và tên người dùng"
+                    />
+                    <x-input label="Email" wire:model.live.debounce.500ms="email" required placeholder="Nhập email người dùng"/>
+                    <x-input label="Mật khẩu" wire:model.live.debounce.500ms="password" required
+                        placeholder="Nhập mật khẩu người dùng"
+                    />
                     <x-file
                         wire:model.live.debounce.500ms="avatar"
                         accept="image/png, image/jpeg" label="Ảnh đại diện"
@@ -350,13 +425,13 @@ new class extends Component {
 
                         {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input label="Mã sinh viên" wire:model.live.debounce.500ms="student_code"/>
-                            <x-input label="Lớp" wire:model.live.debounce.500ms="class_name"/>
+                            <x-input label="Mã sinh viên" wire:model.live.debounce.500ms="student_code" placeholder="Nhập mã sinh viên"/>
+                            <x-input label="Lớp" wire:model.live.debounce.500ms="class_name" placeholder="Nhập tên lớp"/>
                             <x-datetime label="Ngày sinh" wire:model.live.debounce.500ms="date_of_birth"/>
                             <x-radio label="Giới tính" wire:model.live.debounce.500ms="gender" :options="$genders"
                                      inline
                                      class="radio-primary radio-sm"/>
-                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone"/>
+                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone" placeholder="Nhập số điện thoại "/>
                             <x-select
                                 label="Khóa"
                                 wire:model.live.debounce.500ms="intake_id"
@@ -395,7 +470,7 @@ new class extends Component {
 
                         {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input label="Mã giảng viên" wire:model.live.debounce.500ms="staff_code"/>
+                            <x-input label="Mã giảng viên" wire:model.live.debounce.500ms="staff_code" placeholder="Nhập mã giảng viên"/>
                             <x-select
                                 label="Bộ môn"
                                 wire:model.live.debounce.500ms="department_id"
@@ -407,8 +482,31 @@ new class extends Component {
                             <x-radio label="Giới tính" wire:model.live.debounce.500ms="gender" :options="$genders"
                                      inline
                                      class="radio-primary radio-sm"/>
-                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone"/>
-                            <x-input label="Chức vụ" wire:model.live.debounce.500ms="position"/>
+                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone" placeholder="Nhập số điện thoại"/>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <x-input label="Chức vụ (Tiếng Việt)" wire:model.live.debounce.500ms="position_vi" placeholder="Nhập chức vụ Tiếng Việt"/>
+                                <x-input label="Chức vụ (Tiếng Anh)" wire:model.live.debounce.500ms="position_en" placeholder="Nhập chức vụ Tiếng Anh"/>
+
+                            </div>
+                            <x-select
+                                label="Học hàm"
+                                wire:model.live.debounce.300ms="academic_title"
+                                :options="$academicTitleOptions"
+                                placeholder="Chọn học hàm"
+                            />
+                            @if($academic_title === 'other')
+                                <x-input label="Học hàm (khác)" wire:model.live.debounce.300ms="academic_title_other" placeholder="Nhập học hàm khác"/>
+                            @endif
+
+                            <x-select
+                                label="Học vị"
+                                wire:model.live.debounce.300ms="degree"
+                                :options="$degreeOptions"
+                                placeholder="Chọn học vị"
+                            />
+                            @if($degree === 'other')
+                                <x-input label="Học vị (khác)" wire:model.live.debounce.300ms="degree_other" placeholder="Nhập học vị khác"/>
+                            @endif
                         </div>
                     </div>
                     @break
@@ -469,8 +567,6 @@ new class extends Component {
 
         <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
             <x-button label="Lưu" class="bg-primary text-white my-1 w-full" wire:click="save" spinner/>
-            <x-button label="Trở lại" class="bg-warning text-white my-1 w-full"
-                      link="{{route('admin.user.user-list')}}"/>
         </x-card>
     </div>
 </div>
