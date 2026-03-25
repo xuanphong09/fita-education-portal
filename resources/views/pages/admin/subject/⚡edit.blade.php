@@ -238,7 +238,7 @@ new class extends Component {
             }
         }
 
-        $this->success('Cập nhật môn học thành công!', redirectTo: route('admin.subject.index'));
+        $this->success('Cập nhật môn học thành công!');
     }
 };
 ?>
@@ -373,11 +373,6 @@ new class extends Component {
                     class="bg-primary text-white w-full my-1"
                     wire:click="save"
                     spinner="save"
-                />
-                <x-button
-                    label="Trở lại"
-                    class="bg-warning text-white w-full my-1"
-                    link="{{ route('admin.subject.index') }}"
                 />
             </x-card>
 

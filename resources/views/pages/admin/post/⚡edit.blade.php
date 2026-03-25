@@ -24,6 +24,7 @@ new class extends Component {
     public string $content_en  = '';
     public string $excerpt_vi  = '';
     public string $excerpt_en  = '';
+    public string $url='';
 
     // Slug
     public string $slug = '';
@@ -102,6 +103,7 @@ new class extends Component {
         $this->seo_description_vi = $post->getTranslation('seo_description', 'vi', false) ?? '';
         $this->seo_description_en = $post->getTranslation('seo_description', 'en', false) ?? '';
         $this->slug               = $post->slug ?? '';
+        $this->url = route('client.posts.show', ['slug' => $post->slug]);
         $this->category_id        = $post->category_id;
         $this->status             = $post->status;
         $this->is_featured        = (bool) $post->is_featured;
@@ -200,18 +202,6 @@ new class extends Component {
             throw $e;
         }
 
-        $this->dispatch('modal:confirm', [
-            'title'             => 'Bạn có chắc muốn lưu thay đổi không?',
-            'icon'              => 'question',
-            'confirmButtonText' => 'Xác nhận',
-            'cancelButtonText'  => 'Hủy',
-            'method'            => 'confirmSave',
-        ]);
-    }
-
-    #[On('confirmSave')]
-    public function confirmSave(): void
-    {
         $post          = Post::findOrFail($this->id);
         $thumbnailPath = $this->currentThumbnail;
 
@@ -224,7 +214,7 @@ new class extends Component {
 
         if ($this->thumbnail) {
             if ($thumbnailPath) Storage::disk('public')->delete($thumbnailPath);
-            $thumbnailPath = $this->thumbnail->store('posts', 'public');
+            $thumbnailPath = $this->thumbnail->store('uploads/posts', 'public');
         }
 
         $post->update([
@@ -252,10 +242,10 @@ new class extends Component {
             'seo_description' => $this->seo_description_vi || $this->seo_description_en
                 ? ['vi' => $this->seo_description_vi, 'en' => $this->seo_description_en]
                 : null,
-            'thumbnail' => $thumbnailPath,
+            'thumbnail' => $thumbnailPath ? $thumbnailPath : null,
         ]);
 
-        $this->success('Cập nhật bài viết thành công!', redirectTo: route('admin.post.index'));
+        $this->success('Cập nhật bài viết thành công!');
     }
 };
 ?>
@@ -502,21 +492,11 @@ new class extends Component {
             <x-card title="Hành động" shadow separator class="p-3!">
                 <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1"
                           wire:click="save" spinner="save"/>
-                <x-button label="Xem trước" icon="o-eye" class="bg-info text-white w-full my-1"
+                <x-button label="Xem Trang" class="bg-info text-white w-full my-1"
+                          link="{{$url}}" external="true"/>
+                <x-button label="Xem trước" class="bg-warning text-white w-full my-1"
                           wire:click="previewDraft" spinner="previewDraft"/>
-                <x-button label="Trở lại" class="bg-warning text-white w-full my-1"
-                          link="{{ route('admin.post.index') }}"/>
             </x-card>
-
-            {{-- Danh mục --}}
-            <x-card title="Danh mục" shadow class="p-3!">
-                <x-select label="Danh mục" wire:model="category_id"
-                          :options="$this->categoryOptions"
-                          placeholder="(Chưa chọn danh mục)"
-                          placeholder-value=""
-                          option-value="id" option-label="name"/>
-            </x-card>
-
             {{-- Xuất bản --}}
             <x-card title="Xuất bản" shadow class="p-3!">
                 <x-select label="Trạng thái" wire:model.live="status"
@@ -531,13 +511,24 @@ new class extends Component {
                 @error('is_featured') <p class="text-error text-xs mt-1">{{ $message }}</p> @enderror
 
                 @if($status === 'published')
-                <div class="mt-3">
-                    <x-input label="Thời gian đăng" wire:model="published_at"
-                             type="datetime-local"
-                             hint="Để trống = đăng ngay bây giờ"/>
-                </div>
+                    <div class="mt-3">
+                        <x-input label="Thời gian đăng" wire:model="published_at"
+                                 type="datetime-local"
+                                 hint="Để trống = đăng ngay bây giờ"/>
+                    </div>
                 @endif
             </x-card>
+
+            {{-- Danh mục --}}
+            <x-card title="Danh mục" shadow class="p-3!">
+                <x-select label="Danh mục" wire:model="category_id"
+                          :options="$this->categoryOptions"
+                          placeholder="(Chưa chọn danh mục)"
+                          placeholder-value=""
+                          option-value="id" option-label="name"/>
+            </x-card>
+
+
 {{--            ảnh đại diện--}}
             <x-card title="Ảnh đại diện" shadow class="p-3!">
                 <div x-data="{ previewUrl: null }" x-on:livewire-upload-start="previewUrl = null">

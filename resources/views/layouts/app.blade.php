@@ -98,6 +98,7 @@
                 </x-menu-sub>
                 <x-menu-sub title="{{__('Interface configuration')}}" icon="o-cog-6-tooth">
                     <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
+                    <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
                 </x-menu-sub>
             @endcan
 
@@ -122,6 +123,8 @@
                     <x-menu-item title="Môn học" link="{{route('admin.subject.index')}}" :active="request()->routeIs('admin.subject.*')"/>
                 </x-menu-sub>
             @endcanany
+            <x-menu-item title="Danh sách đối tác" icon="o-briefcase" link="{{route('admin.partner.index')}}" :active="request()->routeIs('admin.partner.*')"/>
+
         </x-menu>
     </x-slot:sidebar>
     {{-- end sidebar --}}

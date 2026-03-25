@@ -152,18 +152,6 @@ new class extends Component {
             throw $e;
         }
 
-        $this->dispatch('modal:confirm', [
-            'title'             => 'Bạn có chắc muốn lưu thay đổi không?',
-            'icon'              => 'question',
-            'confirmButtonText' => 'Xác nhận',
-            'cancelButtonText'  => 'Hủy',
-            'method'            => 'confirmSave',
-        ]);
-    }
-
-    #[On('confirmSave')]
-    public function confirmSave(): void
-    {
         $category      = Category::findOrFail($this->id);
         $thumbnailPath = $this->currentThumbnail;
 
@@ -184,7 +172,7 @@ new class extends Component {
             'thumbnail'   => $thumbnailPath,
         ]);
 
-        $this->success('Cập nhật danh mục thành công!', redirectTo: route('admin.category.index'));
+        $this->success('Cập nhật danh mục thành công!');
     }
 };
 ?>
@@ -303,7 +291,6 @@ new class extends Component {
             {{-- Hành động --}}
             <x-card title="Hành động" shadow separator class="p-3!">
                 <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
-                <x-button label="Trở lại" class="bg-warning text-white w-full my-1" link="{{ route('admin.category.index') }}"/>
             </x-card>
 
             {{-- Danh mục cha --}}

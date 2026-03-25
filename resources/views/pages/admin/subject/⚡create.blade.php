@@ -236,11 +236,6 @@ new class extends Component {
                     wire:click="save"
                     spinner="save"
                 />
-                <x-button
-                    label="Trở lại"
-                    class="bg-warning text-white w-full my-1"
-                    link="{{ route('admin.subject.index') }}"
-                />
             </x-card>
 
             <x-card title="Cài đặt" shadow class="p-3!">

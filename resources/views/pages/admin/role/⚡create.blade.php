@@ -120,7 +120,6 @@ new class extends Component {
 
         <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
             <x-button label="Lưu" class="bg-primary text-white my-1 w-full" wire:click="save" spinner/>
-            <x-button label="Trở lại" class="bg-warning text-white my-1 w-full" link="{{route('admin.role.index')}}" />
         </x-card>
     </div>
 </div>

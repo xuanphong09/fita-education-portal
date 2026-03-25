@@ -33,17 +33,17 @@
 {{-- start nav bar--}}
 <div class="sticky top-0 z-50 w-full">
     {{-- start top nav bar--}}
-    <div class="bg-fita text-white text-sm py-2 px-4 flex justify-between items-center h-8">
+    <div class="bg-fita text-white text-sm py-2 lg:px-4 px-2 flex justify-between items-center h-8">
 
         {{-- Bên trái: Tên trường --}}
-        <div class="flex items-center gap-3 lg:ms-10 text-[14px]">
+        <div class="flex items-center gap-3 lg:ms-10 text-[14px] uppercase">
             <a href="@if(app()->getLocale() == 'vi') https://vnua.edu.vn  @else https://eng.vnua.edu.vn/ @endif" class="">{{__('Vietnam National University of Agriculture')}}</a>
         </div>
 
         {{-- Bên phải: Link phụ (ICETAI, Sổ tay...) --}}
         <div class="flex items-center font-medium">
             <livewire:client.global-search />
-            <span class="separator text-[18px] ms-3 me-2 text-white">|</span>
+            <span class="separator text-[18px] lg:ms-3 ms-2 lf:me-2 me-1 text-white">|</span>
             <livewire:language-switcher layout="client"/>
             @auth
                 <span class="separator text-[18px] mx-2 text-white">|</span>
@@ -74,28 +74,38 @@
                         <li>
                             <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100" href="{{route('admin.dashboard')}}">
                                 <x-icon name="o-wrench" class="w-5 h-5"/>
-                                Trang quản trị
+                                {{__('Admin Dashboard')}}
                             </a>
                         </li>
-
+                        @if(auth() && auth()->user()->hasRole('giang_vien'))
                         <li>
-                            <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100">
+                            @php
+                                $myLecturer = auth()->user()->lecturer;
+                                $profileUrl = $myLecturer
+                                    ? route('client.lecturers.profile', ['slug' => $myLecturer->staff_code])
+                                    : '#';
+                            @endphp
+                            <a
+                                href="{{ $profileUrl }}"
+                                class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
+                            >
                                 <x-icon name="o-document" class="w-5 h-5"/>
-                                Trang web cá nhân
+                                {{__('Personal website')}}
                             </a>
                         </li>
+                        @endif
 
                         <li>
                             <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100">
                                 <x-icon name="o-user" class="w-5 h-5"/>
-                                Tài khoản
+                                {{__('Account')}}
                             </a>
                         </li>
 
                         <li class="border-t mt-1 pt-1">
                             <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100 text-red-600" href="{{route('handleLogout')}}">
                                 <x-icon name="o-arrow-right-on-rectangle" class="w-5 h-5"/>
-                                Đăng xuất
+                                {{__('Logout')}}
                             </a>
                         </li>
 
@@ -144,6 +154,11 @@
                             label="{{__('Faculty of Information Technology')}}"
                             link="{{route('client.information')}}"
                         ></x-button>
+                        <x-button
+                            class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"
+                            label="{{__('Lecturers - Staff')}}"
+                            link="{{route('client.lecturers.index')}}"
+                        ></x-button>
                     </li>
 {{--                    <li class="w-full">--}}
 {{--                        <x-button--}}
@@ -162,12 +177,12 @@
 
             <div class="dropdown dropdown-hover h-full group">
                 <x-button
-                    link="{{ route('client.training-programs.index') }}"
+                    link="{{ route('client.training-programs.major','cong-nghe-phan-mem') }}"
                     tabindex="0"
                     class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                     responsive
                 >
-                    Đào tạo
+                    {{__('Programs')}}
                 </x-button>
 
                 <ul tabindex="0" class="text-black dropdown-content z-50 px-0 menu shadow-lg bg-base-100 rounded-b-box border border-gray-300 border-t-transparent w-max min-w-full max-h-80 overflow-auto">
@@ -236,11 +251,12 @@
         <x-menu>
             <x-menu-item title="{{__('Home page')}}" link="{{route('client.home')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.home')"/>
             <x-menu-sub title="{{__('Introduction')}}" class="rounded-none hover:bg-fita! hover:text-white!" >
-                <x-menu-item title="{{__('General Introduction')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
+                <x-menu-item title="{{__('Faculty of Information Technology')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
+                <x-menu-item title="{{__('Lecturers - Staff')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
             </x-menu-sub>
             <x-menu-item title="{{__('Posts')}}" link="{{route('client.posts.index')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.posts.index')"/>
             <x-menu-sub title="{{__('Training Programs')}}" class="rounded-none hover:bg-fita! hover:text-white!" :active="request()->routeIs('client.training-programs.*')">
-                <x-menu-item title="Tất cả chương trình đào tạo" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.training-programs.index')}}" :active="request()->routeIs('client.training-programs.index')"/>
+{{--                <x-menu-item title="Tất cả chương trình đào tạo" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.training-programs.index')}}" :active="request()->routeIs('client.training-programs.index')"/>--}}
                 @foreach($trainingMajors as $major)
                     @php
                         $majorLabel = $major->getTranslation('name', app()->getLocale(), false)

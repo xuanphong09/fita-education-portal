@@ -750,7 +750,7 @@ new class extends Component {
             <x-loading class="" />
             <p>Đang tải dữ liệu...</p>
         </div>
-        <div class="space-y-3" wire:loading.remove wire:target="openCreateSubjectPivot" >
+        <div class="space-y-3 py-0 max-h-[70vh] overflow-y-auto pr-1" wire:loading.remove wire:target="openCreateSubjectPivot" >
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-3 ">
                 <div>
                     @if($pivot_original_subject_id)

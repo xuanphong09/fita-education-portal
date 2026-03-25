@@ -62,18 +62,6 @@ new class extends Component {
             throw $e;
         }
 
-        $this->dispatch('modal:confirm', [
-            'title'             => 'Bạn có chắc muốn lưu thay đổi không?',
-            'icon'              => 'question',
-            'confirmButtonText' => 'Xác nhận',
-            'cancelButtonText'  => 'Hủy',
-            'method'            => 'confirmSave',
-        ]);
-    }
-
-    #[On('confirmSave')]
-    public function confirmSave(): void
-    {
         GroupSubject::findOrFail($this->id)->update([
             'name'        => ['vi' => trim($this->name_vi),        'en' => trim($this->name_en)],
             'description' => ['vi' => trim($this->description_vi), 'en' => trim($this->description_en)],
@@ -81,7 +69,7 @@ new class extends Component {
             'is_active'   => $this->is_active,
         ]);
 
-        $this->success('Cập nhật nhóm môn học thành công!', redirectTo: route('admin.group-subject.index'));
+        $this->success('Cập nhật nhóm môn học thành công!');
     }
 };
 ?>
@@ -202,11 +190,6 @@ new class extends Component {
                     class="bg-primary text-white w-full my-1"
                     wire:click="save"
                     spinner="save"
-                />
-                <x-button
-                    label="Trở lại"
-                    class="bg-warning text-white w-full my-1"
-                    link="{{ route('admin.group-subject.index') }}"
                 />
             </x-card>
 

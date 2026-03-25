@@ -30,7 +30,7 @@ new class extends Component {
         'data.vi.dynamicBlocks.*.data.title' => 'required_if:data.vi.dynamicBlocks.*.type,blockSingle|nullable|string',
         'data.vi.dynamicBlocks.*.data.*.title' => 'required_if:data.vi.dynamicBlocks.*.type,block3Columns|nullable|string',
         'data.vi.dynamicBlocks.*.data.*.content' => 'required_if:data.vi.dynamicBlocks.*.type,block3Columns|nullable|string',
-        'data.vi.dynamicBlocks.*.data.photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+//        'data.vi.dynamicBlocks.*.data.photo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
 
     ], as: [
         'data.vi.dynamicBlocks.*.data.description' => 'mô tả ngắn',

@@ -208,8 +208,8 @@ class extends Component {
                     @endif
 
                     {{-- Content --}}
-                    <div class="max-w-none">
-                        {!! $post->getTranslation('content', app()->getLocale()) !!}
+                    <div class="tinymce-content max-w-none">
+                    {!! $post->getTranslation('content', app()->getLocale()) !!}
                     </div>
 
                     {{-- Share Buttons --}}

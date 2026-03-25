@@ -124,64 +124,81 @@ class extends Component {
             </a>
         </div>
     @else
-        <div class="w-[90%] lg:w-[900px] mx-auto py-8">
+        <div class="container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <article class="bg-white rounded-lg shadow-lg overflow-hidden">
+                        @if($thumbnail)
+                            <div class="aspect-video bg-gray-200 overflow-hidden">
+                                <img
+                                    src="{{ Storage::url($thumbnail) }}"
+                                    alt="{{ $title }}"
+                                    class="w-full h-full object-cover"
+                                />
+                            </div>
+                        @endif
 
-            <h1 class="text-2xl lg:text-3xl font-bold text-gray-900 leading-tight mb-4">
-                {{ $title }}
-            </h1>
+                        <div class="p-4 lg:p-6">
+                            @if($categoryName)
+                                <span class="inline-block bg-fita text-white text-sm px-3 py-1 rounded mb-4">
+                                    {{ $categoryName }}
+                                </span>
+                            @endif
 
-            <div class="flex flex-wrap items-center gap-3 text-sm text-gray-500 mb-6 pb-4 border-b border-gray-200">
-                @if($categoryName)
-                    <span class="bg-fita/10 text-fita px-2 py-0.5 rounded text-xs font-medium">
-                        {{ $categoryName }}
-                    </span>
-                @endif
-                @if($authorName)
-                    <span class="flex items-center gap-1">
-                        <x-icon name="o-user" class="w-4 h-4"/>
-                        {{ $authorName }}
-                    </span>
-                @endif
-                <span class="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded border border-yellow-200">
-                    ⚠ Đây là bản xem trước, chưa được lưu
-                </span>
+                            <h1 class="text-3xl lg:text-4xl font-bold mb-4">
+                                {{ $title }}
+                            </h1>
+
+                            <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 pb-6 mb-6 border-b">
+                                @if($authorName)
+                                    <div class="flex items-center gap-2">
+                                        <x-icon name="o-user" class="w-4 h-4" />
+                                        <span>{{ $authorName }}</span>
+                                    </div>
+                                @endif
+                                <div class="text-xs text-yellow-700 bg-yellow-50 px-2 py-1 rounded border border-yellow-200">
+                                    {{ __('This is a draft preview, not saved yet.') }}
+                                </div>
+                            </div>
+
+                            @if($excerpt)
+                                <div class="bg-gray-50 border-l-4 border-fita p-4 mb-6 italic text-gray-700">
+                                    {{ $excerpt }}
+                                </div>
+                            @endif
+
+                            <div class="tinymce-content max-w-none">
+                                {!! $content !!}
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+                        <h3 class="font-bold text-lg mb-3">{{ __('Preview info') }}</h3>
+                        <div class="space-y-2 text-sm text-gray-600">
+                            <p>
+                                <span class="font-semibold">{{ __('Status') }}:</span>
+                                {{ $status }}
+                            </p>
+                            <p class="text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
+                                {{ __('Data is loaded from temporary cache.') }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-md p-4">
+                        <a
+                            href="{{ route('admin.post.create') }}"
+                            class="btn btn-block bg-fita hover:bg-fita2 text-white border-0"
+                        >
+                            <x-icon name="o-arrow-left" class="w-4 h-4" />
+                            {{ __('Back to editor') }}
+                        </a>
+                    </div>
+                </div>
             </div>
-
-            @if($thumbnail)
-                <div class="mb-6">
-                    <img src="{{ Storage::url($thumbnail) }}" alt="{{ $title }}"
-                         class="w-full max-h-[480px] object-cover rounded-lg shadow-sm"/>
-                </div>
-            @endif
-
-            @if($excerpt)
-                <div class="bg-gray-50 border-l-4 border-fita rounded-r-lg p-4 mb-6 text-gray-700 italic text-base">
-                    {{ $excerpt }}
-                </div>
-            @endif
-
-            <div class="prose prose-lg max-w-none
-                        prose-headings:text-gray-900 prose-headings:font-bold
-                        prose-p:text-gray-700 prose-p:leading-relaxed
-                        prose-a:text-fita prose-a:no-underline hover:prose-a:underline
-                        prose-img:rounded-lg prose-img:shadow-sm prose-img:max-w-full
-                        prose-table:border prose-table:border-gray-200
-                        prose-th:bg-gray-100 prose-th:p-2
-                        prose-td:p-2 prose-td:border prose-td:border-gray-200
-                        prose-code:bg-gray-100 prose-code:px-1 prose-code:rounded
-                        prose-blockquote:border-fita prose-blockquote:bg-gray-50 prose-blockquote:rounded-r">
-                {!! $content !!}
-            </div>
-
-            @if($categoryName)
-                <div class="mt-8 pt-6 border-t border-gray-200">
-                    <span class="text-sm text-gray-500">Danh mục:</span>
-                    <span class="ml-2 bg-fita/10 text-fita px-3 py-1 rounded-full text-sm font-medium">
-                        {{ $categoryName }}
-                    </span>
-                </div>
-            @endif
-
         </div>
     @endif
 </div>

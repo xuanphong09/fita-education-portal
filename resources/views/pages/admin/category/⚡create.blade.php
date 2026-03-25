@@ -230,7 +230,6 @@ new class extends Component {
             {{-- Hành động --}}
             <x-card title="Hành động" shadow separator class="p-3!">
                 <x-button label="Lưu danh mục" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
-                <x-button label="Trở lại" class="bg-warning text-white w-full my-1" link="{{ route('admin.category.index') }}"/>
             </x-card>
 
             {{-- Danh mục cha --}}
