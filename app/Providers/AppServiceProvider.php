@@ -18,8 +18,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::before(function ($user, $ability) {
             return $user->hasRole('super_admin') ? true : null;
         });
-//        if (str_contains(request()->getHost(), 'ngrok-free.app')) {
+
+        if (env('APP_ENV') !== 'local') {
             URL::forceScheme('https');
-//        }
+        }
     }
 }
