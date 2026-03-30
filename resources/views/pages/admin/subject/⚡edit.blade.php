@@ -18,9 +18,9 @@ new class extends Component {
     public string $name_vi = '';
     public string $name_en = '';
     public int|string|null $group_subject_id = null;
-    public int|string|null $credits = 0;
-    public int|string|null $credits_theory = 0;
-    public int|string|null $credits_practice = 0;
+    public string $credits = '0';
+    public string $credits_theory = '0';
+    public string $credits_practice = '0';
     public bool $is_active = true;
     public array $prerequisite_subject_ids = [];
 
@@ -35,9 +35,9 @@ new class extends Component {
         $this->name_vi = $subject->getTranslation('name', 'vi', false) ?: '';
         $this->name_en = $subject->getTranslation('name', 'en', false) ?: '';
         $this->group_subject_id = $subject->group_subject_id;
-        $this->credits = (int)$subject->credits;
-        $this->credits_theory = (int)$subject->credits_theory;
-        $this->credits_practice = (int)$subject->credits_practice;
+        $this->credits = Subject::formatCredit($subject->credits);
+        $this->credits_theory = Subject::formatCredit($subject->credits_theory);
+        $this->credits_practice = Subject::formatCredit($subject->credits_practice);
         $this->is_active = (bool)$subject->is_active;
         $programId = $this->programIdsUsingSubject()->first();
 
@@ -53,9 +53,9 @@ new class extends Component {
             'name_vi' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'group_subject_id' => ['nullable', 'integer', 'exists:group_subjects,id'],
-            'credits' => ['required', 'integer', 'min:0', 'max:20'],
-            'credits_theory' => ['required', 'integer', 'min:0', 'max:20'],
-            'credits_practice' => ['required', 'integer', 'min:0', 'max:20'],
+            'credits' => $this->decimalRules('Tổng tín chỉ'),
+            'credits_theory' => $this->decimalRules('Tín chỉ lý thuyết'),
+            'credits_practice' => $this->decimalRules('Tín chỉ thực hành'),
             'is_active' => ['boolean'],
             'prerequisite_subject_ids' => ['array'],
             'prerequisite_subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
@@ -68,18 +68,52 @@ new class extends Component {
         'code.unique' => 'Mã môn học đã tồn tại.',
         'name_vi.required' => 'Tên môn học tiếng Việt không được để trống.',
         'credits.required' => 'Tổng tín chỉ không được để trống.',
-        'credits.integer' => 'Tổng tín chỉ phải là số nguyên.',
-        'credits.min' => 'Tổng tín chỉ không được âm.',
-        'credits.max' => 'Tổng tín chỉ không được lớn hơn 20.',
+        'credits.regex' => 'Tổng tín chỉ chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'credits_theory.required' => 'Tín chỉ lý thuyết không được để trống.',
-        'credits_theory.integer' => 'Tín chỉ lý thuyết phải là số nguyên.',
-        'credits_theory.min' => 'Tín chỉ lý thuyết không được âm.',
-        'credits_theory.max' => 'Tín chỉ lý thuyết không được lớn hơn 20.',
+        'credits_theory.regex' => 'Tín chỉ lý thuyết chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'credits_practice.required' => 'Tín chỉ thực hành không được để trống.',
-        'credits_practice.integer' => 'Tín chỉ thực hành phải là số nguyên.',
-        'credits_practice.min' => 'Tín chỉ thực hành không được âm.',
-        'credits_practice.max' => 'Tín chỉ thực hành không được lớn hơn 20.',
+        'credits_practice.regex' => 'Tín chỉ thực hành chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
     ];
+
+    protected function validationAttributes(): array
+    {
+        return [
+            'credits' => 'Tổng tín chỉ',
+            'credits_theory' => 'Tín chỉ lý thuyết',
+            'credits_practice' => 'Tín chỉ thực hành',
+        ];
+    }
+
+    protected function decimalRules(string $label): array
+    {
+        return [
+            'required',
+            'regex:/^\d+(?:[\.,]\d)?$/',
+            function ($attribute, $value, $fail) use ($label) {
+            $decimal = $this->toDecimal($value);
+
+            if ($decimal === null) {
+                    $fail($label . ' không hợp lệ.');
+                    return;
+            }
+
+                if ($decimal < 0 || $decimal > 20) {
+                    $fail($label . ' phải nằm trong khoảng từ 0 đến 20.');
+                }
+            },
+        ];
+    }
+
+    protected function toDecimal(int|float|string|null $value): ?float
+    {
+        $normalized = str_replace(',', '.', trim((string) $value));
+
+        if ($normalized === '' || !preg_match('/^\d+(?:\.\d)?$/', $normalized)) {
+            return null;
+        }
+
+        return round((float) $normalized, 1);
+    }
 
     public function updated(string $property): void
     {
@@ -168,16 +202,16 @@ new class extends Component {
 
     protected function validateCreditsDistribution(): void
     {
-        $credits = filter_var($this->credits, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
-        $creditsTheory = filter_var($this->credits_theory, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
-        $creditsPractice = filter_var($this->credits_practice, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
+        $credits = $this->toDecimal($this->credits);
+        $creditsTheory = $this->toDecimal($this->credits_theory);
+        $creditsPractice = $this->toDecimal($this->credits_practice);
 
         // Skip cross-field check while user is still typing/clearing one of the fields.
         if ($credits === null || $creditsTheory === null || $creditsPractice === null) {
             return;
         }
 
-        if (($creditsTheory + $creditsPractice) !== $credits) {
+        if (abs(($creditsTheory + $creditsPractice) - $credits) > 0.0001) {
             throw ValidationException::withMessages([
                 'credits' => ' ',
                 'credits_theory' => ' ',
@@ -198,9 +232,9 @@ new class extends Component {
                 'en' => trim($this->name_en),
             ],
             'group_subject_id' => !blank($this->group_subject_id) ? (int)$this->group_subject_id : null,
-            'credits' => (int)$this->credits,
-            'credits_theory' => (int)$this->credits_theory,
-            'credits_practice' => (int)$this->credits_practice,
+            'credits' => $this->toDecimal($this->credits),
+            'credits_theory' => $this->toDecimal($this->credits_theory),
+            'credits_practice' => $this->toDecimal($this->credits_practice),
             'is_active' => $this->is_active,
         ];
     }
@@ -287,11 +321,11 @@ new class extends Component {
                     />
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <x-input label="Tổng tín chỉ" type="number" min="0" wire:model.live.debounce.300ms="credits"
+                    <x-input label="Tổng tín chỉ" type="text" inputmode="decimal" wire:model.live.debounce.300ms="credits"
                              required/>
-                    <x-input label="Tín chỉ lý thuyết" type="number" min="0"
+                    <x-input label="Tín chỉ lý thuyết" type="text" inputmode="decimal"
                              wire:model.live.debounce.300ms="credits_theory" required/>
-                    <x-input label="Tín chỉ thực hành" type="number" min="0"
+                    <x-input label="Tín chỉ thực hành" type="text" inputmode="decimal"
                              wire:model.live.debounce.300ms="credits_practice" required/>
                 </div>
                 @error('credits_error')
@@ -305,36 +339,36 @@ new class extends Component {
             </x-card>
 
 
-            <x-card title="Môn học phụ thuộc vào môn này" shadow class="p-3!">
-                @if($this->requiredBySubjects->isNotEmpty())
-                    <div class="overflow-x-auto">
-                        <table class="table w-full text-sm">
-                            <thead>
-                            <tr>
-                                <th class="w-20">Mã môn</th>
-                                <th>Tên môn học</th>
-                                <th>Chương trình đào tạo</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            @foreach($this->requiredBySubjects as $item)
-                                <tr class="hover:bg-gray-50">
-                                    <td class="font-mono font-semibold text-primary">{{ $item->subject->code }}</td>
-                                    <td>
-                                        <div>{{ $item->subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                                        <div
-                                            class="text-xs text-gray-400">{{ $item->subject->getTranslation('name', 'en', false) ?: 'Chưa có tên tiếng Anh' }}</div>
-                                    </td>
-                                    <td>{{ $item->trainingProgram?->getTranslation('name', 'vi', false) ?: '—' }}</td>
-                                </tr>
-                            @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @else
-                    <div class="text-sm text-gray-500 py-2">Hiện chưa có môn học nào lấy môn này làm tiên quyết.</div>
-                @endif
-            </x-card>
+{{--            <x-card title="Môn học phụ thuộc vào môn này" shadow class="p-3!">--}}
+{{--                @if($this->requiredBySubjects->isNotEmpty())--}}
+{{--                    <div class="overflow-x-auto">--}}
+{{--                        <table class="table w-full text-sm">--}}
+{{--                            <thead>--}}
+{{--                            <tr>--}}
+{{--                                <th class="w-20">Mã môn</th>--}}
+{{--                                <th>Tên môn học</th>--}}
+{{--                                <th>Chương trình đào tạo</th>--}}
+{{--                            </tr>--}}
+{{--                            </thead>--}}
+{{--                            <tbody>--}}
+{{--                            @foreach($this->requiredBySubjects as $item)--}}
+{{--                                <tr class="hover:bg-gray-50">--}}
+{{--                                    <td class="font-mono font-semibold text-primary">{{ $item->subject->code }}</td>--}}
+{{--                                    <td>--}}
+{{--                                        <div>{{ $item->subject->getTranslation('name', 'vi', false) ?: '—' }}</div>--}}
+{{--                                        <div--}}
+{{--                                            class="text-xs text-gray-400">{{ $item->subject->getTranslation('name', 'en', false) ?: 'Chưa có tên tiếng Anh' }}</div>--}}
+{{--                                    </td>--}}
+{{--                                    <td>{{ $item->trainingProgram?->getTranslation('name', 'vi', false) ?: '—' }}</td>--}}
+{{--                                </tr>--}}
+{{--                            @endforeach--}}
+{{--                            </tbody>--}}
+{{--                        </table>--}}
+{{--                    </div>--}}
+{{--                @else--}}
+{{--                    <div class="text-sm text-gray-500 py-2">Hiện chưa có môn học nào lấy môn này làm tiên quyết.</div>--}}
+{{--                @endif--}}
+{{--            </x-card>--}}
 
             <x-card title="Đang được dùng trong CTDT" shadow class="p-3!">
                 @if($this->semesterUsages->isNotEmpty())
@@ -386,13 +420,13 @@ new class extends Component {
 
             <x-card title="Thống kê" shadow class="p-3!">
                 <div class="text-sm space-y-2">
-                    <div class="flex justify-between gap-3">
-                        <span class="text-gray-500">Môn phụ thuộc:</span>
-                        <x-badge :value="$this->requiredBySubjects->count() . ' môn'" class="badge-info badge-sm"/>
-                    </div>
+{{--                    <div class="flex justify-between gap-3">--}}
+{{--                        <span class="text-gray-500">Môn phụ thuộc:</span>--}}
+{{--                        <x-badge :value="$this->requiredBySubjects->count() . ' môn'" class="badge-info badge-md text-white font-semibold"/>--}}
+{{--                    </div>--}}
                     <div class="flex justify-between gap-3">
                         <span class="text-gray-500">Dùng trong CTDT:</span>
-                        <x-badge :value="$this->semesterUsages->count() . ' học kỳ'" class="badge-success badge-sm"/>
+                        <x-badge :value="$this->semesterUsages->count() . ' học kỳ'" class="badge-success badge-md text-white font-semibold"/>
                     </div>
                 </div>
             </x-card>

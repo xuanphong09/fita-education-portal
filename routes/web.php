@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Middleware\SetAdminLocale;
+use App\Http\Controllers\TinyMCEController;
 
 Route::livewire('/', 'pages::client.home')->name('client.home');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
@@ -17,9 +18,6 @@ Route::livewire('/bai-viet/{slug}', 'pages::client.posts.show')
 
 Route::livewire('/giang-vien', 'pages::client.lecturers.index')->name('client.lecturers.index');
 Route::livewire('/giang-vien/{slug}', 'pages::client.lecturers.profile')->name('client.lecturers.profile');
-
-
-
 
 
 // Auth
@@ -65,6 +63,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/post/index', 'pages::admin.post.index')->name('admin.post.index');
         Route::livewire('/post/create', 'pages::admin.post.create')->name('admin.post.create');
         Route::livewire('/post/edit/{id}', 'pages::admin.post.edit')->name('admin.post.edit');
+        Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
+
     });
 
     // ---- Quản lý đào tạo ----

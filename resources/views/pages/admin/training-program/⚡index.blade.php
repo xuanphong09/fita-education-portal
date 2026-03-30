@@ -1,22 +1,37 @@
 <?php
 
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use App\Models\Major;
 use App\Models\Intake;
 use App\Models\TrainingProgram;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 new class extends Component {
     use WithPagination, Toast;
 
     public array $sortBy = ['column' => 'updated_at', 'direction' => 'desc'];
     public int $perPage = 10;
+    #[Url(as: 'search')]
     public string $search = '';
     public ?int $major_id = null;
     public ?int $intake_id = null;
     public string $filterStatus = '';
+
+    public bool $modalDuplicate = false;
+    public ?int $duplicateFromId = null;
+    public string $duplicate_name_vi = '';
+    public string $duplicate_name_en = '';
+    public ?int $duplicate_major_id = null;
+    public ?int $duplicate_intake_id = null;
+    public ?int $duplicate_school_year_start = null;
+    public ?int $duplicate_school_year_end = null;
+    public string $duplicate_version = '';
+    public string $duplicate_status = 'draft';
 
     public function updatedSearch(): void
     {
@@ -40,6 +55,214 @@ new class extends Component {
         $this->intake_id = null;
         $this->filterStatus = '';
         $this->resetPage();
+    }
+
+    public function openDuplicateModal(int $id): void
+    {
+        $program = TrainingProgram::findOrFail($id);
+
+        $this->duplicateFromId = $id;
+        $this->duplicate_name_vi = (string)($program->getTranslation('name', 'vi', false) ?? '');
+        $this->duplicate_name_en = (string)($program->getTranslation('name', 'en', false) ?? '');
+        $this->duplicate_major_id = $program->major_id;
+        $this->duplicate_intake_id = $program->intake_id;
+        $this->duplicate_school_year_start = $program->school_year_start;
+        $this->duplicate_school_year_end = $program->school_year_end;
+        $this->duplicate_status = 'draft';
+        $this->resetErrorBag();
+        $this->refreshDuplicateVersion();
+        $this->modalDuplicate = true;
+    }
+
+    public function updatedDuplicateIntakeId(): void
+    {
+        $this->refreshDuplicateVersion();
+    }
+
+    public function updatedDuplicateSchoolYearStart(): void
+    {
+        $this->refreshDuplicateVersion();
+    }
+
+    private function refreshDuplicateVersion(): void
+    {
+        $intakeId = (int)($this->duplicate_intake_id ?? 0);
+        $year = (int)($this->duplicate_school_year_start ?? 0);
+
+        if ($intakeId <= 0 || $year <= 0) {
+            $this->duplicate_version = '';
+            return;
+        }
+
+        $intakeName = Intake::query()->where('id', $intakeId)->value('name');
+        $this->duplicate_version = $intakeName ? trim((string)$intakeName) . ' - ' . (string)$year : '';
+    }
+
+    public function rules(): array
+    {
+        return [
+            'duplicate_name_vi' => ['required', 'string', 'max:255'],
+            'duplicate_name_en' => ['nullable', 'string', 'max:255'],
+            'duplicate_major_id' => ['nullable', 'exists:majors,id'],
+            'duplicate_intake_id' => ['required', 'exists:intakes,id'],
+            'duplicate_school_year_start' => ['required', 'integer', 'min:2020', 'max:2100'],
+            'duplicate_school_year_end' => ['nullable', 'integer', 'min:2020', 'max:2100', 'gte:duplicate_school_year_start'],
+            'duplicate_version' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('training_programs', 'version')->where(function ($q) {
+                    $q->whereNull('deleted_at');
+
+                    if ($this->duplicate_intake_id) {
+                        $q->where('intake_id', $this->duplicate_intake_id);
+                    }
+
+                    if ($this->duplicate_major_id) {
+                        $q->where('major_id', $this->duplicate_major_id);
+                    } else {
+                        $q->whereNull('major_id');
+                    }
+                }),
+            ],
+            'duplicate_status' => ['required', 'in:draft,published,archived'],
+        ];
+    }
+
+    protected $messages = [
+        'duplicate_name_vi.required' => 'Tên chương trình (Tiếng Việt) là bắt buộc.',
+        'duplicate_name_vi.string' => 'Tên chương trình (Tiếng Việt) phải là một chuỗi.',
+        'duplicate_name_vi.max' => 'Tên chương trình (Tiếng Việt) không được vượt quá 255 ký tự.',
+        'duplicate_name_en.string' => 'Tên chương trình (Tiếng Anh) phải là một chuỗi.',
+        'duplicate_name_en.max' => 'Tên chương trình (Tiếng Anh) không được vượt quá 255 ký tự.',
+        'duplicate_major_id.exists' => 'Chuyên ngành không tồn tại.',
+        'duplicate_intake_id.required' => 'Khóa là bắt buộc.',
+        'duplicate_intake_id.exists' => 'Khóa không tồn tại.',
+        'duplicate_school_year_start.required' => 'Năm bắt đầu là bắt buộc.',
+        'duplicate_school_year_start.integer' => 'Năm bắt đầu phải là một số nguyên.',
+        'duplicate_school_year_start.min' => 'Năm bắt đầu không được nhỏ hơn 2020.',
+        'duplicate_school_year_start.max' => 'Năm bắt đầu không được lớn hơn 2100.',
+        'duplicate_school_year_end.integer' => 'Năm kết thúc phải là một số nguyên.',
+        'duplicate_school_year_end.min' => 'Năm kết thúc không được nhỏ hơn 2020.',
+        'duplicate_school_year_end.max' => 'Năm kết thúc không được lớn hơn 2100.',
+        'duplicate_school_year_end.gte' => 'Năm kết thúc phải lớn hơn hoặc bằng năm bắt đầu.',
+        'duplicate_version.required' => 'Phiên bản là bắt buộc.',
+        'duplicate_version.string' => 'Phiên bản phải là một chuỗi.',
+        'duplicate_version.max' => 'Phiên bản không được vượt quá 20 ký tự.',
+        'duplicate_version.unique' => 'Phiên bản đã tồn tại trong cùng khóa và chuyên ngành. Vui lòng chọn phiên bản khác hoặc thay đổi khóa/chuyên ngành.',
+        'duplicate_status.required' => 'Trạng thái là bắt buộc.',
+        'duplicate_status.in' => 'Trạng thái không hợp lệ. Phải là draft, published hoặc archived.',
+    ];
+
+    public function confirmDuplicate(): void
+    {
+        $this->validate([
+            'duplicate_name_vi' => ['required', 'string', 'max:255'],
+            'duplicate_name_en' => ['nullable', 'string', 'max:255'],
+            'duplicate_major_id' => ['nullable', 'exists:majors,id'],
+            'duplicate_intake_id' => ['required', 'exists:intakes,id'],
+            'duplicate_school_year_start' => ['required', 'integer', 'min:2020', 'max:2100'],
+            'duplicate_school_year_end' => ['nullable', 'integer', 'min:2020', 'max:2100', 'gte:duplicate_school_year_start'],
+            'duplicate_version' => [
+                'required',
+                'string',
+                'max:20',
+                Rule::unique('training_programs', 'version')->where(function ($q) {
+                    $q->whereNull('deleted_at');
+
+                    if ($this->duplicate_intake_id) {
+                        $q->where('intake_id', $this->duplicate_intake_id);
+                    }
+
+                    if ($this->duplicate_major_id) {
+                        $q->where('major_id', $this->duplicate_major_id);
+                    } else {
+                        $q->whereNull('major_id');
+                    }
+                }),
+            ],
+            'duplicate_status' => ['required', 'in:draft,published,archived'],
+        ]);
+
+        $sourceProgram = TrainingProgram::with('semesters.subjects')->findOrFail($this->duplicateFromId);
+
+        DB::transaction(function () use ($sourceProgram) {
+            $newProgram = TrainingProgram::create([
+                'version' => $this->duplicate_version,
+                'status' => $this->duplicate_status,
+                'major_id' => $this->duplicate_major_id,
+                'intake_id' => $this->duplicate_intake_id,
+                'type' => $sourceProgram->type,
+                'level' => $sourceProgram->level,
+                'language' => $sourceProgram->language,
+                'duration_time' => $sourceProgram->duration_time,
+                'school_year_start' => $this->duplicate_school_year_start,
+                'school_year_end' => $this->duplicate_school_year_end,
+                'total_credits' => $sourceProgram->total_credits,
+                'name' => [
+                    'vi' => $this->duplicate_name_vi,
+                    'en' => $this->duplicate_name_en,
+                ],
+                'notes' => $sourceProgram->notes,
+                'published_at' => $this->duplicate_status === 'published' ? now() : null,
+            ]);
+
+            $subjects = $sourceProgram->semesters->flatMap(fn($semester) => $semester->subjects)->unique('id')->values();
+
+            foreach ($sourceProgram->semesters as $semester) {
+                $newSemester = $newProgram->semesters()->create([
+                    'semester_no' => $semester->semester_no,
+                    'total_credits' => $semester->total_credits,
+                ]);
+
+                foreach ($semester->subjects as $subject) {
+                    $newSemester->subjects()->attach($subject->id, [
+                        'type' => $subject->pivot->type,
+                        'notes' => $subject->pivot->notes,
+                        'order' => $subject->pivot->order,
+                    ]);
+                }
+            }
+
+            foreach ($subjects as $subject) {
+                $prerequisites = \App\Models\SubjectPrerequisite::where('training_program_id', $sourceProgram->id)
+                    ->where('subject_id', $subject->id)
+                    ->pluck('prerequisite_subject_id')
+                    ->toArray();
+
+                if (!empty($prerequisites)) {
+                    \App\Models\SubjectPrerequisite::syncForProgramSubject($newProgram->id, $subject->id, $prerequisites);
+                }
+
+                $equivalents = \App\Models\SubjectEquivalent::where('training_program_id', $sourceProgram->id)
+                    ->where('subject_id', $subject->id)
+                    ->pluck('equivalent_subject_id')
+                    ->toArray();
+
+                if (!empty($equivalents)) {
+                    \App\Models\SubjectEquivalent::syncForProgramSubject($newProgram->id, $subject->id, $equivalents);
+                }
+            }
+        });
+
+        $this->modalDuplicate = false;
+        $this->resetDuplicateForm();
+        $this->resetPage();
+
+        $this->success('Đã nhân bản chương trình đào tạo thành công.');
+    }
+
+    protected function resetDuplicateForm(): void
+    {
+        $this->duplicateFromId = null;
+        $this->duplicate_name_vi = '';
+        $this->duplicate_name_en = '';
+        $this->duplicate_major_id = null;
+        $this->duplicate_intake_id = null;
+        $this->duplicate_school_year_start = null;
+        $this->duplicate_school_year_end = null;
+        $this->duplicate_version = '';
+        $this->duplicate_status = 'draft';
     }
 
     public function getHasActiveFiltersProperty(): bool
@@ -84,6 +307,14 @@ new class extends Component {
         return $query->paginate($this->perPage);
     }
 
+    public function getIntakeOptionsProperty(): array
+    {
+        return Intake::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->toArray();
+    }
+
     public function getMajorOptionsProperty(): array
     {
         return Major::query()
@@ -94,18 +325,10 @@ new class extends Component {
                     'id' => $major->id,
                     'name' => $major->getTranslation('name', app()->getLocale(), false)
                         ?: $major->getTranslation('name', 'vi', false)
-                        ?: $major->getTranslation('name', 'en', false)
-                        ?: $major->slug,
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
                 ];
             })
-            ->toArray();
-    }
-
-    public function getIntakeOptionsProperty(): array
-    {
-        return Intake::query()
-            ->orderBy('name')
-            ->get(['id', 'name'])
             ->toArray();
     }
 
@@ -155,16 +378,18 @@ new class extends Component {
     <x-header title="Quản lý chương trình đào tạo"
               class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
         <x-slot:middle class="justify-end!">
-                <x-input
-                    icon="o-magnifying-glass"
-                    placeholder="Tìm theo phiên bản hoặc tên..."
-                    wire:model.live.debounce.300ms="search"
-                    clearable
-                />
+            <x-input
+                icon="o-magnifying-glass"
+                placeholder="Tìm theo phiên bản hoặc tên..."
+                wire:model.live.debounce.300ms="search"
+                clearable
+            />
         </x-slot:middle>
         <x-slot:actions>
-            <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.training-program.trash') }}"/>
-            <x-button icon="o-plus" class="btn-primary text-white" label="Tạo mới" link="{{ route('admin.training-program.create') }}"/>
+            <x-button icon="o-trash" class="btn-ghost" label="Thùng rác"
+                      link="{{ route('admin.training-program.trash') }}"/>
+            <x-button icon="o-plus" class="btn-primary text-white" label="Tạo mới"
+                      link="{{ route('admin.training-program.create') }}"/>
         </x-slot:actions>
     </x-header>
     <div class="flex flex-wrap gap-3 mb-4">
@@ -230,45 +455,53 @@ new class extends Component {
             "
         >
             @scope('cell_id', $program)
-                {{ ($this->programs->currentPage() - 1) * $this->programs->perPage() + $loop->iteration }}
+            {{ ($this->programs->currentPage() - 1) * $this->programs->perPage() + $loop->iteration }}
             @endscope
 
             @scope('cell_name', $program)
-                <div class="font-semibold">{{ $program->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                <div class="text-sm text-gray-400">{{ $program->getTranslation('name', 'en', false) ?: '' }}</div>
+            <div class="font-semibold">{{ $program->getTranslation('name', 'vi', false) ?: '—' }}</div>
+            <div class="text-sm text-gray-400">{{ $program->getTranslation('name', 'en', false) ?: '' }}</div>
             @endscope
 
             @scope('cell_scope', $program)
-                <div class="text-sm">
-                    <div><span class="text-gray-500">{{ __('Major:') }}</span> {{ $program->major?->getTranslation('name', app()->getLocale(), false) ?: $program->major?->getTranslation('name', 'vi', false) ?: $program->major?->getTranslation('name', 'en', false) ?: __('General') }}</div>
-                    <div><span class="text-gray-500">Khóa:</span> {{ $program->intake?->name ?? '—' }}</div>
+            <div class="text-sm">
+                <div><span
+                        class="text-gray-500">{{ __('Major:') }}</span> {{ $program->major?->getTranslation('name', app()->getLocale(), false) ?: $program->major?->getTranslation('name', 'vi', false) ?: $program->major?->getTranslation('name', 'en', false) ?: __('General') }}
                 </div>
+                <div><span class="text-gray-500">Khóa:</span> {{ $program->intake?->name ?? '—' }}</div>
+            </div>
             @endscope
 
             @scope('cell_version', $program)
-                <div class="font-semibold" >{{$program->version}} </div>
+            <div class="font-semibold">{{$program->version}} </div>
             @endscope
 
             @scope('cell_total_credits', $program)
-                <div>{{$program->total_credits . ' TC'}}</div>
+            <div>{{$program->total_credits . ' TC'}}</div>
             @endscope
 
             @scope('cell_status', $program)
-                @if($program->status === 'published')
-                    <x-badge value="Đã xuất bản" class="badge-success badge-md" />
-                @elseif($program->status === 'archived')
-                    <x-badge value="Lưu trữ" class="badge-error badge-md" />
-                @else
-                    <x-badge value="Nháp" class="badge-ghost badge-md" />
-                @endif
+            @if($program->status === 'published')
+                <x-badge value="Đã xuất bản" class="badge-success badge-md text-white font-semibold"/>
+            @elseif($program->status === 'archived')
+                <x-badge value="Lưu trữ" class="badge-error badge-md text-white font-semibold"/>
+            @else
+                <x-badge value="Nháp" class="badge-ghost badge-md text-black font-semibold"/>
+            @endif
             @endscope
 
             @scope('cell_actions', $program)
-                <div class="flex space-x-2">
-                    <x-button icon="o-calendar-days" class="btn-sm btn-ghost text-info" tooltip="Học kỳ & môn học" link="{{ route('admin.training-program.semesters', $program->id) }}"/>
-                    <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa" link="{{ route('admin.training-program.edit', $program->id) }}"/>
-                    <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" tooltip="Xóa" wire:click="delete({{ $program->id }})" spinner="delete({{ $program->id }})" />
-                </div>
+            <div class="flex space-x-2">
+                <x-button icon="o-calendar-days" class="btn-sm btn-ghost text-info" tooltip="Học kỳ & môn học"
+                          link="{{ route('admin.training-program.semesters', $program->id) }}"/>
+                <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa"
+                          link="{{ route('admin.training-program.edit', $program->id) }}"/>
+                <x-button icon="o-document-duplicate" class="btn-sm btn-ghost text-success" tooltip="Nhân bản"
+                          wire:click="openDuplicateModal({{ $program->id }})"
+                          spinner="openDuplicateModal({{ $program->id }})"/>
+                <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" tooltip="Xóa"
+                          wire:click="delete({{ $program->id }})" spinner="delete({{ $program->id }})"/>
+            </div>
             @endscope
 
             <x-slot:empty>
@@ -281,13 +514,103 @@ new class extends Component {
             <x-pagination :rows="$this->programs" wire:model.live="perPage"/>
         </x-table>
 
-        <div wire:loading.flex class="absolute inset-0 z-5 items-center justify-center bg-white/30 backdrop-blur-sm rounded-md transition-all duration-300">
+        <div wire:loading.flex
+             class="absolute inset-0 z-5 items-center justify-center bg-white/30 backdrop-blur-sm rounded-md transition-all duration-300">
             <div class="flex flex-col items-center gap-2 flex-1">
                 <x-loading class="text-primary loading-lg"/>
                 <span class="text-sm font-medium text-gray-500">Đang tải dữ liệu...</span>
             </div>
         </div>
     </div>
+
+    <!-- Duplicate Modal -->
+    <x-modal wire:model="modalDuplicate" title="Nhân bản chương trình đào tạo" separator
+             class="modalDuplicateTrainingProgram">
+        <div class="space-y-2 py-2 px-1 max-h-[70vh] overflow-y-auto pr-1">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                <x-input
+                    label="Tên chương trình (Tiếng Việt)"
+                    placeholder="Nhập tên tiếng Việt"
+                    wire:model="duplicate_name_vi"
+                />
+
+                <x-input
+                    label="Tên chương trình (Tiếng Anh)"
+                    placeholder="Nhập tên tiếng Anh"
+                    wire:model="duplicate_name_en"
+                />
+
+                <x-select
+                    label="Chuyên ngành"
+                    placeholder="Chọn chuyên ngành"
+                    placeholder-value=""
+                    wire:model.live="duplicate_major_id"
+                    :options="$this->majorOptions"
+                    option-value="id"
+                    option-label="name"
+                />
+
+                <x-select
+                    label="Khóa"
+                    placeholder="Chọn khóa"
+                    wire:model.live="duplicate_intake_id"
+                    :options="$this->intakeOptions"
+                    option-value="id"
+                    option-label="name"
+                />
+
+                <x-input
+                    label="Năm bắt đầu"
+                    type="number"
+                    min="2020"
+                    max="2100"
+                    wire:model.live="duplicate_school_year_start"
+                />
+
+                <x-input
+                    label="Năm kết thúc"
+                    type="number"
+                    min="2020"
+                    max="2100"
+                    wire:model="duplicate_school_year_end"
+                />
+
+                <x-input
+                    label="Phiên bản (tự động tạo)"
+                    placeholder="Phiên bản sẽ tự động sinh ra"
+                    wire:model="duplicate_version"
+                    readonly
+                />
+
+                <x-select
+                    label="Trạng thái"
+                    wire:model="duplicate_status"
+                    :options="[
+                        ['id' => 'draft', 'name' => 'Nháp'],
+                        ['id' => 'published', 'name' => 'Đã đăng'],
+                        ['id' => 'archived', 'name' => 'Lưu trữ'],
+                    ]"
+                    option-value="id"
+                    option-label="name"
+                />
+            </div>
+            <div class="text-sm text-gray-500 bg-blue-50 p-3 rounded">
+                <strong>Lưu ý:</strong> Chương trình sẽ được nhân bản toàn bộ bao gồm:
+                <ul class="list-disc list-inside mt-1">
+                    <li>Tất cả học kỳ</li>
+                    <li>Tất cả môn học và loại môn</li>
+                    <li>Môn tiên quyết</li>
+                    <li>Môn tương đương</li>
+                </ul>
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <x-button label="Hủy" class="btn-ghost" @click="$wire.modalDuplicate = false"/>
+            <x-button label="Nhân bản" class="btn-primary text-white" wire:click="confirmDuplicate"
+                      spinner="confirmDuplicate"/>
+        </x-slot:actions>
+    </x-modal>
 </div>
 
 

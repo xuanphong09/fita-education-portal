@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Mary\Traits\Toast;
+use App\Services\ContentImageService;
 
 new class extends Component {
     use Toast, WithFileUploads;
@@ -30,7 +31,7 @@ new class extends Component {
     public string $slug = '';
 
     // Quan hệ
-    public ?int $category_id = null;
+    public array $category_ids = [];
 
     // Trạng thái
     public string $status       = 'draft';
@@ -65,7 +66,8 @@ new class extends Component {
             'excerpt_vi'         => 'nullable|string|max:500',
             'excerpt_en'         => 'nullable|string|max:500',
             'slug'               => 'required|string|max:255|unique:posts,slug,' . $this->id,
-            'category_id'        => 'nullable|exists:categories,id',
+            'category_ids'       => 'nullable|array',
+            'category_ids.*'     => 'integer|exists:categories,id',
             'status'             => 'required|in:draft,published,archived',
             'is_featured'        => 'boolean',
             'published_at'       => 'nullable|date',
@@ -104,7 +106,10 @@ new class extends Component {
         $this->seo_description_en = $post->getTranslation('seo_description', 'en', false) ?? '';
         $this->slug               = $post->slug ?? '';
         $this->url = route('client.posts.show', ['slug' => $post->slug]);
-        $this->category_id        = $post->category_id;
+        $this->category_ids       = $post->categories()->pluck('categories.id')->map(fn ($id) => (int) $id)->toArray();
+        if (empty($this->category_ids) && $post->category_id) {
+            $this->category_ids = [(int) $post->category_id];
+        }
         $this->status             = $post->status;
         $this->is_featured        = (bool) $post->is_featured;
         $this->published_at       = $post->published_at?->format('Y-m-d\\TH:i');
@@ -123,9 +128,33 @@ new class extends Component {
 
     public function getCategoryOptionsProperty(): array
     {
-        return Category::where('is_active', true)->orderBy('order')->get()
-            ->map(fn($c) => ['id' => $c->id, 'name' => $c->getTranslatedName()])
-            ->toArray();
+        $categories = Category::query()
+            ->where('is_active', true)
+            ->orderBy('order')
+            ->get();
+
+        return $this->flattenCategoryOptions($categories);
+    }
+
+    private function flattenCategoryOptions($categories, ?int $parentId = null, int $depth = 0): array
+    {
+        $options = [];
+
+        foreach ($categories->where('parent_id', $parentId) as $category) {
+            $prefix = $depth > 0 ? str_repeat('— ', $depth) : '';
+
+            $options[] = [
+                'id' => $category->id,
+                'name' => $prefix . $category->getTranslatedName(),
+            ];
+
+            $options = array_merge(
+                $options,
+                $this->flattenCategoryOptions($categories, (int) $category->id, $depth + 1)
+            );
+        }
+
+        return $options;
     }
 
     public function fillSeoEn(): void
@@ -145,7 +174,8 @@ new class extends Component {
             'content'         => ['vi' => $this->content_vi, 'en' => $this->content_en],
             'excerpt'         => ['vi' => $this->excerpt_vi, 'en' => $this->excerpt_en],
             'slug'            => $this->slug,
-            'category_id'     => $this->category_id,
+            'category_id'     => $this->category_ids[0] ?? null,
+            'category_ids'    => $this->category_ids,
             'status'          => $this->status,
             'is_featured'     => $this->is_featured,
             'published_at'    => $this->published_at,
@@ -217,20 +247,28 @@ new class extends Component {
             $thumbnailPath = $this->thumbnail->store('uploads/posts', 'public');
         }
 
+        $primaryCategoryId = $this->category_ids[0] ?? null;
+
+        // Xử lý ảnh ngoài cho nội dung bài viết
+        $contentImageService = app(ContentImageService::class);
+        $content_vi = $contentImageService->downloadAndReplaceExternalImages($this->content_vi);
+        $content_en = $contentImageService->downloadAndReplaceExternalImages($this->content_en);
+
         $post->update([
             'title'   => [
                 'vi' => $this->title_vi,
                 'en' => $this->title_en,
             ],
             'content' => [
-                'vi' => $this->content_vi,
-                'en' => $this->content_en,
+                'vi' => $content_vi,
+                'en' => $content_en,
             ],
             'excerpt' => $this->excerpt_vi || $this->excerpt_en
                 ? ['vi' => $this->excerpt_vi, 'en' => $this->excerpt_en]
                 : null,
             'slug'         => $this->slug,
-            'category_id'  => $this->category_id,
+            // Keep legacy category_id for backward compatibility (first selected category).
+            'category_id'  => $primaryCategoryId,
             'status'       => $this->status,
             'is_featured'  => $this->is_featured,
             'published_at' => $this->status === 'published'
@@ -242,8 +280,11 @@ new class extends Component {
             'seo_description' => $this->seo_description_vi || $this->seo_description_en
                 ? ['vi' => $this->seo_description_vi, 'en' => $this->seo_description_en]
                 : null,
-            'thumbnail' => $thumbnailPath ? $thumbnailPath : null,
+            'user_id'   => Auth::id(),
+            'thumbnail' => $thumbnailPath  ? $thumbnailPath : null,
         ]);
+
+        $post->categories()->sync($this->category_ids);
 
         $this->success('Cập nhật bài viết thành công!');
     }
@@ -301,10 +342,11 @@ new class extends Component {
                                         label="Mô tả ngắn"
                             />
                             <x-editor
-                                wire:model.live.debounce.500ms="content_vi"
+                                wire:model="content_vi"
                                 :config="config('tinymce')"
                                 class="h-full"
                                 label="Nội dung chi tiết"
+                                folder="uploads/posts/editor"
                                 required
                             />
                         </div>
@@ -403,10 +445,11 @@ new class extends Component {
                                         label="Short description"
                             />
                             <x-editor
-                                wire:model.live.debounce.500ms="content_en"
+                                wire:model="content_en"
                                 :config="config('tinymce')"
                                 class="h-full"
                                 label="Content details"
+                                folder="uploads/posts/editor"
                             />
                         </div>
 
@@ -521,11 +564,16 @@ new class extends Component {
 
             {{-- Danh mục --}}
             <x-card title="Danh mục" shadow class="p-3!">
-                <x-select label="Danh mục" wire:model="category_id"
-                          :options="$this->categoryOptions"
-                          placeholder="(Chưa chọn danh mục)"
-                          placeholder-value=""
-                          option-value="id" option-label="name"/>
+                <select
+                    wire:model="category_ids"
+                    multiple
+                    size="8"
+                    class="select select-bordered w-full"
+                >
+                    @foreach($this->categoryOptions as $category)
+                        <option value="{{ $category['id'] }}">{{ $category['name'] }}</option>
+                    @endforeach
+                </select>
             </x-card>
 
 
@@ -588,4 +636,6 @@ new class extends Component {
         </div>
     </div>
 </div>
+
+
 

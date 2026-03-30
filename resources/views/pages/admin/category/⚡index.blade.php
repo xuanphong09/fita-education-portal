@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use App\Models\Category;
 use Livewire\WithPagination;
@@ -12,7 +13,7 @@ new class extends Component {
 
     public array $sortBy = ['column' => 'created_at', 'direction' => 'desc'];
     public int $perPage = 10;
-
+    #[Url(as: 'search')]
     public string $search = '';
 
     public function getCategoriesProperty()
@@ -25,7 +26,7 @@ new class extends Component {
             $search = "%{$this->search}%";
             $q->where(function ($q) use ($search) {
                 $q->where('slug', 'like', $search)
-                  ->orWhere('name', 'like', $search);
+                    ->orWhere('name', 'like', $search);
             });
         }
 
@@ -42,7 +43,7 @@ new class extends Component {
             ['key' => 'name', 'label' => 'Tên danh mục', 'class' => 'w-64'],
             ['key' => 'parent', 'label' => 'Danh mục cha', 'sortable' => false, 'class' => 'w-48'],
             ['key' => 'posts_count', 'label' => 'Số bài', 'class' => 'w-24'],
-            ['key' => 'is_active', 'label' => 'Kích hoạt',  'class' => 'w-24'],
+            ['key' => 'is_active', 'label' => 'Kích hoạt', 'class' => 'w-24'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-24'],
         ];
     }
@@ -88,7 +89,8 @@ new class extends Component {
         <span>{{ __('Danh sách danh mục') }}</span>
     </x-slot:breadcrumb>
 
-    <x-header title="{{ __('Danh sách danh mục') }}" class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
+    <x-header title="{{ __('Danh sách danh mục') }}"
+              class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
         <x-slot:middle class="justify-end!">
             <x-input
                 icon="o-magnifying-glass"
@@ -99,7 +101,8 @@ new class extends Component {
             />
         </x-slot:middle>
         <x-slot:actions>
-            <x-button icon="o-plus" class="btn-primary text-white" label="{{__('Create new')}}" link="{{route('admin.category.create')}}"/>
+            <x-button icon="o-plus" class="btn-primary text-white" label="{{__('Create new')}}"
+                      link="{{route('admin.category.create')}}"/>
         </x-slot:actions>
     </x-header>
 
@@ -143,30 +146,32 @@ new class extends Component {
             @endscope
 
             @scope('cell_parent', $category)
-                @if($category->parent)
-                    <div>{{ $category->parent->getTranslatedName() }}</div>
-                @else
-                    <div class="text-xs text-gray-400">—</div>
-                @endif
+            @if($category->parent)
+                <div>{{ $category->parent->getTranslatedName() }}</div>
+            @else
+                <div class="text-xs text-gray-400">—</div>
+            @endif
             @endscope
 
             @scope('cell_posts_count', $category)
-                <x-badge :value="$category->posts_count . ' bài'" />
+            <x-badge :value="$category->posts_count . ' bài'"/>
             @endscope
 
             @scope('cell_is_active', $category)
-                @if($category->is_active)
-                    <x-badge value="Kích hoạt" class="badge-success badge-sm" />
-                @else
-                    <x-badge value="Tắt" class="badge-error badge-sm" />
-                @endif
+            @if($category->is_active)
+                <x-badge value="Kích hoạt" class="badge-success badge-md text-white font-semibold"/>
+            @else
+                <x-badge value="Tắt" class="badge-error badge-md text-white font-semibold"/>
+            @endif
             @endscope
 
             @scope('cell_actions', $category)
-                <div class="flex space-x-2">
-                    <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa" link="{{route('admin.category.edit',$category->id)}}"/>
-                    <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" tooltip="Xóa" wire:click="delete({{ $category->id }})" spinner="delete({{ $category->id }})" />
-                </div>
+            <div class="flex space-x-2">
+                <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa"
+                          link="{{route('admin.category.edit',$category->id)}}"/>
+                <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" tooltip="Xóa"
+                          wire:click="delete({{ $category->id }})" spinner="delete({{ $category->id }})"/>
+            </div>
             @endscope
 
             <x-slot:empty>

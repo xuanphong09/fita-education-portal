@@ -7,7 +7,9 @@ use App\Models\ProgramSemester;
 use App\Models\Subject;
 use App\Models\TrainingProgram;
 use App\Models\SubjectPrerequisite;
+use App\Models\SubjectEquivalent;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 new class extends Component {
@@ -31,8 +33,14 @@ new class extends Component {
     public string $attach_notes = '';
     public int $attach_order = 0;
     public string $attach_credits = '';
+    public string $subjectSearch = '';
+    public string $prerequisiteSearch = '';
+    public string $equivalentSearch = '';
+    public int $subjectSearchMinLength = 2;
+    public int $subjectSearchLimit = 30;
 
     public array $attach_subject_prerequisite_id = [];
+    public array $attach_subject_equivalent_id = [];
 
     public function mount(int $id): void
     {
@@ -81,10 +89,18 @@ new class extends Component {
                         'prerequisites as prerequisites_count' => function ($prereqQuery) {
                             $prereqQuery->where('subject_prerequisites.training_program_id', $this->programId);
                         },
+                        'equivalents as equivalents_count' => function ($equivalentQuery) {
+                            $equivalentQuery->where('subject_equivalents.training_program_id', $this->programId);
+                        },
                     ])
                     ->with(['prerequisites' => function ($prereqQuery) {
                         $prereqQuery
                             ->where('subject_prerequisites.training_program_id', $this->programId)
+                            ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
+                            ->orderBy('group_subjects.sort_order');
+                    }, 'equivalents' => function ($equivalentQuery) {
+                        $equivalentQuery
+                            ->where('subject_equivalents.training_program_id', $this->programId)
                             ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
                             ->orderBy('group_subjects.sort_order');
                     }]);
@@ -106,6 +122,8 @@ new class extends Component {
     public function getSubjectOptionsProperty(): array
     {
         $usedSubjectIds = $this->usedSubjectIds;
+        $currentSubjectId = (int) ($this->attach_subject_id ?: $this->pivot_original_subject_id ?: 0);
+        $keyword = trim($this->subjectSearch);
 
         // Khi edit, vẫn giữ môn hiện tại trong danh sách để tránh bị mất option đang chọn.
         if ($this->pivot_original_subject_id) {
@@ -114,7 +132,7 @@ new class extends Component {
                 ->values();
         }
 
-        return Subject::query()
+        $baseQuery = Subject::query()
             ->where(function ($q) {
                 $q->where('is_active', true);
 
@@ -123,9 +141,43 @@ new class extends Component {
                     $q->orWhere('id', $this->pivot_original_subject_id);
                 }
             })
-            ->when($usedSubjectIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $usedSubjectIds->all()))
-            ->orderBy('code')
-            ->get()
+            ->when($usedSubjectIds->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $usedSubjectIds->all()));
+
+        // If user has typed keyword, search; otherwise show initial list
+        if (mb_strlen($keyword) > 0) {
+            $subjects = (clone $baseQuery)
+                ->where(function ($q) use ($keyword) {
+                    $q->where('code', 'like', '%' . $keyword . '%')
+                        ->orWhereRaw(
+                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ?",
+                            ['%' . $keyword . '%']
+                        )
+                        ->orWhereRaw(
+                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ?",
+                            ['%' . $keyword . '%']
+                        );
+                })
+                ->orderBy('code')
+                ->limit($this->subjectSearchLimit)
+                ->get();
+        } else {
+            // Show initial list (first 30 active subjects, ordered by code)
+            $subjects = (clone $baseQuery)
+                ->orderBy('code')
+                ->limit($this->subjectSearchLimit)
+                ->get();
+        }
+
+        // Ensure current subject is always in the list
+        if ($currentSubjectId > 0 && !$subjects->contains('id', $currentSubjectId)) {
+            $currentSubject = (clone $baseQuery)->where('id', $currentSubjectId)->first();
+            if ($currentSubject) {
+                $subjects->prepend($currentSubject);
+            }
+        }
+
+        return $subjects
+            ->unique('id')
             ->map(fn ($subject) => [
                 'id' => $subject->id,
                 'name' => $subject->code . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A'),
@@ -148,9 +200,85 @@ new class extends Component {
             ->get()
             ->map(fn ($subject) => [
                 'id' => $subject->id,
-                'name' => $subject->code . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A'),
+                'name' => $subject->code
+                    . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A')
+                    . ' (' . Subject::formatCredit($subject->credits) . ' TC)'
             ])
             ->toArray();
+    }
+
+    public function getEquivalentSubjectOptionsProperty(): array
+    {
+        $usedSubjectIds = $this->usedSubjectIds->all();
+
+        return Subject::query()
+            ->where(function ($q) use ($usedSubjectIds) {
+                $q->where('is_active', true)
+                    ->when(!empty($usedSubjectIds), fn ($inner) => $inner->whereNotIn('id', $usedSubjectIds));
+            })
+            ->when($this->attach_subject_id, fn ($q) => $q->where('id', '!=', $this->attach_subject_id))
+            ->orderBy('code')
+            ->get()
+            ->map(fn ($subject) => [
+                'id' => $subject->id,
+                'name' => $subject->code
+                    . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A')
+                    . ' (' . Subject::formatCredit($subject->credits) . ' TC)'
+            ])
+            ->toArray();
+    }
+
+    public function getFilteredSubjectUsedOptionsProperty(): array
+    {
+        $keyword = trim($this->prerequisiteSearch);
+
+        if ($keyword === '') {
+            return $this->subjectUsedOptions;
+        }
+
+        $normalizedKeyword = $this->normalizeSearchText($keyword);
+
+        return collect($this->subjectUsedOptions)
+            ->filter(function (array $subject) use ($keyword, $normalizedKeyword) {
+                $name = (string) ($subject['name'] ?? '');
+
+                if (mb_stripos($name, $keyword) !== false) {
+                    return true;
+                }
+
+                return str_contains($this->normalizeSearchText($name), $normalizedKeyword);
+            })
+            ->values()
+            ->all();
+    }
+
+    public function getFilteredEquivalentSubjectOptionsProperty(): array
+    {
+        $keyword = trim($this->equivalentSearch);
+
+        if ($keyword === '') {
+            return $this->equivalentSubjectOptions;
+        }
+
+        $normalizedKeyword = $this->normalizeSearchText($keyword);
+
+        return collect($this->equivalentSubjectOptions)
+            ->filter(function (array $subject) use ($keyword, $normalizedKeyword) {
+                $name = (string) ($subject['name'] ?? '');
+
+                if (mb_stripos($name, $keyword) !== false) {
+                    return true;
+                }
+
+                return str_contains($this->normalizeSearchText($name), $normalizedKeyword);
+            })
+            ->values()
+            ->all();
+    }
+
+    protected function normalizeSearchText(string $value): string
+    {
+        return mb_strtolower(trim(Str::ascii($value)));
     }
 
     public function selectSemester(int $id): void
@@ -176,6 +304,7 @@ new class extends Component {
             ->where('training_program_id', $this->programId)
             ->max('semester_no') + 1);
         $this->semester_total_credits = 0;
+        $this->resetValidation(['semester_no', 'semester_total_credits']);
     }
 
     public function editSemester(int $id): void
@@ -187,7 +316,20 @@ new class extends Component {
         $this->editingSemesterId = $semester->id;
         $this->semester_no = $semester->semester_no;
         $this->semester_total_credits = $semester->total_credits;
-        $this->resetErrorBag('semester_no');
+        $this->resetValidation(['semester_no', 'semester_total_credits']);
+    }
+
+    protected function semesterRules(): array
+    {
+        return [
+            'semester_no' => [
+                'required', 'integer', 'min:1', 'max:20',
+                Rule::unique('program_semesters', 'semester_no')
+                    ->ignore($this->editingSemesterId)
+                    ->where(fn($q) => $q->where('training_program_id', $this->programId)),
+            ],
+            'semester_total_credits' => ['required', 'integer', 'min:0', 'max:200'],
+        ];
     }
 
     protected function rules(): array
@@ -201,11 +343,23 @@ new class extends Component {
             ],
             'semester_total_credits' => ['required', 'integer', 'min:0', 'max:200'],
             'attach_subject_id' => ['required', 'exists:subjects,id'],
-            'attach_type' => ['required', Rule::in(['required', 'elective'])],
+            'attach_type' => ['required', Rule::in(['required', 'elective', 'pcbb'])],
             'attach_notes' => ['nullable', 'string'],
             'attach_order' => ['required', 'integer', 'min:0', 'max:1000'],
             'attach_subject_prerequisite_id' => ['array'],
-            'attach_subject_prerequisite_id.*' => ['integer', 'exists:subjects,id', 'different:attach_subject_id']
+            'attach_subject_prerequisite_id.*' => ['integer', 'exists:subjects,id', 'different:attach_subject_id'],
+            'attach_subject_equivalent_id' => ['array'],
+            'attach_subject_equivalent_id.*' => [
+                'integer',
+                Rule::exists('subjects', 'id')->where(fn ($q) => $q->where('is_active', true)),
+                'distinct',
+                'different:attach_subject_id',
+                function ($attribute, $value, $fail) {
+                    if ($this->usedSubjectIds->contains((int) $value)) {
+                        $fail('Môn học tương đương phải nằm ngoài chương trình đào tạo hiện tại.');
+                    }
+                },
+            ],
         ];
     }
     protected $messages = [
@@ -231,11 +385,16 @@ new class extends Component {
         'attach_subject_prerequisite_id.*.integer' => 'Môn tiên quyết không hợp lệ.',
         'attach_subject_prerequisite_id.*.exists' => 'Môn tiên quyết không tồn tại.',
         'attach_subject_prerequisite_id.*.different' => 'Môn tiên quyết không được trùng với môn đang thêm.',
+        'attach_subject_equivalent_id.array' => 'Danh sách môn học tương đương phải là một mảng.',
+        'attach_subject_equivalent_id.*.integer' => 'Môn học tương đương không hợp lệ.',
+        'attach_subject_equivalent_id.*.exists' => 'Môn học tương đương không tồn tại.',
+        'attach_subject_equivalent_id.*.distinct' => 'Môn học tương đương bị trùng trong danh sách đã chọn.',
+        'attach_subject_equivalent_id.*.different' => 'Môn học tương đương không được trùng với môn đang thêm.',
     ];
 
     public function saveSemester(): void
     {
-        $this->validate();
+        $this->validate($this->semesterRules());
 
         $payload = [
             'training_program_id' => $this->programId,
@@ -310,6 +469,14 @@ new class extends Component {
                         ->orWhereIn('prerequisite_subject_id', $semesterSubjectIds->all());
                 })
                 ->delete();
+
+            SubjectEquivalent::query()
+                ->forProgram($this->programId)
+                ->where(function ($q) use ($semesterSubjectIds) {
+                    $q->whereIn('subject_id', $semesterSubjectIds->all())
+                        ->orWhereIn('equivalent_subject_id', $semesterSubjectIds->all());
+                })
+                ->delete();
         }
 
         $semester->delete();
@@ -329,7 +496,9 @@ new class extends Component {
     {
         $subject = Subject::query()->find($this->attach_subject_id);
         if ($subject) {
-            $this->attach_credits = 'Tổng số tín chỉ: ' . $subject->credits . ' (LT: ' . ($subject->credits_theory ?? 0) . ', TH: ' . ($subject->credits_practice ?? 0) . ')';
+            $this->attach_credits = 'Tổng số tín chỉ: ' . Subject::formatCredit($subject->credits)
+                . ' (LT: ' . Subject::formatCredit($subject->credits_theory)
+                . ', TH: ' . Subject::formatCredit($subject->credits_practice) . ')';
 
             $this->attach_subject_prerequisite_id = SubjectPrerequisite::query()
                 ->forProgram($this->programId)
@@ -338,9 +507,18 @@ new class extends Component {
                 ->map(fn ($id) => (int) $id)
                 ->values()
                 ->all();
+
+            $this->attach_subject_equivalent_id = SubjectEquivalent::query()
+                ->forProgram($this->programId)
+                ->forSubject($subject->id)
+                ->pluck('equivalent_subject_id')
+                ->map(fn ($id) => (int) $id)
+                ->values()
+                ->all();
         } else {
             $this->attach_credits = '';
             $this->attach_subject_prerequisite_id = [];
+            $this->attach_subject_equivalent_id = [];
         }
     }
 
@@ -352,7 +530,11 @@ new class extends Component {
         $this->attach_notes = '';
         $this->attach_order = 0;
         $this->attach_credits = '';
+        $this->subjectSearch = '';
         $this->attach_subject_prerequisite_id = [];
+        $this->attach_subject_equivalent_id = [];
+        $this->prerequisiteSearch = '';
+        $this->equivalentSearch = '';
     }
 
     public function openCreateSubjectPivot(): void
@@ -409,11 +591,23 @@ new class extends Component {
 
         $this->validate([
             'attach_subject_id' => ['required', 'exists:subjects,id'],
-            'attach_type' => ['required', Rule::in(['required', 'elective'])],
+            'attach_type' => ['required', Rule::in(['required', 'elective', 'pcbb'])],
             'attach_notes' => ['nullable', 'string'],
             'attach_order' => ['required', 'integer', 'min:0', 'max:1000'],
             'attach_subject_prerequisite_id' => ['array'],
             'attach_subject_prerequisite_id.*' => ['integer', 'exists:subjects,id', 'different:attach_subject_id'],
+            'attach_subject_equivalent_id' => ['array'],
+            'attach_subject_equivalent_id.*' => [
+                'integer',
+                Rule::exists('subjects', 'id')->where(fn ($q) => $q->where('is_active', true)),
+                'distinct',
+                'different:attach_subject_id',
+                function ($attribute, $value, $fail) {
+                    if ($this->usedSubjectIds->contains((int) $value)) {
+                        $fail('Môn học tương đương phải nằm ngoài chương trình đào tạo hiện tại.');
+                    }
+                },
+            ],
         ]);
 
         $semester = ProgramSemester::query()
@@ -447,6 +641,12 @@ new class extends Component {
                 $this->programId,
                 (int) $this->attach_subject_id,
                 $this->attach_subject_prerequisite_id
+            );
+
+            SubjectEquivalent::syncForProgramSubject(
+                $this->programId,
+                (int) $this->attach_subject_id,
+                $this->attach_subject_equivalent_id
             );
         } catch (\InvalidArgumentException $e) {
             $this->error($e->getMessage());
@@ -518,6 +718,14 @@ new class extends Component {
             SubjectPrerequisite::query()
                 ->forProgram($this->programId)
                 ->where('subject_id', $subjectId)
+                ->delete();
+
+            SubjectEquivalent::query()
+                ->forProgram($this->programId)
+                ->where(function ($q) use ($subjectId) {
+                    $q->where('subject_id', $subjectId)
+                        ->orWhere('equivalent_subject_id', $subjectId);
+                })
                 ->delete();
 
             $this->recalculateSemesterCredits($semester->id);
@@ -609,7 +817,7 @@ new class extends Component {
                             <x-table
                                 :headers="$this->headers()"
                                 :rows="$this->selectedSemester->subjects"
-                                wire:model="expanded" expandable expandable-condition="prerequisites_count"
+                                wire:model="expanded" expandable
                                 striped
                                 wire:loading.class="opacity-50 pointer-events-none select-none"
                                 class="
@@ -634,16 +842,27 @@ new class extends Component {
                                 @endscope
 
                                 @scope('cell_credits', $subject)
-                                <div class="font-semibold">{{ $subject->credits }} tín chỉ</div>
-                                <div class="text-sm text-gray-500 whitespace-nowrap">LT/TH: {{ $subject->credits_theory ?? 0 }}/{{ $subject->credits_practice ?? 0 }}</div>
+                                <div class="font-semibold">{{ $subject->credits_display }} tín chỉ</div>
+                                <div class="text-sm text-gray-500 whitespace-nowrap">LT/TH: {{ $subject->credits_theory_display }}/{{ $subject->credits_practice_display }}</div>
                                 @endscope
 
                                 @scope('cell_type', $subject)
-                                @if($subject->pivot->type === 'required')
-                                    <x-badge value="Bắt buộc" class="badge-success badge-sm whitespace-nowrap" />
-                                @else
-                                    <x-badge value="Tự chọn" class="badge-warning badge-sm whitespace-nowrap" />
-                                @endif
+                                @php
+                                    $typeLabel = match ($subject->pivot->type) {
+                                        'required' => 'Bắt buộc',
+                                        'elective' => 'Tự chọn',
+                                        'pcbb' => 'PCBB',
+                                        default => strtoupper((string) $subject->pivot->type),
+                                    };
+
+                                    $typeClass = match ($subject->pivot->type) {
+                                        'required' => 'badge-error',
+                                        'elective' => 'badge-success',
+                                        'pcbb' => 'badge-warning',
+                                        default => 'badge-neutral',
+                                    };
+                                @endphp
+                                <x-badge :value="$typeLabel" class="{{ $typeClass }} badge-md text-white font-semibold whitespace-nowrap" />
                                 @endscope
 
                                 @scope('cell_notes', $subject)
@@ -669,6 +888,21 @@ new class extends Component {
                                                 <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
                                                     <div class="font-semibold">{{ $prerequisite->code }}</div>
                                                     <div class="text-gray-600">{{ $prerequisite->getTranslation('name', 'vi', false) ?: '—' }}</div>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    @endif
+
+                                    <div class="text-sm font-semibold mb-2 mt-4">Môn học tương đương</div>
+
+                                    @if($subject->equivalents->isEmpty())
+                                        <div class="text-sm text-gray-500">Không có môn học tương đương.</div>
+                                    @else
+                                        <div class="grid md:grid-cols-2 gap-2">
+                                            @foreach($subject->equivalents as $equivalent)
+                                                <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
+                                                    <div class="font-semibold">{{ $equivalent->code }}</div>
+                                                    <div class="text-gray-600">{{ $equivalent->getTranslation('name', 'vi', false) ?: '—' }}</div>
                                                 </div>
                                             @endforeach
                                         </div>
@@ -750,40 +984,108 @@ new class extends Component {
             <x-loading class="" />
             <p>Đang tải dữ liệu...</p>
         </div>
-        <div class="space-y-3 py-0 max-h-[70vh] overflow-y-auto pr-1" wire:loading.remove wire:target="openCreateSubjectPivot" >
+        <div class="space-y-3 py-0 px-1 max-h-[70vh] overflow-y-auto pr-1" wire:loading.remove wire:target="openCreateSubjectPivot" >
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-3 ">
-                <div>
                     @if($pivot_original_subject_id)
                         <div class="">
                             <x-input label="Môn học" type="number" min="0" placeholder="{{ collect($this->subjectOptions)->firstWhere('id', $attach_subject_id)['name'] ?? 'N/A' }}" readonly />
                         </div>
                     @else
-                        <x-select label="Môn học" wire:model.live.debounce.300ms="attach_subject_id" :options="$this->subjectOptions" option-value="id" option-label="name" placeholder="Chọn môn học" />
+                        <x-input
+                            label="Tìm thêm môn học"
+                            icon="o-magnifying-glass"
+                            placeholder="Nhập tên hoặc mã môn học..."
+                            wire:model.live.debounce.400ms="subjectSearch"
+                            clearable
+                        />
+                        <div>
+                            <x-choices-offline single
+                                               clearable
+                                               searchable
+                                               label="Môn học"
+                                               wire:model.live.debounce.300ms="attach_subject_id"
+                                               :options="$this->subjectOptions"
+                                               option-value="id" option-label="name"
+                                               placeholder="Chọn môn học"
+                                               noResultText="Không tìm thấy môn học nào"
+                            />
+                            <div class="text-sm mt-2 text-primary font-medium">{{$attach_credits}}</div>
+                            <div class="text-xs text-gray-500 mt-1">
+                                Hiển thị tối đa {{ $this->subjectSearchLimit }} môn học
+                            </div>
+                        </div>
                     @endif
-                    <div class="text-sm mt-2 text-primary font-medium">{{$attach_credits}}</div>
-                </div>
 
-                <x-select label="Loại" wire:model.live.debounce.300ms="attach_type" :options="[['id' => 'required', 'name' => 'Môn bắt buộc'], ['id' => 'elective', 'name' => 'Môn tự chọn']]" option-value="id" option-label="name" />
+                <x-select label="Loại" wire:model.live.debounce.300ms="attach_type" :options="[
+                    ['id' => 'required', 'name' => 'Môn bắt buộc'],
+                    ['id' => 'elective', 'name' => 'Môn tự chọn'],
+                    ['id' => 'pcbb', 'name' => 'PCBB - Phần cứng bắt buộc']
+                ]" option-value="id" option-label="name" />
                 <x-input label="Thứ tự" type="number" min="0" wire:model="attach_order" />
                 <div class="mt-4 col-span-2">
                     <label class="font-semibold text-gray-700 mb-3 block">Danh sách môn học tiên quyết</label>
-
-                    <div
-                        class="grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-35 overflow-auto">
-                    @forelse($this->subjectUsedOptions as $subject)
-                        <div class="select-none" wire:key="subject-used-{{ $subject['id'] }}">
-                            <x-checkbox
-                                label="{{ $subject['name'] }}"
-                                wire:model="attach_subject_prerequisite_id"
-                                value="{{ $subject['id'] }}"
-                                class="checkbox-primary checkbox-sm"
-                            />
+                    <x-input
+                        icon="o-magnifying-glass"
+                        placeholder="Tìm theo mã hoặc tên môn..."
+                        wire:model.live.debounce.300ms="prerequisiteSearch"
+                        clearable
+                    />
+                    <div class="relative mt-2">
+                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-35 overflow-auto">
+                        @forelse($this->filteredSubjectUsedOptions as $subject)
+                            <div class="select-none" wire:key="subject-used-{{ $subject['id'] }}">
+                                <x-checkbox
+                                    label="{{ $subject['name'] }}"
+                                    wire:model="attach_subject_prerequisite_id"
+                                    value="{{ $subject['id'] }}"
+                                    class="checkbox-primary checkbox-sm"
+                                />
+                            </div>
+                        @empty
+                            <div class="col-span-full text-center py-4 text-red-500">
+                                Chưa có môn học nào trong chương trình đào tạo này.
+                            </div>
+                        @endforelse
+                            <div wire:loading.flex wire:target="prerequisiteSearch,attach_subject_id" class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
+                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                                    <x-loading class="loading-spinner text-primary" />
+                                    <span>Đang lọc môn học...</span>
+                                </div>
+                            </div>
                         </div>
-                    @empty
-                        <div class="col-span-full text-center py-4 text-red-500">
-                            Chưa có môn học nào trong chương trình đào tạo này.
+                    </div>
+                </div>
+                <div class="mt-4 col-span-2">
+                    <label class="font-semibold text-gray-700 mb-3 block">Danh sách môn học tương đương</label>
+                    <x-input
+                        icon="o-magnifying-glass"
+                        placeholder="Tìm môn tương đương theo mã hoặc tên môn..."
+                        wire:model.live.debounce.300ms="equivalentSearch"
+                        clearable
+                    />
+                    <div class="relative mt-2">
+                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-35 overflow-auto">
+                        @forelse($this->filteredEquivalentSubjectOptions as $subject)
+                            <div class="select-none" wire:key="subject-equivalent-{{ $subject['id'] }}">
+                                <x-checkbox
+                                    label="{{ $subject['name'] }}"
+                                    wire:model="attach_subject_equivalent_id"
+                                    value="{{ $subject['id'] }}"
+                                    class="checkbox-primary checkbox-sm"
+                                />
+                            </div>
+                        @empty
+                            <div class="col-span-full text-center py-4 text-red-500">
+                                Chưa có môn học nào trong chương trình đào tạo này.
+                            </div>
+                        @endforelse
+                            <div wire:loading.flex wire:target="equivalentSearch,attach_subject_id" class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
+                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                                    <x-loading class="loading-spinner text-primary" />
+                                    <span>Đang lọc môn học tương đương...</span>
+                                </div>
+                            </div>
                         </div>
-                    @endforelse
                     </div>
                 </div>
 {{--                </div>--}}

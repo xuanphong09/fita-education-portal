@@ -4,6 +4,7 @@ use App\Models\GroupSubject;
 use App\Models\Subject;
 use Illuminate\Database\QueryException;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
@@ -11,7 +12,8 @@ use Mary\Traits\Toast;
 new class extends Component {
     use WithPagination, Toast;
 
-    public int $perPage = 15;
+    public int $perPage = 10;
+    #[Url(as: 'search')]
     public string $search = '';
     public string $group_subject_id = '';
 
@@ -36,7 +38,7 @@ new class extends Component {
             ->orderBy('sort_order')
             ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') ASC")
             ->get()
-            ->map(fn (GroupSubject $group) => [
+            ->map(fn(GroupSubject $group) => [
                 'id' => $group->id,
                 'name' => $group->getTranslation('name', 'vi', false) ?: ('#' . $group->id),
             ])
@@ -49,7 +51,7 @@ new class extends Component {
             ->with('groupSubject')
             ->withCount(['programSemesters', 'requiredBy'])
             ->search($this->search)
-            ->when($this->group_subject_id !== '', fn ($query) => $query->where('group_subject_id', (int) $this->group_subject_id))
+            ->when($this->group_subject_id !== '', fn($query) => $query->where('group_subject_id', (int)$this->group_subject_id))
             ->orderByDesc('deleted_at')
             ->paginate($this->perPage);
     }
@@ -162,43 +164,44 @@ new class extends Component {
             "
         >
             @scope('cell_id', $subject)
-                {{ ($this->subjects->currentPage() - 1) * $this->subjects->perPage() + $loop->iteration }}
+            {{ ($this->subjects->currentPage() - 1) * $this->subjects->perPage() + $loop->iteration }}
             @endscope
 
             @scope('cell_code', $subject)
-                <div class="font-mono font-semibold text-primary">{{ $subject->code }}</div>
+            <div class="font-mono font-semibold text-primary">{{ $subject->code }}</div>
             @endscope
 
             @scope('cell_name', $subject)
-                <div class="font-semibold">{{ $subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                <div class="text-xs text-gray-400">{{ $subject->getTranslation('name', 'en', false) ?: 'Chưa có tên tiếng Anh' }}</div>
+            <div class="font-semibold">{{ $subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
+            <div
+                class="text-xs text-gray-400">{{ $subject->getTranslation('name', 'en', false) ?: 'Chưa có tên tiếng Anh' }}</div>
             @endscope
 
             @scope('cell_group_subject', $subject)
-                {{ $subject->groupSubject?->getTranslation('name', 'vi', false) ?: '—' }}
+            {{ $subject->groupSubject?->getTranslation('name', 'vi', false) ?: '—' }}
             @endscope
 
             @scope('cell_deleted_at', $subject)
-                {{ optional($subject->deleted_at)->format('d/m/Y H:i') }}
+            {{ optional($subject->deleted_at)->format('d/m/Y H:i') }}
             @endscope
 
             @scope('cell_actions', $subject)
-                <div class="flex gap-2">
-                    <x-button
-                        icon="o-arrow-uturn-left"
-                        class="btn-sm btn-ghost text-success"
-                        tooltip="Khôi phục"
-                        wire:click="restore({{ $subject->id }})"
-                        spinner="restore({{ $subject->id }})"
-                    />
-                    <x-button
-                        icon="o-trash"
-                        class="btn-sm btn-ghost text-error"
-                        tooltip="Xóa vĩnh viễn"
-                        wire:click="forceDelete({{ $subject->id }})"
-                        spinner="forceDelete({{ $subject->id }})"
-                    />
-                </div>
+            <div class="flex gap-2">
+                <x-button
+                    icon="o-arrow-uturn-left"
+                    class="btn-sm btn-ghost text-success"
+                    tooltip="Khôi phục"
+                    wire:click="restore({{ $subject->id }})"
+                    spinner="restore({{ $subject->id }})"
+                />
+                <x-button
+                    icon="o-trash"
+                    class="btn-sm btn-ghost text-error"
+                    tooltip="Xóa vĩnh viễn"
+                    wire:click="forceDelete({{ $subject->id }})"
+                    spinner="forceDelete({{ $subject->id }})"
+                />
+            </div>
             @endscope
 
             <x-slot:empty>

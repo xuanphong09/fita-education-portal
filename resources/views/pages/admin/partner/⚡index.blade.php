@@ -15,7 +15,7 @@ new
 class extends Component {
     use WithPagination, Toast, WithFileUploads;
 
-    #[Url(as: 'tim-kiem')]
+    #[Url(as: 'search')]
     public string $search = '';
 
     public bool $showCreate = false;

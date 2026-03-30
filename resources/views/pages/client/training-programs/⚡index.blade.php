@@ -2,6 +2,7 @@
 
 use App\Models\Intake;
 use App\Models\Major;
+use App\Models\Subject;
 use App\Models\TrainingProgram;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -191,9 +192,9 @@ class extends Component {
                                     'id' => (int) $subject->id,
                                     'code' => (string) $subject->code,
                                     'name' => $this->localizedName($subject),
-                                    'credits' => (int) ($subject->credits ?? 0),
-                                    'credits_theory' => (int) ($subject->credits_theory ?? 0),
-                                    'credits_practice' => (int) ($subject->credits_practice ?? 0),
+                                    'credits' => (float) ($subject->credits ?? 0),
+                                    'credits_theory' => (float) ($subject->credits_theory ?? 0),
+                                    'credits_practice' => (float) ($subject->credits_practice ?? 0),
                                     'type' => (string) ($subject->pivot->type ?? 'required'),
                                     'order' => (int) ($subject->pivot->order ?? 0),
                                     'notes' => (string) ($subject->pivot->notes ?? ''),
@@ -209,7 +210,7 @@ class extends Component {
 
                         return [
                             'semester_no' => (int) $semester->semester_no,
-                            'total_credits' => (int) $subjects->sum('credits'),
+                            'total_credits' => (float) $subjects->sum('credits'),
                             'subjects' => $subjects,
                         ];
                     })
@@ -227,7 +228,7 @@ class extends Component {
                             'group_name' => (string) $groupName,
                             'group_sort_order' => (int) ($sorted->first()['group_sort_order'] ?? 9999),
                             'total_subjects' => (int) $sorted->count(),
-                            'total_credits' => (int) $sorted->sum('credits'),
+                            'total_credits' => (float) $sorted->sum('credits'),
                             'subjects' => $sorted,
                         ];
                     })
@@ -374,7 +375,7 @@ class extends Component {
 
                         <div class="flex flex-wrap gap-2">
                             <x-badge value="{{ $activeProgram->version }}" class="badge-primary" />
-                            <x-badge value="{{ $activeProgram->total_credits }} tín chỉ" class="badge-outline" />
+                            <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} tín chỉ" class="badge-outline" />
                         </div>
                     </div>
                 </x-card>
@@ -416,7 +417,7 @@ class extends Component {
                             <x-card shadow>
                                 <div class="flex items-center justify-between mb-3">
                                     <h3 class="text-lg font-semibold">Học kỳ {{ $semesterBlock['semester_no'] }}</h3>
-                                    <span class="text-sm text-gray-500">{{ $semesterBlock['total_credits'] }} tín chỉ</span>
+                                    <span class="text-sm text-gray-500">{{ Subject::formatCredit($semesterBlock['total_credits']) }} tín chỉ</span>
                                 </div>
 
                                 @if($semesterBlock['subjects']->isEmpty())
@@ -440,13 +441,28 @@ class extends Component {
                                                     <td>{{ $subject['name'] }}</td>
                                                     <td>{{ $subject['group_name'] }}</td>
                                                     <td>
-                                                        {{ $subject['credits'] }}
-                                                        <span class="text-xs text-gray-500">(LT/TH: {{ $subject['credits_theory'] }}/{{ $subject['credits_practice'] }})</span>
+                                                        {{ Subject::formatCredit($subject['credits']) }}
+                                                        <span class="text-xs text-gray-500">(LT/TH: {{ Subject::formatCredit($subject['credits_theory']) }}/{{ Subject::formatCredit($subject['credits_practice']) }})</span>
                                                     </td>
                                                     <td>
+                                                        @php
+                                                            $typeLabel = match ($subject['type']) {
+                                                                'required' => 'Bắt buộc',
+                                                                'elective' => 'Tự chọn',
+                                                                'pcbb' => 'PCBB',
+                                                                default => strtoupper((string) $subject['type']),
+                                                            };
+
+                                                            $typeClass = match ($subject['type']) {
+                                                                'required' => 'badge-error',
+                                                                'elective' => 'badge-success',
+                                                                'pcbb' => 'badge-warning',
+                                                                default => 'badge-neutral',
+                                                            };
+                                                        @endphp
                                                         <x-badge
-                                                            value="{{ $subject['type'] === 'required' ? 'Bắt buộc' : 'Tự chọn' }}"
-                                                            class="{{ $subject['type'] === 'required' ? 'badge-success' : 'badge-warning' }} badge-sm"
+                                                            :value="$typeLabel"
+                                                            class="{{ $typeClass }} badge-sm"
                                                         />
                                                     </td>
                                                 </tr>
@@ -469,7 +485,7 @@ class extends Component {
                                 <div class="flex flex-wrap items-center justify-between mb-3 gap-2">
                                     <h3 class="text-lg font-semibold">{{ $groupBlock['group_name'] }}</h3>
                                     <div class="text-sm text-gray-500">
-                                        {{ $groupBlock['total_subjects'] }} môn • {{ $groupBlock['total_credits'] }} tín chỉ
+                                        {{ $groupBlock['total_subjects'] }} môn • {{ Subject::formatCredit($groupBlock['total_credits']) }} tín chỉ
                                     </div>
                                 </div>
 
@@ -492,9 +508,24 @@ class extends Component {
                                                 <td>{{ $subject['name'] }}</td>
                                                 <td>{{ $subject['credits'] }}</td>
                                                 <td>
+                                                    @php
+                                                        $typeLabel = match ($subject['type']) {
+                                                            'required' => 'Bắt buộc',
+                                                            'elective' => 'Tự chọn',
+                                                            'pcbb' => 'PCBB - Phần cứng bắt buộc',
+                                                            default => strtoupper((string) $subject['type']),
+                                                        };
+
+                                                        $typeClass = match ($subject['type']) {
+                                                            'required' => 'badge-success',
+                                                            'elective' => 'badge-warning',
+                                                            'pcbb' => 'badge-error',
+                                                            default => 'badge-neutral',
+                                                        };
+                                                    @endphp
                                                     <x-badge
-                                                        value="{{ $subject['type'] === 'required' ? 'Bắt buộc' : 'Tự chọn' }}"
-                                                        class="{{ $subject['type'] === 'required' ? 'badge-success' : 'badge-warning' }} badge-sm"
+                                                        :value="$typeLabel"
+                                                        class="{{ $typeClass }} badge-sm"
                                                     />
                                                 </td>
                                             </tr>

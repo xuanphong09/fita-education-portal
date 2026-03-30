@@ -6,6 +6,7 @@ use Livewire\WithPagination;
 use App\Models\Post;
 use App\Models\Category;
 use App\Services\PostSearchService;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 
@@ -94,9 +95,9 @@ class extends Component {
         $selectedCategoryId = $currentCategory?->id;
 
         $postQuery = Post::query()
-            ->with(['category', 'user'])
+            ->with(['categories', 'user'])
             ->tap($applyPublished)
-            ->when($selectedCategoryId, fn ($q) => $q->where('category_id', $selectedCategoryId));
+            ->when($selectedCategoryId, fn ($q) => $q->whereHas('categories', fn ($cq) => $cq->where('categories.id', $selectedCategoryId)));
 
         // Hide posts without EN content when locale is EN (uses virtual cols if available).
         PostSearchService::applyLocaleFilter($postQuery, $isEn);
@@ -137,12 +138,13 @@ class extends Component {
             ->values();
 
         $postCounts = Post::query()
-            ->selectRaw('category_id, COUNT(*) as total')
+            ->join('category_post', 'category_post.post_id', '=', 'posts.id')
             ->tap($applyPublished)
             ->tap(fn ($q) => PostSearchService::applyLocaleFilter($q, $isEn))
-            ->when($visibleCategoryIds->isNotEmpty(), fn ($q) => $q->whereIn('category_id', $visibleCategoryIds))
-            ->groupBy('category_id')
-            ->pluck('total', 'category_id');
+            ->when($visibleCategoryIds->isNotEmpty(), fn ($q) => $q->whereIn('category_post.category_id', $visibleCategoryIds))
+            ->selectRaw('category_post.category_id, COUNT(DISTINCT posts.id) as total')
+            ->groupBy('category_post.category_id')
+            ->pluck('total', 'category_post.category_id');
 
         $categories = $categories->filter(function ($category) use ($postCounts) {
             if (($postCounts[$category->id] ?? 0) > 0) {
@@ -274,7 +276,11 @@ class extends Component {
                                 'url' => route('client.posts.show', $post->slug),
                                 'title' => $post->getTranslation('title', app()->getLocale()),
                                 'excerpt' => $post->getExcerptOrAuto(app()->getLocale(), 220),
-                                'category' => optional($post->category)->getTranslation('name', app()->getLocale()),
+                                'categories' => $post->categories
+                                    ->map(fn ($c) => $c->getTranslation('name', app()->getLocale(), false))
+                                    ->filter()
+                                    ->values()
+                                    ->all(),
                                 'author' => optional($post->user)->name,
                                 'date' => optional($post->published_at)->format('d/m/Y'),
                                 'views' => number_format($post->views),
@@ -345,8 +351,8 @@ class extends Component {
 
                                 <div class="p-6 flex flex-col justify-between min-h-72">
                                     <div class="mb-3 flex items-center gap-2 text-md text-gray-500 flex-wrap">
-                                        <template x-if="current && current.category">
-                                            <span class="inline-block bg-fita text-white px-2 py-1 rounded" x-text="current.category"></span>
+                                        <template x-if="current && current.categories && current.categories.length">
+                                            <span class="inline-block bg-fita text-white px-2 py-1 rounded" x-text="current.categories[0]"></span>
                                         </template>
                                         <template x-if="current && current.author">
                                             <span class="inline-flex items-center gap-1">
@@ -441,10 +447,14 @@ class extends Component {
                                                 Nổi bật
                                             </span>
                                         @endif
-                                        @if($post->category && $post->category->getTranslation('name', app()->getLocale()))
-                                            <span class="inline-block bg-fita text-white px-2 py-1 rounded">
-                                                {{ $post->category->getTranslation('name', app()->getLocale()) }}
-                                            </span>
+                                        @if($post->categories->isNotEmpty())
+                                            @foreach($post->categories as $postCategory)
+                                                @if($postCategory->getTranslation('name', app()->getLocale(), false))
+                                                    <span class="inline-block bg-fita text-white px-2 py-1 rounded">
+                                                        {{ $postCategory->getTranslation('name', app()->getLocale()) }}
+                                                    </span>
+                                                @endif
+                                            @endforeach
                                         @endif
                                         @if($post->user)
                                             <span class="inline-flex items-center gap-1">

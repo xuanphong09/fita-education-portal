@@ -124,7 +124,7 @@ class extends Component {
         $slides = count($dbSlides) > 0 ? $dbSlides : $fallbackSlides;
 
         $baseQuery = Post::query()
-            ->with(['category', 'user'])
+            ->with(['categories', 'user'])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
@@ -205,7 +205,7 @@ class extends Component {
         <x-carousel
             :slides="$slides"
             interval="5000"
-            class="h-auto w-full bg-cover bg-center bg-no-repeat overflow-hidden aspect-2/1 md:aspect-5/2 lg:aspect-7/2 custom-carousel"
+            class="h-auto rounded-none w-full bg-cover bg-center bg-no-repeat overflow-hidden aspect-2/1 md:aspect-5/2 lg:aspect-7/2 custom-carousel"
         >
         @scope('content', $slide)
         <div

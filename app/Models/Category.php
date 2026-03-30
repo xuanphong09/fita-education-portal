@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -44,9 +45,11 @@ class Category extends Model
         return $this->children()->with('childrenRecursive');
     }
 
-    public function posts(): HasMany
+    public function posts(): BelongsToMany
     {
-        return $this->hasMany(Post::class, 'category_id');
+        return $this->belongsToMany(Post::class, 'category_post')
+            ->withTimestamps()
+            ->whereNull('posts.deleted_at');
     }
 
     // Helper to get translated name

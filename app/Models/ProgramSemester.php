@@ -36,7 +36,7 @@ class ProgramSemester extends Model
     public function requiredSubjects(): BelongsToMany
     {
         return $this->subjects()
-            ->wherePivot('type', 'required')
+            ->wherePivotIn('type', ['required', 'pcbb'])
             ->orderBy('program_semester_subjects.order');
     }
 
@@ -51,7 +51,7 @@ class ProgramSemester extends Model
     // Scope tien ich de loc hoc ky co it nhat 1 mon bat buoc.
     public function scopeHasRequiredSubjects(Builder $query): Builder
     {
-        return $query->whereHas('subjects', fn (Builder $q) => $q->where('program_semester_subjects.type', 'required'));
+        return $query->whereHas('subjects', fn (Builder $q) => $q->whereIn('program_semester_subjects.type', ['required', 'pcbb']));
     }
 }
 
