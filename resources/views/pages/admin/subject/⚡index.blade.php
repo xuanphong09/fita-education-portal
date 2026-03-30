@@ -3,6 +3,7 @@
 use App\Models\GroupSubject;
 use App\Models\Subject;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
@@ -12,6 +13,7 @@ new class extends Component {
 
     public array $sortBy = ['column' => 'code', 'direction' => 'asc'];
     public int $perPage = 15;
+    #[Url(as: 'search')]
     public string $search = '';
     public string $group_subject_id = '';
     public string $filterActive = '';
@@ -57,7 +59,7 @@ new class extends Component {
             ->orderBy('sort_order')
             ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') ASC")
             ->get()
-            ->map(fn (GroupSubject $group) => [
+            ->map(fn(GroupSubject $group) => [
                 'id' => $group->id,
                 'name' => $group->getTranslation('name', 'vi', false) ?: ('#' . $group->id),
             ])
@@ -70,8 +72,8 @@ new class extends Component {
             ->with('groupSubject')
             ->withCount(['programSemesters', 'prerequisites', 'requiredBy'])
             ->search($this->search)
-            ->when($this->group_subject_id !== '', fn ($query) => $query->where('group_subject_id', (int) $this->group_subject_id))
-            ->when($this->filterActive !== '', fn ($query) => $query->where('is_active', $this->filterActive === '1'))
+            ->when($this->group_subject_id !== '', fn($query) => $query->where('group_subject_id', (int)$this->group_subject_id))
+            ->when($this->filterActive !== '', fn($query) => $query->where('is_active', $this->filterActive === '1'))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
     }
@@ -125,7 +127,7 @@ new class extends Component {
     public function toggleActive(int $id): void
     {
         $subject = Subject::query()->findOrFail($id);
-        $subject->update(['is_active' => ! $subject->is_active]);
+        $subject->update(['is_active' => !$subject->is_active]);
 
         $this->success($subject->is_active ? 'Đã kích hoạt môn học.' : 'Đã tắt môn học.');
     }
@@ -153,7 +155,8 @@ new class extends Component {
         </x-slot:middle>
         <x-slot:actions>
             <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.subject.trash') }}"/>
-            <x-button icon="o-plus" class="btn-primary text-white" label="Tạo môn học" link="{{ route('admin.subject.create') }}"/>
+            <x-button icon="o-plus" class="btn-primary text-white" label="Tạo môn học"
+                      link="{{ route('admin.subject.create') }}"/>
         </x-slot:actions>
     </x-header>
 
@@ -211,59 +214,63 @@ new class extends Component {
             "
         >
             @scope('cell_id', $subject)
-                {{ ($this->subjects->currentPage() - 1) * $this->subjects->perPage() + $loop->iteration }}
+            {{ ($this->subjects->currentPage() - 1) * $this->subjects->perPage() + $loop->iteration }}
             @endscope
 
             @scope('cell_code', $subject)
-                <div class="font-mono font-semibold text-primary">{{ $subject->code }}</div>
-                <div class="text-sm text-gray-400">ID: {{ $subject->id }}</div>
+            <div class="font-mono font-semibold text-primary">{{ $subject->code }}</div>
+            <div class="text-sm text-gray-400">ID: {{ $subject->id }}</div>
             @endscope
 
             @scope('cell_name', $subject)
-                <div class="font-semibold">{{ $subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                <div class="text-sm text-gray-400">{{ $subject->getTranslation('name', 'en', false) ?: 'Chưa có tên tiếng Anh' }}</div>
+            <div class="font-semibold">{{ $subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
+            <div
+                class="text-sm text-gray-400">{{ $subject->getTranslation('name', 'en', false) ?: 'Chưa có tên tiếng Anh' }}</div>
             @endscope
 
             @scope('cell_group_subject', $subject)
-                @if($subject->groupSubject)
-                    <div>{{ $subject->groupSubject->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                    <div class="text-sm text-gray-400">{{ $subject->groupSubject->getTranslation('name', 'en', false) ?: '' }}</div>
-                @else
-                    <x-badge value="Chưa phân nhóm" class="badge-ghost badge-sm" />
-                @endif
+            @if($subject->groupSubject)
+                <div>{{ $subject->groupSubject->getTranslation('name', 'vi', false) ?: '—' }}</div>
+                <div
+                    class="text-sm text-gray-400">{{ $subject->groupSubject->getTranslation('name', 'en', false) ?: '' }}</div>
+            @else
+                <x-badge value="Chưa phân nhóm" class="badge-ghost badge-md font-semibold whitespace-nowrap"/>
+            @endif
             @endscope
 
             @scope('cell_credits', $subject)
-                <div class="font-semibold">{{ $subject->credits }} tín chỉ</div>
-                <div class="text-sm text-gray-500">LT/TH: {{ $subject->credits_theory }} / {{ $subject->credits_practice }}</div>
+            <div class="font-semibold">{{ $subject->credits_display }} tín chỉ</div>
+            <div class="text-sm text-gray-500">LT/TH: {{ $subject->credits_theory_display }}
+                / {{ $subject->credits_practice_display }}</div>
             @endscope
 
             @scope('cell_is_active', $subject)
-                <button wire:click="toggleActive({{ $subject->id }})" class="cursor-pointer">
-                    @if($subject->is_active)
-                        <x-badge value="Kích hoạt" class="badge-success badge-sm" />
-                    @else
-                        <x-badge value="Đang tắt" class="badge-error badge-sm" />
-                    @endif
-                </button>
+            <button wire:click="toggleActive({{ $subject->id }})" class="cursor-pointer">
+                @if($subject->is_active)
+                    <x-badge value="Kích hoạt"
+                             class="badge-success badge-md text-white font-semibold whitespace-nowrap"/>
+                @else
+                    <x-badge value="Đang tắt" class="badge-error badge-md text-white font-semibold whitespace-nowrap"/>
+                @endif
+            </button>
             @endscope
 
             @scope('cell_actions', $subject)
-                <div class="flex gap-2">
-                    <x-button
-                        icon="o-pencil"
-                        class="btn-sm btn-ghost text-primary"
-                        tooltip="Chỉnh sửa"
-                        link="{{ route('admin.subject.edit', $subject->id) }}"
-                    />
-                    <x-button
-                        icon="o-trash"
-                        class="btn-sm btn-ghost text-error"
-                        tooltip="Xóa"
-                        wire:click="delete({{ $subject->id }})"
-                        spinner="delete({{ $subject->id }})"
-                    />
-                </div>
+            <div class="flex gap-2">
+                <x-button
+                    icon="o-pencil"
+                    class="btn-sm btn-ghost text-primary"
+                    tooltip="Chỉnh sửa"
+                    link="{{ route('admin.subject.edit', $subject->id) }}"
+                />
+                <x-button
+                    icon="o-trash"
+                    class="btn-sm btn-ghost text-error"
+                    tooltip="Xóa"
+                    wire:click="delete({{ $subject->id }})"
+                    spinner="delete({{ $subject->id }})"
+                />
+            </div>
             @endscope
 
             <x-slot:empty>

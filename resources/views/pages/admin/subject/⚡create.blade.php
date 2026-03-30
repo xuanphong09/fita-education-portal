@@ -14,9 +14,9 @@ new class extends Component {
     public string $name_vi = '';
     public string $name_en = '';
     public int|string|null $group_subject_id = null;
-    public int|string|null $credits = 0;
-    public int|string|null $credits_theory = 0;
-    public int|string|null $credits_practice = 0;
+    public string $credits = '0';
+    public string $credits_theory = '0';
+    public string $credits_practice = '0';
     public bool $is_active = true;
     public array $prerequisite_subject_ids = [];
 
@@ -27,9 +27,9 @@ new class extends Component {
             'name_vi' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'group_subject_id' => ['nullable', 'integer', 'exists:group_subjects,id'],
-            'credits' => ['required', 'integer', 'min:0', 'max:20'],
-            'credits_theory' => ['required', 'integer', 'min:0', 'max:20'],
-            'credits_practice' => ['required', 'integer', 'min:0', 'max:20'],
+            'credits' => $this->decimalRules('Tổng tín chỉ'),
+            'credits_theory' => $this->decimalRules('Tín chỉ lý thuyết'),
+            'credits_practice' => $this->decimalRules('Tín chỉ thực hành'),
             'is_active' => ['boolean'],
         ];
     }
@@ -40,18 +40,52 @@ new class extends Component {
         'code.unique' => 'Mã môn học đã tồn tại.',
         'name_vi.required' => 'Tên môn học tiếng Việt không được để trống.',
         'credits.required' => 'Tổng tín chỉ không được để trống.',
-        'credits.integer' => 'Tổng tín chỉ phải là số nguyên.',
-        'credits.min' => 'Tổng tín chỉ không được âm.',
-        'credits.max' => 'Tổng tín chỉ không được lớn hơn 20.',
+        'credits.regex' => 'Tổng tín chỉ chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'credits_theory.required' => 'Tín chỉ lý thuyết không được để trống.',
-        'credits_theory.integer' => 'Tín chỉ lý thuyết phải là số nguyên.',
-        'credits_theory.min' => 'Tín chỉ lý thuyết không được âm.',
-        'credits_theory.max' => 'Tín chỉ lý thuyết không được lớn hơn 20.',
+        'credits_theory.regex' => 'Tín chỉ lý thuyết chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'credits_practice.required' => 'Tín chỉ thực hành không được để trống.',
-        'credits_practice.integer' => 'Tín chỉ thực hành phải là số nguyên.',
-        'credits_practice.min' => 'Tín chỉ thực hành không được âm.',
-        'credits_practice.max' => 'Tín chỉ thực hành không được lớn hơn 20.',
+        'credits_practice.regex' => 'Tín chỉ thực hành chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
     ];
+
+    protected function validationAttributes(): array
+    {
+        return [
+            'credits' => 'Tổng tín chỉ',
+            'credits_theory' => 'Tín chỉ lý thuyết',
+            'credits_practice' => 'Tín chỉ thực hành',
+        ];
+    }
+
+    protected function decimalRules(string $label): array
+    {
+        return [
+            'required',
+            'regex:/^\d+(?:[\.,]\d)?$/',
+            function ($attribute, $value, $fail) use ($label) {
+            $decimal = $this->toDecimal($value);
+
+            if ($decimal === null) {
+                    $fail($label . ' không hợp lệ.');
+                    return;
+            }
+
+                if ($decimal < 0 || $decimal > 20) {
+                    $fail($label . ' phải nằm trong khoảng từ 0 đến 20.');
+                }
+            },
+        ];
+    }
+
+    protected function toDecimal(int|float|string|null $value): ?float
+    {
+        $normalized = str_replace(',', '.', trim((string) $value));
+
+        if ($normalized === '' || !preg_match('/^\d+(?:\.\d)?$/', $normalized)) {
+            return null;
+        }
+
+        return round((float) $normalized, 1);
+    }
 
     public function updated(string $property): void
     {
@@ -88,16 +122,16 @@ new class extends Component {
 
     protected function validateCreditsDistribution(): void
     {
-        $credits = filter_var($this->credits, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
-        $creditsTheory = filter_var($this->credits_theory, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
-        $creditsPractice = filter_var($this->credits_practice, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE);
+        $credits = $this->toDecimal($this->credits);
+        $creditsTheory = $this->toDecimal($this->credits_theory);
+        $creditsPractice = $this->toDecimal($this->credits_practice);
 
         // Skip cross-field check while user is still typing/clearing one of the fields.
         if ($credits === null || $creditsTheory === null || $creditsPractice === null) {
             return;
         }
 
-        if (($creditsTheory + $creditsPractice) !== $credits) {
+        if (abs(($creditsTheory + $creditsPractice) - $credits) > 0.0001) {
             throw ValidationException::withMessages([
                 'credits' => ' ',
                 'credits_theory' => ' ',
@@ -118,9 +152,9 @@ new class extends Component {
                 'en' => trim($this->name_en),
             ],
             'group_subject_id' => !blank($this->group_subject_id) ? (int) $this->group_subject_id : null,
-            'credits' => (int) $this->credits,
-            'credits_theory' => (int) $this->credits_theory,
-            'credits_practice' => (int) $this->credits_practice,
+            'credits' => $this->toDecimal($this->credits),
+            'credits_theory' => $this->toDecimal($this->credits_theory),
+            'credits_practice' => $this->toDecimal($this->credits_practice),
             'is_active' => $this->is_active,
         ];
     }
@@ -194,27 +228,27 @@ new class extends Component {
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                     <x-input
                         label="Tổng tín chỉ"
-                        type="number"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         wire:model.live.debounce.300ms="credits"
                         required
-                        placeholder="Nhập sô tín chỉ của môn học"
+                        placeholder="VD: 1,5"
                     />
                     <x-input
                         label="Tín chỉ lý thuyết"
-                        type="number"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         wire:model.live.debounce.300ms="credits_theory"
                         required
-                        placeholder="Nhập số tín chỉ lý thuyết"
+                        placeholder="VD: 1,0"
                     />
                     <x-input
                         label="Tín chỉ thực hành"
-                        type="number"
-                        min="0"
+                        type="text"
+                        inputmode="decimal"
                         wire:model.live.debounce.300ms="credits_practice"
                         required
-                        placeholder="Nhập số tín chỉ thực hành"
+                        placeholder="VD: 0,5"
                     />
                 </div>
                 @error('credits_error')

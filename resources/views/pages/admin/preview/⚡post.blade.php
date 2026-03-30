@@ -21,7 +21,7 @@ class extends Component {
     public string  $slug         = '';
     public string  $status       = 'draft';
     public ?string $thumbnail    = null;
-    public ?string $categoryName = null;
+    public array $categoryNames = [];
     public ?string $authorName   = null;
     public ?string $publishedAt  = null;
     public int     $views        = 0;
@@ -58,9 +58,23 @@ class extends Component {
             $this->publishedAt = $data['published_at']     ?? null;
             $this->views       = 0;
 
-            if (!empty($data['category_id'])) {
-                $cat = Category::find($data['category_id']);
-                $this->categoryName = $cat?->getTranslatedName();
+            $previewCategoryIds = collect($data['category_ids'] ?? [])
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values();
+
+            if ($previewCategoryIds->isEmpty() && !empty($data['category_id'])) {
+                $previewCategoryIds = collect([(int) $data['category_id']]);
+            }
+
+            if ($previewCategoryIds->isNotEmpty()) {
+                $this->categoryNames = Category::query()
+                    ->whereIn('id', $previewCategoryIds)
+                    ->get()
+                    ->map(fn (Category $cat) => $cat->getTranslatedName())
+                    ->filter()
+                    ->values()
+                    ->all();
             }
             if (!empty($data['user_id'])) {
                 $user = User::find($data['user_id']);
@@ -68,7 +82,7 @@ class extends Component {
             }
         } else {
             // ---- Đọc từ DB ---- (không fallback, EN rỗng thì hiển thị rỗng)
-            $post = Post::with(['category', 'user'])->findOrFail($this->id);
+            $post = Post::with(['categories', 'user'])->findOrFail($this->id);
 
             $this->title       = $post->getTranslation('title',   $locale, false) ?? '';
             $this->content     = $post->getTranslation('content', $locale, false) ?? '';
@@ -78,7 +92,11 @@ class extends Component {
             $this->thumbnail   = $post->thumbnail;
             $this->views       = $post->views;
             $this->publishedAt = $post->published_at?->format('d/m/Y');
-            $this->categoryName = $post->category?->getTranslatedName();
+            $this->categoryNames = $post->categories
+                ->map(fn (Category $cat) => $cat->getTranslatedName())
+                ->filter()
+                ->values()
+                ->all();
             $this->authorName   = $post->user?->name;
         }
     }
@@ -94,15 +112,20 @@ class extends Component {
 
 <div>
     <x-slot:title>{{ $title }}</x-slot:title>
+    <x-slot:breadcrumb>
+        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Posts')}}</a>
+        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
+        <span class="line-clamp-1 max-w-200">{{ $title }}</span>
+    </x-slot:breadcrumb>
 
+    <x-slot:titleBreadcrumb>
+        {{__('Posts')}}
+    </x-slot:titleBreadcrumb>
     {{-- ===== Thanh preview bar ===== --}}
     <div class="fixed top-0 left-0 right-0 z-[9999] bg-gray-900 text-white text-sm flex items-center justify-between px-4 py-2 shadow-lg print:hidden">
         <div class="flex items-center gap-3">
             <x-icon name="o-eye" class="w-4 h-4 text-yellow-400"/>
             <span class="font-medium text-yellow-400">Chế độ xem trước</span>
-            @if($isDraft)
-                <span class="bg-yellow-500/20 text-yellow-300 text-xs px-2 py-0.5 rounded">Chưa lưu (cache)</span>
-            @endif
             <span class="text-gray-400 hidden lg:block">—</span>
             <span class="text-gray-300 truncate max-w-xs hidden lg:block">{{ $title }}</span>
         </div>
@@ -132,12 +155,6 @@ class extends Component {
             <span class="text-xs {{ $s['class'] }}">● {{ $s['label'] }}</span>
 
             <span class="text-gray-600">|</span>
-
-            <a href="{{ route('admin.post.edit', $id) }}"
-               class="flex items-center gap-1 px-3 py-1 bg-primary rounded text-xs hover:bg-primary/80 transition-all">
-                <x-icon name="o-pencil" class="w-3 h-3"/>
-                Sửa bài
-            </a>
             <a href="{{ route('admin.post.index') }}"
                class="flex items-center gap-1 px-3 py-1 bg-gray-700 rounded text-xs hover:bg-gray-600 transition-all">
                 <x-icon name="o-arrow-left" class="w-3 h-3"/>
@@ -165,10 +182,14 @@ class extends Component {
                     @endif
 
                     <div class="p-4 lg:p-6">
-                        @if($categoryName)
-                            <span class="inline-block bg-fita text-white text-sm px-3 py-1 rounded mb-4">
-                                {{ $categoryName }}
-                            </span>
+                        @if(!empty($categoryNames))
+                            <div class="flex flex-wrap gap-2 mb-4">
+                                @foreach($categoryNames as $categoryName)
+                                    <span class="inline-block bg-fita text-white text-sm px-3 py-1 rounded">
+                                        {{ $categoryName }}
+                                    </span>
+                                @endforeach
+                            </div>
                         @endif
 
                         <h1 class="text-3xl lg:text-4xl font-bold mb-4">
@@ -213,35 +234,17 @@ class extends Component {
 
             <div class="lg:col-span-1">
                 <div class="bg-white rounded-lg shadow-md p-4 mb-6">
-                    <h3 class="font-bold text-lg mb-3">{{ __('Preview info') }}</h3>
+                    <h3 class="font-bold text-lg mb-3">Thông tin xem trước</h3>
                     <div class="space-y-2 text-sm text-gray-600">
                         <p>
-                            <span class="font-semibold">{{ __('Status') }}:</span>
-                            {{ $status }}
+                            <span class="font-semibold">Trạng thái:</span>
+                            {{ $s['label'] }}
                         </p>
-                        @if($isDraft)
-                            <p class="text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
-                                {{ __('This is a draft preview from cache.') }}
-                            </p>
-                        @endif
+                        <p class="text-yellow-700 bg-yellow-50 border border-yellow-200 rounded px-2 py-1">
+                            <span class="font-semibold">Dữ liệu cập nhật lúc:</span>
+                            {{ now()->format('H:i:s d/m/Y') }}
+                        </p>
                     </div>
-                </div>
-
-                <div class="bg-white rounded-lg shadow-md p-4">
-                    <a
-                        href="{{ route('admin.post.index') }}"
-                        class="btn btn-block bg-fita hover:bg-fita2 text-white border-0"
-                    >
-                        <x-icon name="o-arrow-left" class="w-4 h-4" />
-                        {{ __('Back to Posts') }}
-                    </a>
-                    <a
-                        href="{{ route('admin.post.edit', $id) }}"
-                        class="btn btn-block btn-outline border-fita text-fita hover:bg-fita hover:text-white mt-2"
-                    >
-                        <x-icon name="o-pencil-square" class="w-4 h-4" />
-                        {{ __('Edit Post') }}
-                    </a>
                 </div>
             </div>
         </div>

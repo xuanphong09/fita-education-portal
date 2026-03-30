@@ -17,7 +17,7 @@ class extends Component {
 
     protected function publishedPostsQuery()
     {
-        return Post::with(['category', 'user'])
+        return Post::with(['categories', 'user'])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
@@ -73,10 +73,11 @@ class extends Component {
         // Tăng lượt xem
         $this->post->incrementView();
 
-        // Bài viết liên quan (cùng danh mục)
-        if ($this->post->category_id) {
+        // Bài viết liên quan (cùng một trong các danh mục)
+        $categoryIds = $this->post->categories->pluck('id')->all();
+        if (!empty($categoryIds)) {
             $this->relatedPosts = $this->publishedPostsQuery()
-                ->where('category_id', $this->post->category_id)
+                ->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $categoryIds))
                 ->where('id', '!=', $this->post->id)
                 ->orderBy('published_at', 'desc')
                 ->limit($locale === 'en' ? 10 : 3)
@@ -131,8 +132,8 @@ class extends Component {
             @if($seo['published_time'])
                 <meta property="article:published_time" content="{{ $seo['published_time'] }}">
             @endif
-            @if($post->category)
-                <meta property="article:section" content="{{ $post->category->getTranslation('name', app()->getLocale()) }}">
+            @if($post->categories->isNotEmpty())
+                <meta property="article:section" content="{{ $post->categories->first()->getTranslation('name', app()->getLocale()) }}">
             @endif
             @if($post->user)
                 <meta property="article:author" content="{{ $post->user->name }}">
@@ -141,13 +142,21 @@ class extends Component {
     </x-slot:seo>
 
     <x-slot:breadcrumb>
-        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Posts')}}</a>
+        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Post list')}}</a>
+        @if($post->categories->isNotEmpty())
         <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
-        <span class="line-clamp-1">{{ $post->getTranslation('title', app()->getLocale()) }}</span>
+        <a href="{{route('client.posts.index', ['danh-muc' => $post->categories->first()->slug])}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{$post->categories->first()->getTranslation('name', app()->getLocale())}}</a>
+        @endif
+            <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
+        <span class="line-clamp-1 max-w-200">{{ $post->getTranslation('title', app()->getLocale()) }}</span>
     </x-slot:breadcrumb>
 
     <x-slot:titleBreadcrumb>
-        {{__('Posts')}}
+        @if($post->categories->isNotEmpty())
+            {{$post->categories->first()->getTranslation('name', app()->getLocale())}}
+        @else
+            {{__('Posts')}}
+        @endif
     </x-slot:titleBreadcrumb>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -167,14 +176,20 @@ class extends Component {
 
                 <div class="p-4 lg:p-6">
                     {{-- Category Badge --}}
-                    @if($post->category && $post->category->getTranslation('name', app()->getLocale(), false))
-                        <a
-                            href="{{ route('client.posts.index', ['danh-muc' => $post->category->slug]) }}"
-                            wire:navigate
-                            class="inline-block bg-fita text-white text-sm px-3 py-1 rounded mb-4 hover:bg-fita2 transition-colors"
-                        >
-                            {{ $post->category->getTranslation('name', app()->getLocale()) }}
-                        </a>
+                    @if($post->categories->isNotEmpty())
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            @foreach($post->categories as $postCategory)
+                                @if($postCategory->getTranslation('name', app()->getLocale(), false))
+                                    <a
+                                        href="{{ route('client.posts.index', ['danh-muc' => $postCategory->slug]) }}"
+                                        wire:navigate
+                                        class="inline-block bg-fita text-white text-sm px-3 py-1 rounded hover:bg-fita2 transition-colors"
+                                    >
+                                        {{ $postCategory->getTranslation('name', app()->getLocale()) }}
+                                    </a>
+                                @endif
+                            @endforeach
+                        </div>
                     @endif
 
                     {{-- Title --}}
@@ -320,27 +335,6 @@ class extends Component {
                     </div>
                 </div>
             @endif
-
-            {{-- Back to List --}}
-            <div class="bg-white rounded-lg shadow-md p-4">
-                <a
-                    href="{{ route('client.posts.index') }}"
-                    wire:navigate
-                    class="btn btn-block bg-fita hover:bg-fita2 text-white border-0"
-                >
-                    <x-icon name="o-arrow-left" class="w-4 h-4" />
-                    {{ __('Back to Posts') }}
-                </a>
-                @if($post->category)
-                    <a
-                        href="{{ route('client.posts.index', ['danh-muc' => $post->category->slug]) }}"
-                        wire:navigate
-                        class="btn btn-block btn-outline border-fita text-fita hover:bg-fita hover:text-white mt-2"
-                    >
-                        {{ __('More from') }} {{ $post->category->getTranslation('name', app()->getLocale()) }}
-                    </a>
-                @endif
-            </div>
         </div>
     </div>
 </div>

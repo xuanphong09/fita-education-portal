@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
@@ -11,7 +12,7 @@ new class extends Component {
 
     public array $sortBy = ['column' => 'created_at', 'direction' => 'desc'];
     public int $perPage = 10;
-
+    #[Url(as: 'search')]
     public string $search = '';
 
     public function getUsersProperty()
@@ -19,18 +20,18 @@ new class extends Component {
         return User::query()
             ->with(['roles', 'student', 'lecturer']) // Quan trọng: Gọi sẵn dữ liệu họ hàng
             ->when($this->search, function ($query) {
-                $query->where(function($q) {
+                $query->where(function ($q) {
                     // Tìm trong bảng users
                     $q->where('name', 'like', '%' . $this->search . '%')
                         ->orWhere('email', 'like', '%' . $this->search . '%')
 
                         // Tìm lấn sang bảng students (Mã SV)
-                        ->orWhereHas('student', function($subQuery) {
+                        ->orWhereHas('student', function ($subQuery) {
                             $subQuery->where('student_code', 'like', '%' . $this->search . '%');
                         })
 
                         // Tìm lấn sang bảng lecturers (Mã CB)
-                        ->orWhereHas('lecturer', function($subQuery) {
+                        ->orWhereHas('lecturer', function ($subQuery) {
                             $subQuery->where('staff_code', 'like', '%' . $this->search . '%');
                         });
                 });
@@ -92,7 +93,8 @@ new class extends Component {
             />
         </x-slot:middle>
         <x-slot:actions>
-            <x-button icon="o-plus" class="btn-primary text-white" label="{{__('Create new')}}" link="{{route('admin.user.create')}}"/>
+            <x-button icon="o-plus" class="btn-primary text-white" label="{{__('Create new')}}"
+                      link="{{route('admin.user.create')}}"/>
         </x-slot:actions>
     </x-header>
     {{--    end - header--}}
@@ -123,7 +125,9 @@ new class extends Component {
             {{-- Cột 2: Gom Avatar, Tên và Email --}}
             @scope('cell_user_info', $user)
             <div class="flex items-center gap-3 text-left w-full">
-                <x-avatar :image="$user->avatar ? asset($user->avatar) :'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=random'" class="w-10! h-10!" />
+                <x-avatar
+                    :image="$user->avatar ? asset($user->avatar) :'https://ui-avatars.com/api/?name='.urlencode($user->name).'&background=random'"
+                    class="w-10! h-10!"/>
                 <div class="flex flex-col items-start">
                     <span class="font-semibold text-gray-800">{{ $user->name }}</span>
                     <span class="text-sm text-gray-500">{{ $user->email }}</span>
@@ -155,10 +159,10 @@ new class extends Component {
                             'Ban Chủ Nhiệm Khoa' => 'badge-warning',
                             'Giảng viên' => 'badge-info',
                             'Sinh viên' => 'badge-success',
-                            default => 'badge-neutral'
+                            default => 'badge-neutral text-black!'
                         };
                     @endphp
-                    <x-badge :value="$role->display_name" class="{{ $color }} badge-sm font-semibold" />
+                    <x-badge :value="$role->display_name" class="{{ $color }} badge-md text-white font-semibold "/>
                 @empty
                     <span class="text-gray-400 text-sm">Chưa có</span>
                 @endforelse
@@ -168,9 +172,9 @@ new class extends Component {
             {{-- Cột 5: Trạng thái Hoạt động/Bị khóa --}}
             @scope('cell_is_active', $user)
             @if($user->is_active)
-                <x-badge value="Hoạt động" class="badge-success badge-outline badge-sm" />
+                <x-badge value="Hoạt động" class="badge-success badge-outline badge-md font-semibold"/>
             @else
-                <x-badge value="Đã khóa" class="badge-error badge-outline badge-sm" />
+                <x-badge value="Đã khóa" class="badge-error badge-outline badge-md font-semibold"/>
             @endif
             @endscope
 
@@ -195,16 +199,17 @@ new class extends Component {
 
             <x-slot:empty>
                 <div class="text-center py-5">
-                    <x-icon name="o-users" class="w-10 h-10 text-gray-400 mx-auto" />
+                    <x-icon name="o-users" class="w-10 h-10 text-gray-400 mx-auto"/>
                     <p class="mt-2 text-gray-500">Chưa có người dùng nào.</p>
                 </div>
             </x-slot:empty>
 
             <x-pagination :rows="$this->users" wire:model.live="perPage"/>
         </x-table>
-        <div wire:loading.flex class="absolute inset-0 z-5 items-center justify-center bg-white/30 backdrop-blur-sm rounded-md transition-all duration-300">
+        <div wire:loading.flex
+             class="absolute inset-0 z-5 items-center justify-center bg-white/30 backdrop-blur-sm rounded-md transition-all duration-300">
             <div class="flex flex-col items-center gap-2 flex-1">
-                <x-loading class="text-primary loading-lg" />
+                <x-loading class="text-primary loading-lg"/>
                 <span class="text-sm font-medium text-gray-500">Đang tải dữ liệu...</span>
             </div>
         </div>

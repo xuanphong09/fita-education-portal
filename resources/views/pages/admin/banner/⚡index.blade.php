@@ -15,7 +15,7 @@ new
 class extends Component {
     use WithPagination, Toast, WithFileUploads;
 
-    #[Url(as: 'tim-kiem')]
+    #[Url(as: 'search')]
     public string $search = '';
     public string $tab_create_select = 'vi';
     public string $tab_edit_select = 'vi';
@@ -383,7 +383,7 @@ class extends Component {
         </div>
     </div>
 
-    <x-modal wire:model="showCreate" title="Thêm banner" class="modalAddBanner">
+    <x-modal wire:model="showCreate" title="Thêm banner" class="modalAddBanner" separator>
         <div class="space-y-1 py-0 max-h-[70vh] overflow-y-auto pr-1">
             <div class="space-y-2">
                 <label class="font-medium text-sm">Ảnh đại diện</label>
@@ -444,7 +444,7 @@ class extends Component {
         </x-slot:actions>
     </x-modal>
 
-    <x-modal wire:model="showEdit" title="Sửa banner" class="modalAddBanner">
+    <x-modal wire:model="showEdit" title="Sửa banner" class="modalAddBanner" separator>
         <div class="space-y-1 py-0 max-h-[70vh] overflow-y-auto pr-1">
             <div class="space-y-2">
                 <label class="font-medium text-sm">Ảnh đại diện</label>

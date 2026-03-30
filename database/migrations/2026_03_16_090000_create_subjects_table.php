@@ -17,9 +17,9 @@ return new class extends Migration
 
             // Ten mon hoc da ngon ngu: {"vi":"...","en":"..."}
             $table->json('name');
-            $table->unsignedSmallInteger('credits');//tong so tin chi
-            $table->unsignedSmallInteger('credits_theory'); //tong so tin chi ly thuyet
-            $table->unsignedSmallInteger('credits_practice'); //tong so tin chi thuc hanh
+            $table->decimal('credits', 3, 1); // tối đa 999.9
+            $table->decimal('credits_theory', 3, 1);
+            $table->decimal('credits_practice', 3, 1);
 
             //mon hoc thuoc nhom nao
             $table->foreignId('group_subject_id')->nullable()->constrained()->nullOnDelete();

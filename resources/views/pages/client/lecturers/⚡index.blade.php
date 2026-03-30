@@ -20,7 +20,7 @@ class extends Component {
     #[Url(as: 'bo-mon')]
     public ?string $department = null;
 
-    public int $perPage = 9;
+    public int $perPage = 10;
 
     private function normalizeText(?string $text): string
     {
@@ -134,8 +134,8 @@ class extends Component {
                 $query->where('department_id', $departmentId);
             })
             ->orderByRaw("CASE
+                WHEN {$positionExpr} LIKE '%pho truong khoa%' OR {$positionExpr} LIKE '%phó trưởng khoa%' OR {$positionExpr} LIKE '%vice dean%' OR {$positionExpr} LIKE '%deputy dean%' OR {$positionExpr} LIKE '%associate dean%' THEN 2
                 WHEN {$positionExpr} LIKE '%truong khoa%' OR {$positionExpr} LIKE '%trưởng khoa%' OR {$positionExpr} LIKE '%dean%' THEN 1
-                WHEN {$positionExpr} LIKE '%pho khoa%' OR {$positionExpr} LIKE '%phó khoa%' OR {$positionExpr} LIKE '%vice dean%' OR {$positionExpr} LIKE '%deputy dean%' OR {$positionExpr} LIKE '%associate dean%' THEN 2
                 WHEN {$positionExpr} LIKE '%truong bo mon%' OR {$positionExpr} LIKE '%trưởng bộ môn%' OR {$positionExpr} LIKE '%head of department%' THEN 3
                 WHEN {$positionExpr} LIKE '%pho truong bo mon%' OR {$positionExpr} LIKE '%phó trưởng bộ môn%' OR {$positionExpr} LIKE '%deputy head%' OR {$positionExpr} LIKE '%vice head%' THEN 4
                 WHEN {$positionExpr} LIKE '%giang vien%' OR {$positionExpr} LIKE '%giảng viên%' OR {$positionExpr} LIKE '%lecturer%' THEN 5

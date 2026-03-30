@@ -15,7 +15,7 @@ new
 class extends Component {
     use WithPagination, Toast;
 
-    #[Url(as: 'tim-kiem')]
+    #[Url(as: 'search')]
     public string $search = '';
 
     public int $perPage = 10;

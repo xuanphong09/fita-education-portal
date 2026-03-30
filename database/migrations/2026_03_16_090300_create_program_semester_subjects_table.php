@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('subject_id')->constrained()->restrictOnDelete();
 
             // Loai mon: bat buoc hoac tu chon
-            $table->enum('type', ['required', 'elective'])->default('required');
+            $table->enum('type', ['required', 'elective', 'pcbb'])->default('required');
 
             //ghi chu neu co
             $table->text('notes')->nullable();

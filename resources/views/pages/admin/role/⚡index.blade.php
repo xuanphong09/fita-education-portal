@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -12,7 +13,7 @@ new class extends Component {
 
     public array $sortBy = ['column' => 'created_at', 'direction' => 'desc'];
     public int $perPage = 10;
-
+    #[Url(as: 'search')]
     public string $search = '';
 
     public function getRolesProperty()
@@ -65,7 +66,7 @@ new class extends Component {
             return;
         }
 
-        if($role->name === 'super_admin') {
+        if ($role->name === 'super_admin') {
             $this->error('Không thể xóa vai trò Super Admin.');
             return;
         }
@@ -163,7 +164,7 @@ new class extends Component {
                     <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" tooltip="Xóa"
                               wire:click="delete({{ $role->id }})"
                               spinner="delete({{ $role->id }})"
-                    :hidden="$role->users_count > 0 || $role->name === 'sper_admin'"
+                              :hidden="$role->users_count > 0 || $role->name === 'sper_admin'"
                     />
                 @endif
             </div>

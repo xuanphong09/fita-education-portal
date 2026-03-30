@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
@@ -10,7 +11,8 @@ new class extends Component {
     use WithPagination, Toast;
 
     public array $sortBy = ['column' => 'sort_order', 'direction' => 'asc'];
-    public int $perPage = 15;
+    public int $perPage = 10;
+    #[Url(as: 'search')]
     public string $search = '';
 
     public function updatedSearch(): void
@@ -26,7 +28,7 @@ new class extends Component {
             $keyword = '%' . trim($this->search) . '%';
             $query->where(function ($q) use ($keyword) {
                 $q->whereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')) like ?", [$keyword])
-                  ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) like ?", [$keyword]);
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) like ?", [$keyword]);
             });
         }
 
@@ -38,24 +40,24 @@ new class extends Component {
     public function headers(): array
     {
         return [
-            ['key' => 'id',             'label' => '#',           'class' => 'w-12'],
-            ['key' => 'name',           'label' => 'Tên nhóm',    'sortable' => false],
-            ['key' => 'subjects_count', 'label' => 'Số môn',      'class' => 'w-24'],
-            ['key' => 'sort_order',     'label' => 'Thứ tự',      'class' => 'w-24'],
-            ['key' => 'is_active',      'label' => 'Kích hoạt',   'class' => 'w-28'],
-            ['key' => 'actions',        'label' => 'Hành động',   'sortable' => false, 'class' => 'w-24'],
+            ['key' => 'id', 'label' => '#', 'class' => 'w-12'],
+            ['key' => 'name', 'label' => 'Tên nhóm', 'sortable' => false],
+            ['key' => 'subjects_count', 'label' => 'Số môn', 'class' => 'w-24'],
+            ['key' => 'sort_order', 'label' => 'Thứ tự', 'class' => 'w-24'],
+            ['key' => 'is_active', 'label' => 'Kích hoạt', 'class' => 'w-28'],
+            ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-24'],
         ];
     }
 
     public function delete(int $id): void
     {
         $this->dispatch('modal:confirm', [
-            'title'             => 'Bạn có chắc chắn muốn xóa nhóm môn học này?',
-            'icon'              => 'question',
+            'title' => 'Bạn có chắc chắn muốn xóa nhóm môn học này?',
+            'icon' => 'question',
             'confirmButtonText' => 'Xác nhận',
-            'cancelButtonText'  => 'Hủy',
-            'method'            => 'confirmDelete',
-            'id'                => $id,
+            'cancelButtonText' => 'Hủy',
+            'method' => 'confirmDelete',
+            'id' => $id,
         ]);
     }
 
@@ -129,53 +131,54 @@ new class extends Component {
             "
         >
             @scope('cell_id', $group)
-                {{ ($this->groups->currentPage() - 1) * $this->groups->perPage() + $loop->iteration }}
+            {{ ($this->groups->currentPage() - 1) * $this->groups->perPage() + $loop->iteration }}
             @endscope
 
             @scope('cell_name', $group)
-                <div class="font-semibold">{{ $group->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                <div class="text-xs text-gray-400">{{ $group->getTranslation('name', 'en', false) ?: 'No EN name' }}</div>
-                @if($group->getTranslation('description', 'vi', false))
-                    <div class="text-xs text-gray-500 mt-1 line-clamp-1">
-                        {{ $group->getTranslation('description', 'vi', false) }}
-                    </div>
-                @endif
+            <div class="font-semibold">{{ $group->getTranslation('name', 'vi', false) ?: '—' }}</div>
+            <div class="text-xs text-gray-400">{{ $group->getTranslation('name', 'en', false) ?: 'No EN name' }}</div>
+            @if($group->getTranslation('description', 'vi', false))
+                <div class="text-xs text-gray-500 mt-1 line-clamp-1">
+                    {{ $group->getTranslation('description', 'vi', false) }}
+                </div>
+            @endif
             @endscope
 
             @scope('cell_subjects_count', $group)
-                <x-badge :value="$group->subjects_count . ' môn'" class="badge-neutral badge-sm" />
+            <x-badge :value="$group->subjects_count . ' môn'" class="badge-md font-semibold whitespace-nowrap"/>
             @endscope
 
             @scope('cell_sort_order', $group)
-                <x-badge :value="$group->sort_order" class="badge-ghost badge-sm" />
+            <x-badge :value="$group->sort_order" class="badge-ghost badge-md"/>
             @endscope
 
             @scope('cell_is_active', $group)
-                <button wire:click="toggleActive({{ $group->id }})" class="cursor-pointer">
-                    @if($group->is_active)
-                        <x-badge value="Kích hoạt" class="badge-success badge-sm" />
-                    @else
-                        <x-badge value="Tắt" class="badge-error badge-sm" />
-                    @endif
-                </button>
+            <button wire:click="toggleActive({{ $group->id }})" class="cursor-pointer">
+                @if($group->is_active)
+                    <x-badge value="Kích hoạt"
+                             class="badge-success badge-md text-white font-semibold whitespace-nowrap"/>
+                @else
+                    <x-badge value="Tắt" class="badge-error badge-md text-white font-semibold whitespace-nowrap"/>
+                @endif
+            </button>
             @endscope
 
             @scope('cell_actions', $group)
-                <div class="flex gap-2">
-                    <x-button
-                        icon="o-pencil"
-                        class="btn-sm btn-ghost text-primary"
-                        tooltip="Chỉnh sửa"
-                        link="{{ route('admin.group-subject.edit', $group->id) }}"
-                    />
-                    <x-button
-                        icon="o-trash"
-                        class="btn-sm btn-ghost text-error"
-                        tooltip="Xóa"
-                        wire:click="delete({{ $group->id }})"
-                        spinner="delete({{ $group->id }})"
-                    />
-                </div>
+            <div class="flex gap-2">
+                <x-button
+                    icon="o-pencil"
+                    class="btn-sm btn-ghost text-primary"
+                    tooltip="Chỉnh sửa"
+                    link="{{ route('admin.group-subject.edit', $group->id) }}"
+                />
+                <x-button
+                    icon="o-trash"
+                    class="btn-sm btn-ghost text-error"
+                    tooltip="Xóa"
+                    wire:click="delete({{ $group->id }})"
+                    spinner="delete({{ $group->id }})"
+                />
+            </div>
             @endscope
 
             <x-slot:empty>

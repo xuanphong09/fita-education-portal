@@ -29,9 +29,9 @@ class Subject extends Model
     ];
 
     protected $casts = [
-        'credits' => 'integer',
-        'credits_theory' => 'integer',
-        'credits_practice' => 'integer',
+        'credits' => 'decimal:1',
+        'credits_theory' => 'decimal:1',
+        'credits_practice' => 'decimal:1',
         'group_subject_id' => 'integer',
         'is_active' => 'boolean',
     ];
@@ -96,6 +96,48 @@ class Subject extends Model
         return $this->requiredBy()->wherePivot('training_program_id', $trainingProgramId);
     }
 
+    // Mon tuong duong cua mon hien tai (A <-> B).
+    public function equivalents(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Subject::class,
+            'subject_equivalents',
+            'subject_id',
+            'equivalent_subject_id'
+        )
+            ->using(SubjectEquivalent::class)
+            ->withPivot(['id', 'training_program_id'])
+            ->withTimestamps();
+    }
+
+    public function equivalentOf(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            Subject::class,
+            'subject_equivalents',
+            'equivalent_subject_id',
+            'subject_id'
+        )
+            ->using(SubjectEquivalent::class)
+            ->withPivot(['id', 'training_program_id'])
+            ->withTimestamps();
+    }
+
+    public function equivalentLinks(): HasMany
+    {
+        return $this->hasMany(SubjectEquivalent::class, 'subject_id');
+    }
+
+    public function equivalentOfLinks(): HasMany
+    {
+        return $this->hasMany(SubjectEquivalent::class, 'equivalent_subject_id');
+    }
+
+    public function equivalentsForProgram(int $trainingProgramId): BelongsToMany
+    {
+        return $this->equivalents()->wherePivot('training_program_id', $trainingProgramId);
+    }
+
     public function scopeOrdered(Builder $query): Builder
     {
         return $query->orderBy('code');
@@ -137,6 +179,43 @@ class Subject extends Model
         }
 
         return $query;
+    }
+
+    public static function formatCredit(int|float|string|null $value): string
+    {
+        if ($value === null || $value === '') {
+            return '0';
+        }
+
+        $normalized = str_replace(',', '.', trim((string) $value));
+
+        if (!is_numeric($normalized)) {
+            return '0';
+        }
+
+        $number = round((float) $normalized, 1);
+
+        // Hide trailing ".0" for whole numbers, keep one decimal for fractional values.
+        if (abs($number - floor($number)) < 0.0001) {
+            return (string) (int) $number;
+        }
+
+        return number_format($number, 1, '.', '');
+    }
+
+    public function getCreditsDisplayAttribute(): string
+    {
+        return self::formatCredit($this->credits);
+    }
+
+    public function getCreditsTheoryDisplayAttribute(): string
+    {
+        return self::formatCredit($this->credits_theory);
+    }
+
+    public function getCreditsPracticeDisplayAttribute(): string
+    {
+        return self::formatCredit($this->credits_practice);
     }
 }
 

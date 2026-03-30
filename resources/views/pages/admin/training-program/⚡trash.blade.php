@@ -1,15 +1,18 @@
 <?php
 
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use App\Models\TrainingProgram;
+use Illuminate\Database\QueryException;
 
 new class extends Component {
     use WithPagination, Toast;
 
     public int $perPage = 10;
+    #[Url(as: 'search')]
     public string $search = '';
 
     public function updatedSearch(): void
@@ -51,9 +54,18 @@ new class extends Component {
     public function confirmRestore(int $id): void
     {
         $program = TrainingProgram::onlyTrashed()->findOrFail($id);
-        $program->restore();
 
-        $this->success('Đã khôi phục CTDT thành công.');
+        try {
+            $program->restore();
+            $this->success('Đã khôi phục CTDT thành công.');
+        } catch (QueryException $e) {
+            if ((int)($e->errorInfo[1] ?? 0) === 1062) {
+                $this->error('Không thể khôi phục CTDT này do trùng phiên bản với một CTDT đang tồn tại. Vui lòng chỉnh sửa phiên bản của CTDT hiện tại trước khi khôi phục.');
+                return;
+            }
+
+            throw $e;
+        }
     }
 
     public function forceDelete(int $id): void
@@ -101,7 +113,8 @@ new class extends Component {
             />
         </x-slot:middle>
         <x-slot:actions>
-            <x-button icon="o-arrow-left" class="btn-ghost" label="Quay lại" link="{{ route('admin.training-program.index') }}"/>
+            <x-button icon="o-arrow-left" class="btn-ghost" label="Quay lại"
+                      link="{{ route('admin.training-program.index') }}"/>
         </x-slot:actions>
     </x-header>
 
@@ -128,42 +141,44 @@ new class extends Component {
             "
         >
             @scope('cell_id', $program)
-                {{ ($this->programs->currentPage() - 1) * $this->programs->perPage() + $loop->iteration }}
+            {{ ($this->programs->currentPage() - 1) * $this->programs->perPage() + $loop->iteration }}
             @endscope
 
             @scope('cell_name', $program)
-                <div class="font-semibold">{{ $program->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                <div class="text-xs text-gray-400">{{ $program->getTranslation('name', 'en', false) ?: '' }}</div>
+            <div class="font-semibold">{{ $program->getTranslation('name', 'vi', false) ?: '—' }}</div>
+            <div class="text-xs text-gray-400">{{ $program->getTranslation('name', 'en', false) ?: '' }}</div>
             @endscope
 
             @scope('cell_scope', $program)
-                <div class="text-sm">
-                    <div><span class="text-gray-500">{{ __('Major:') }}</span> {{ $program->major?->getTranslation('name', app()->getLocale(), false) ?: $program->major?->getTranslation('name', 'vi', false) ?: $program->major?->getTranslation('name', 'en', false) ?: __('General') }}</div>
-                    <div><span class="text-gray-500">Khóa:</span> {{ $program->intake?->name ?? '—' }}</div>
+            <div class="text-sm">
+                <div><span
+                        class="text-gray-500">{{ __('Major:') }}</span> {{ $program->major?->getTranslation('name', app()->getLocale(), false) ?: $program->major?->getTranslation('name', 'vi', false) ?: $program->major?->getTranslation('name', 'en', false) ?: __('General') }}
                 </div>
+                <div><span class="text-gray-500">Khóa:</span> {{ $program->intake?->name ?? '—' }}</div>
+            </div>
             @endscope
 
             @scope('cell_deleted_at', $program)
-                {{ optional($program->deleted_at)->format('d/m/Y H:i') }}
+            {{ optional($program->deleted_at)->format('d/m/Y H:i') }}
             @endscope
 
             @scope('cell_actions', $program)
-                <div class="flex gap-2">
-                    <x-button
-                        icon="o-arrow-uturn-left"
-                        class="btn-sm btn-ghost text-success"
-                        tooltip="Khôi phục"
-                        wire:click="restore({{ $program->id }})"
-                        spinner="restore({{ $program->id }})"
-                    />
-                    <x-button
-                        icon="o-trash"
-                        class="btn-sm btn-ghost text-error"
-                        tooltip="Xóa vĩnh viễn"
-                        wire:click="forceDelete({{ $program->id }})"
-                        spinner="forceDelete({{ $program->id }})"
-                    />
-                </div>
+            <div class="flex gap-2">
+                <x-button
+                    icon="o-arrow-uturn-left"
+                    class="btn-sm btn-ghost text-success"
+                    tooltip="Khôi phục"
+                    wire:click="restore({{ $program->id }})"
+                    spinner="restore({{ $program->id }})"
+                />
+                <x-button
+                    icon="o-trash"
+                    class="btn-sm btn-ghost text-error"
+                    tooltip="Xóa vĩnh viễn"
+                    wire:click="forceDelete({{ $program->id }})"
+                    spinner="forceDelete({{ $program->id }})"
+                />
+            </div>
             @endscope
 
             <x-slot:empty>

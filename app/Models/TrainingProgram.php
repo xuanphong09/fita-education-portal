@@ -86,7 +86,7 @@ class TrainingProgram extends Model
             ->join('program_semester_subjects', 'program_semester_subjects.subject_id', '=', 'subjects.id')
             ->join('program_semesters', 'program_semesters.id', '=', 'program_semester_subjects.program_semester_id')
             ->where('program_semesters.training_program_id', $this->id)
-            ->where('program_semester_subjects.type', 'required')
+            ->whereIn('program_semester_subjects.type', ['required', 'pcbb'])
             ->orderBy('program_semesters.semester_no')
             ->orderBy('program_semester_subjects.order');
     }

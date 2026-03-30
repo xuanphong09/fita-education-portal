@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Major;
+use App\Models\Subject;
 use App\Models\TrainingProgram;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -24,6 +25,11 @@ class extends Component {
     #[Url(as: 'tim')]
     public string $search = '';
 
+    #[Url(as: 'loai')]
+    public string $typeFilter = '';
+
+    public array $expanded = [];
+
     public function mount(Major $major): void
     {
         $this->major = $major;
@@ -32,6 +38,27 @@ class extends Component {
     public function updatedVersion(): void
     {
         $this->semesterNo = null;
+        $this->expanded = [];
+    }
+
+    public function updatedSemesterNo(): void
+    {
+        $this->expanded = [];
+    }
+
+    public function updatedViewMode(): void
+    {
+        $this->expanded = [];
+    }
+
+    public function updatedSearch(): void
+    {
+        $this->expanded = [];
+    }
+
+    public function updatedTypeFilter(): void
+    {
+        $this->expanded = [];
     }
 
     public function setViewMode(string $mode): void
@@ -203,7 +230,7 @@ class extends Component {
             ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16'],
-            ['key' => 'prerequisite_subjects_codes', 'label' => __('Prerequisite subjects codes'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'prerequisite_subjects_codes', 'label' => __('PS codes'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
             ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
         ];
@@ -216,11 +243,11 @@ class extends Component {
             ['key' => 'semester_no', 'label' => __('Semester'), 'sortable' => false],
             ['key' => 'code', 'label' => __('Subject code'), 'sortable' => false, 'class' => 'w-16'],
             ['key' => 'name', 'label' => __('Subject name'), 'sortable' => false, 'class' => 'w-70'],
-            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-1'],
             ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16'],
-            ['key' => 'prerequisite_subjects_codes', 'label' => __('Prerequisite subjects codes'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'prerequisite_subjects_codes', 'label' => __('PS codes'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
             ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
         ];
@@ -281,7 +308,7 @@ class extends Component {
                             ->with(['subjects' => function ($subjectQuery) {
                                 $subjectQuery
                                     ->where('subjects.is_active', true)
-                                    ->with(['groupSubject', 'prerequisites'])
+                                    ->with(['groupSubject', 'prerequisites', 'equivalents'])
                                     ->orderBy('program_semester_subjects.order');
                             }]);
                     },
@@ -327,6 +354,21 @@ class extends Component {
                                 })
                                 ->implode(' ');
 
+                            $equivalents = $subject->equivalents
+                                ->filter(fn ($equivalent) => (int) ($equivalent->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                                ->values();
+
+                            $equivalentItems = $equivalents
+                                ->map(fn ($equivalent) => [
+                                    'id' => (int) $equivalent->id,
+                                    'code' => (string) $equivalent->code,
+                                    'name' => $this->localizedName($equivalent),
+                                    'credits' => (float) ($equivalent->credits ?? 0),
+                                    'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
+                                    'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
+                                ])
+                                ->values();
+
                             $subjectNameVi = trim((string) $subject->getTranslation('name', 'vi', false));
                             $subjectNameEn = trim((string) $subject->getTranslation('name', 'en', false));
 
@@ -334,11 +376,11 @@ class extends Component {
                                 'id' => (int) $subject->id,
                                 'code' => (string) $subject->code,
                                 'name' => $this->localizedName($subject),
-                                'credits' => (int) ($subject->credits ?? 0),
-                                'theory' => (int) ($subject->credits_theory ?? 0),
-                                'practice' => (int) ($subject->credits_practice ?? 0),
-                                'credits_theory' => (int) ($subject->credits_theory ?? 0),
-                                'credits_practice' => (int) ($subject->credits_practice ?? 0),
+                                'credits' => (float) ($subject->credits ?? 0),
+                                'theory' => (float) ($subject->credits_theory ?? 0),
+                                'practice' => (float) ($subject->credits_practice ?? 0),
+                                'credits_theory' => (float) ($subject->credits_theory ?? 0),
+                                'credits_practice' => (float) ($subject->credits_practice ?? 0),
                                 'prerequisite_subjects' => $prerequisiteNames,
                                 'prerequisite_subjects_codes' => $prerequisiteCodes,
                                 'type' => (string) ($subject->pivot->type ?? 'required'),
@@ -349,12 +391,17 @@ class extends Component {
                                     ? $this->localizedName($subject->groupSubject)
                                     : __('Uncategorized Group'),
                                 'group_sort_order' => (int) ($subject->groupSubject->sort_order ?? 9999),
+                                'can_expand' => (int) $equivalentItems->count() > 0,
+                                'equivalents_count' => (int) $equivalentItems->count(),
+                                'equivalents' => $equivalentItems,
                                 'search_index' => $this->normalizeSearchText(implode(' ', [
                                     (string) $subject->code,
                                     $this->localizedName($subject),
                                     $subjectNameVi,
                                     $subjectNameEn,
                                     $prerequisiteSearchText,
+                                    $equivalentItems->pluck('code')->implode(' '),
+                                    $equivalentItems->pluck('name')->implode(' '),
                                 ])),
                             ];
                         })
@@ -362,6 +409,9 @@ class extends Component {
                             return $collection->filter(function ($subject) use ($normalizedKeyword) {
                                 return str_contains((string) ($subject['search_index'] ?? ''), $normalizedKeyword);
                             });
+                        })
+                        ->when($this->typeFilter !== '', function ($collection) {
+                            return $collection->filter(fn ($subject) => (string) $subject['type'] === $this->typeFilter);
                         })
                         ->sortBy('order')
                         ->values()
@@ -373,7 +423,7 @@ class extends Component {
 
                     return [
                         'semester_no' => (int) $semester->semester_no,
-                        'total_credits' => (int) $subjects->sum('credits'),
+                        'total_credits' => (float) $subjects->sum('credits'),
                         'subjects' => $subjects,
                     ];
                 })
@@ -401,7 +451,7 @@ class extends Component {
                         'group_name' => (string) $groupName,
                         'group_sort_order' => (int) ($sorted->first()['group_sort_order'] ?? 9999),
                         'total_subjects' => (int) $sorted->count(),
-                        'total_credits' => (int) $sorted->sum('credits'),
+                        'total_credits' => (float) $sorted->sum('credits'),
                         'subjects' => $sorted,
                     ];
                 })
@@ -470,7 +520,21 @@ class extends Component {
                         option-label="label"
                         wire:model.live="viewMode"
                     />
+                </div>
 
+                <div class="w-full sm:w-50">
+                    <x-select
+                        label="{{__('Filter by type')}}"
+                        wire:model.live="typeFilter"
+                        :options="[
+                            ['value' => '', 'label' => __('All types')],
+                            ['value' => 'required', 'label' => __('Required')],
+                            ['value' => 'elective', 'label' => __('Elective')],
+                            ['value' => 'pcbb', 'label' => __('Hardware Required')],
+                        ]"
+                        option-value="value"
+                        option-label="label"
+                    />
                 </div>
 
                 <div class="w-full sm:flex-1 sm:min-w-60">
@@ -520,7 +584,7 @@ class extends Component {
 
                     <div class="flex flex-wrap gap-2 text-[16px]">
                         <x-badge value="{{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
-                        <x-badge value="{{ $activeProgram->total_credits }} {{__('Credits ')}}" class="badge-outline badge-md" />
+                        <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits ')}}" class="badge-outline badge-md" />
                     </div>
                 </div>
             </x-card>
@@ -528,7 +592,7 @@ class extends Component {
             <div class="relative min-h-60">
                 <div
                     wire:loading.delay.short
-                    wire:target="version,semesterNo,viewMode,search"
+                    wire:target="version,semesterNo,viewMode,search,typeFilter"
                     class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
                 >
                     <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
@@ -540,7 +604,7 @@ class extends Component {
                 <div
                     wire:loading.class="opacity-60 pointer-events-none"
                     wire:loading.class.remove="opacity-100"
-                    wire:target="version,semesterNo,viewMode,search"
+                    wire:target="version,semesterNo,viewMode,search,typeFilter"
                     class="transition-opacity duration-150"
                 >
                     @if($viewMode === 'semester')
@@ -550,7 +614,7 @@ class extends Component {
                                     <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
                                         <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }}</h3>
                                         <span
-                                            class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{$semesterBlock['total_credits'] }} {{__('Credits ')}}</span>
+                                            class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{ Subject::formatCredit($semesterBlock['total_credits']) }} {{__('Credits ')}}</span>
                                     </div>
 
                                     @if($semesterBlock['subjects']->isEmpty())
@@ -560,18 +624,21 @@ class extends Component {
                                             <x-table
                                                 :headers="$this->semesterHeaders()"
                                                 :rows="$semesterBlock['subjects']"
+                                                wire:model="expanded"
+                                                expandable
+                                                expandable-condition="can_expand"
                                                 striped
-                                                class="
-                                            bg-white
-                                            text-[16px]!
-                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:text-[16px]!
-                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
-                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                        "
+                                                class="bg-white
+                                                    text-[16px]!
+                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:text-[16px]!
+                                                    [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                                    [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                                    [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                                    [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                                "
                                             >
                                                 @scope('cell_no', $subject)
-                                                {{ $subject['row_index'] }}
+                                                    <span class="select-none">{{ $subject['row_index'] }}</span>
                                                 @endscope
 
                                                 @scope('cell_code', $subject)
@@ -583,15 +650,15 @@ class extends Component {
                                                 @endscope
 
                                                 @scope('cell_credits', $subject)
-                                                {{ $subject['credits'] }}
+                                                {{ Subject::formatCredit($subject['credits']) }}
                                                 @endscope
 
                                                 @scope('cell_theory', $subject)
-                                                {{ $subject['theory'] }}
+                                                {{ Subject::formatCredit($subject['theory']) }}
                                                 @endscope
 
                                                 @scope('cell_practice', $subject)
-                                                {{ $subject['practice'] }}
+                                                {{ Subject::formatCredit($subject['practice']) }}
                                                 @endscope
 
                                                 @scope('cell_prerequisite_subjects', $subject)
@@ -603,10 +670,63 @@ class extends Component {
                                                 @endscope
 
                                                 @scope('cell_type', $subject)
+                                                @php
+                                                    $typeLabel = match ($subject['type']) {
+                                                        'required' => __('Required'),
+                                                        'elective' => __('Elective'),
+                                                        'pcbb' => __('Hardware Required'),
+                                                        default => strtoupper((string) $subject['type']),
+                                                    };
+
+                                                    $typeClass = match ($subject['type']) {
+                                                        'required' => 'badge-error',
+                                                        'elective' => 'badge-success',
+                                                        'pcbb' => 'badge-warning',
+                                                        default => 'badge-neutral',
+                                                    };
+                                                @endphp
                                                 <x-badge
-                                                    value="{{ $subject['type'] === 'required' ? __('Required') : __('Elective') }}"
-                                                    class="{{ $subject['type'] === 'required' ? 'badge-error' : 'badge-success' }} text-white font-semibold badge-md whitespace-nowrap"
+                                                    :value="$typeLabel"
+                                                    class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
                                                 />
+                                                @endscope
+
+                                                @scope('expansion', $subject)
+                                                @if(($subject['equivalents_count'] ?? 0) > 0)
+                                                    <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                                        <div class="font-semibold mb-3">
+                                                            {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
+                                                        </div>
+                                                        <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                            <table class="table text-[16px]">
+                                                                <thead>
+                                                                <tr>
+                                                                    <th class="w-14">{{ __('No.') }}</th>
+                                                                    <th>{{ __('Subject code') }}</th>
+                                                                    <th>{{ __('Subject name') }}</th>
+                                                                    <th class="w-24">{{ __('Credits') }}</th>
+                                                                    <th class="w-20">{{ __('Theory') }}</th>
+                                                                    <th class="w-20">{{ __('Practice') }}</th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                                    <tr>
+                                                                        <td>{{ $index + 1 }}</td>
+                                                                        <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                                        <td>{{ $equivalent['name'] }}</td>
+                                                                        <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                        <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
+                                                                        <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                                @endif
                                                 @endscope
                                             </x-table>
                                         </div>
@@ -625,7 +745,7 @@ class extends Component {
                                     <div class="flex flex-wrap items-center justify-between mb-3 gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white">
                                         <h3 class="text-lg font-semibold">{{ $groupBlock['group_name'] }}</h3>
                                         <div class="text-md">
-                                            {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ $groupBlock['total_credits'] }}
+                                            {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ Subject::formatCredit($groupBlock['total_credits']) }}
                                             {{__('Credits ')}}
                                         </div>
                                     </div>
@@ -634,12 +754,17 @@ class extends Component {
                                         <x-table
                                             :headers="$this->groupHeaders()"
                                             :rows="$groupBlock['subjects']"
+                                            wire:model="expanded"
+                                            expandable
+                                            expandable-condition="can_expand"
                                             striped
+                                            @click.stop="if ($event.target.closest('a, button, input, select')) return; const row = $event.target.closest('tr'); if (row && row.dataset.rowId) { toggleExpand(parseInt(row.dataset.rowId)); }"
                                             class="
                                         bg-white text-[16px]!
                                         [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:text-[16px]!
                                         [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
                                         [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                        [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
                                         [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
                                     "
                                         >
@@ -660,15 +785,15 @@ class extends Component {
                                             @endscope
 
                                             @scope('cell_credits', $subject)
-                                            {{ $subject['credits'] }}
+                                            {{ Subject::formatCredit($subject['credits']) }}
                                             @endscope
 
                                             @scope('cell_theory', $subject)
-                                            {{ $subject['theory'] }}
+                                            {{ Subject::formatCredit($subject['theory']) }}
                                             @endscope
 
                                             @scope('cell_practice', $subject)
-                                            {{ $subject['practice'] }}
+                                            {{ Subject::formatCredit($subject['practice']) }}
                                             @endscope
 
                                             @scope('cell_prerequisite_subjects', $subject)
@@ -680,14 +805,67 @@ class extends Component {
                                             @endscope
 
                                             @scope('cell_type', $subject)
+                                            @php
+                                                $typeLabel = match ($subject['type']) {
+                                                    'required' => __('Required'),
+                                                    'elective' => __('Elective'),
+                                                    'pcbb' => __('Hardware Required'),
+                                                    default => strtoupper((string) $subject['type']),
+                                                };
+
+                                                $typeClass = match ($subject['type']) {
+                                                    'required' => 'badge-error',
+                                                    'elective' => 'badge-success',
+                                                    'pcbb' => 'badge-warning',
+                                                    default => 'badge-neutral',
+                                                };
+                                            @endphp
                                             <x-badge
-                                                value="{{ $subject['type'] === 'required' ? __('Required') : __('Elective') }}"
-                                                class="{{ $subject['type'] === 'required' ? 'badge-error' : 'badge-success' }} text-white font-semibold badge-md whitespace-nowrap"
+                                                :value="$typeLabel"
+                                                class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
                                             />
                                             @endscope
 
                                             @scope('cell_note', $subject)
                                             {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                            @endscope
+
+                                            @scope('expansion', $subject)
+                                            @if(($subject['equivalents_count'] ?? 0) > 0)
+                                                <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                                    <div class="font-semibold text-primary mb-3">
+                                                        {{ __('Equivalent subjects for') }} {{ $subject['code'] }} - {{ $subject['name'] }}
+                                                    </div>
+                                                    <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                        <table class="table text-[16px]">
+                                                            <thead>
+                                                            <tr>
+                                                                <th class="w-14">{{ __('No.') }}</th>
+                                                                <th>{{ __('Subject code') }}</th>
+                                                                <th>{{ __('Subject name') }}</th>
+                                                                <th class="w-24">{{ __('Credits') }}</th>
+                                                                <th class="w-20">{{ __('Theory') }}</th>
+                                                                <th class="w-20">{{ __('Practice') }}</th>
+                                                            </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                            @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                                <tr>
+                                                                    <td>{{ $index + 1 }}</td>
+                                                                    <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                                    <td>{{ $equivalent['name'] }}</td>
+                                                                    <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                    <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
+                                                                    <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                                </tr>
+                                                            @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                            @endif
                                             @endscope
                                         </x-table>
                                     </div>
