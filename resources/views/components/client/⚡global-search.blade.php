@@ -67,22 +67,22 @@ new class extends Component {
 
 <div class="relative z-50" x-data="{ open: false }" @click.outside="open = false">
     <div class="group relative">
-        <button class="btn-ghost bg-transparent border-transparent shadow-none btn-sm">
+        <button type="button" @click="open = !open" class="btn-ghost bg-transparent border-transparent shadow-none btn-sm">
             <x-icon name="o-magnifying-glass" class="w-6 h-6 font-bold @if($this->mode==='light') text-black @else text-white @endif"/>
         </button>
-        <div class="
-    {{-- 1. CẤU HÌNH CHO MOBILE (Mặc định) --}}
-    fixed left-0 right-0 mx-auto top-8 w-[95vw] z-50
+        <div :class="{ 'visible! opacity-100! translate-y-0!': open }" class="
+            {{-- 1. CẤU HÌNH CHO MOBILE (Mặc định) --}}
+            fixed left-0 right-0 mx-auto top-8 w-[95vw] z-50
 
-    {{-- 2. CẤU HÌNH CHO DESKTOP (Ghi đè lại về như cũ) --}}
-    lg:absolute lg:-right-10 lg:top-full lg:mx-0 lg:left-auto lg:w-80 lg:mt-2
+            {{-- 2. CẤU HÌNH CHO DESKTOP (Ghi đè lại về như cũ) --}}
+            lg:absolute lg:-right-10 lg:top-full lg:mx-0 lg:left-auto lg:w-80 lg:mt-2
 
-    {{-- 3. CÁC THUỘC TÍNH CHUNG (Màu sắc, Animation...) --}}
-    bg-white shadow-2xl border border-gray-100 p-2 rounded-none
-    invisible opacity-0 translate-y-2 transition-all duration-300 ease-out
-    group-hover:visible group-hover:opacity-100 group-hover:translate-y-0
-    focus-within:visible focus-within:opacity-100 focus-within:translate-y-0 text-black
-">
+            {{-- 3. CÁC THUỘC TÍNH CHUNG (Màu sắc, Animation...) --}}
+            bg-white shadow-2xl border border-gray-100 p-2 rounded-none
+            invisible opacity-0 translate-y-2 transition-all duration-300 ease-out
+            group-hover:visible group-hover:opacity-100 group-hover:translate-y-0
+            focus-within:visible focus-within:opacity-100 focus-within:translate-y-0 text-black
+        ">
 
             {{-- Form nhập liệu --}}
             <form wire:submit.prevent="searchAction" class="relative">

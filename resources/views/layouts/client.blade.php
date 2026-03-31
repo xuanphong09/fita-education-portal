@@ -33,15 +33,15 @@
 {{-- start nav bar--}}
 <div class="sticky top-0 z-50 w-full">
     {{-- start top nav bar--}}
-    <div class="bg-fita text-white text-sm py-2 lg:px-4 px-2 flex justify-between items-center h-8">
+    <div class="bg-fita text-white text-sm py-2 lg:px-4 px-2 flex items-center h-8 justify-between">
 
         {{-- Bên trái: Tên trường --}}
-        <div class="flex items-center gap-3 lg:ms-10 text-[14px] uppercase">
+        <div class="flex items-center gap-3 lg:ms-10 text-[14px] uppercase whitespace-nowrap @if(app()->getLocale() == 'en') hidden @endif">
             <a href="@if(app()->getLocale() == 'vi') https://vnua.edu.vn  @else https://eng.vnua.edu.vn/ @endif" class="">{{__('Vietnam National University of Agriculture')}}</a>
         </div>
 
         {{-- Bên phải: Link phụ (ICETAI, Sổ tay...) --}}
-        <div class="flex items-center font-medium">
+        <div class="flex items-center font-medium @if(app()->getLocale() == 'en') flex-1 justify-end @endif">
             <livewire:client.global-search />
             <span class="separator text-[18px] lg:ms-3 ms-2 lf:me-2 me-1 text-white">|</span>
             <livewire:language-switcher layout="client"/>

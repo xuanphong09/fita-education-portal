@@ -52,19 +52,10 @@
                 </div>
             </x-slot:trigger>
 
-            <div class="font-normal text-white">
+            <div class="font-normal text-black">
                 {{-- Items --}}
-                <x-menu-item title="My profile" icon="o-user" link="/profile" />
-                <x-menu-item title="Messages" icon="o-envelope" link="/messages">
-                    <x-slot:suffix>
-                        <span class="badge badge-warning badge-sm text-white text-xs">New</span>
-                    </x-slot:suffix>
-                </x-menu-item>
-                <x-menu-item title="Settings" icon="o-cog-6-tooth" link="/settings" />
-
-                <x-menu-separator />
-
-{{--                <x-menu-item title="Logout" icon="o-power" action="{{ route('logout') }}" no-wire-navigate class="text-red-500 hover:bg-red-50 hover:text-red-600 text-sm" />--}}
+                <x-menu-item title="Tài khoản" icon="o-user" link="###" />
+                <x-menu-item title="Đăng xuất" icon="o-power" link="{{ route('handleLogout') }}" no-wire-navigate class="text-red-500 hover:bg-red-50 hover:text-red-600 text-sm" />
             </div>
         </x-dropdown>
     </x-slot:actions>

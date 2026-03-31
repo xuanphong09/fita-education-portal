@@ -621,7 +621,7 @@ new class extends Component {
             ->value('semester_no');
 
         if ($existsInAnotherSemester) {
-            $message = "Mon hoc nay da ton tai o hoc ky {$existsInAnotherSemester} trong CTDT.";
+            $message = "Môn này đã tồn tại ở học kỳ {$existsInAnotherSemester} trong CTDT.";
             $this->addError('attach_subject_id', $message);
             $this->error($message);
             return;
@@ -752,7 +752,7 @@ new class extends Component {
         $semesterCredits = (int) $semester->subjects()->sum('subjects.credits');
         $semester->update(['total_credits' => $semesterCredits]);
 
-        $this->recalculateProgramCredits();
+//        $this->recalculateProgramCredits();
     }
 
     protected function recalculateProgramCredits(): void
