@@ -26,19 +26,19 @@ new class extends Component
             // 1. KHỞI TẠO SWIPER (SLIDER LƯỚI)
             this.swiper = new Swiper(this.$refs.container, {
                 slidesPerView: 1,
-                spaceBetween: 20,
+                spaceBetween: 15,
                 grid: {
                     rows: 2, // Quy định 2 hàng
-                    fill: 'row',
+                    fill: 'column', // điền theo cột (top->bottom, sau đó sang cột tiếp theo)
                 },
                 navigation: {
                     nextEl: '#next-{{ $uuid }}',
                     prevEl: '#prev-{{ $uuid }}',
                 },
                 breakpoints: {
-                    400: { slidesPerView: 2, spaceBetween: 20, grid: { rows: 2 } },
-                    768: { slidesPerView: 4, spaceBetween: 20, grid: { rows: 2 } },
-                    1024: { slidesPerView: 3, spaceBetween: 20, grid: { rows: 2 } }
+                    400: { slidesPerView: 2, spaceBetween: 10, grid: { rows: 2 } },
+                    768: { slidesPerView: 3, spaceBetween: 15, grid: { rows: 2 } },
+                    1024: { slidesPerView: 3, spaceBetween: 15, grid: { rows: 2 } }
                 }
             });
 
