@@ -16,7 +16,10 @@
             return $path;
         }
 
-        return Storage::url($path);
+        $cleanPath = preg_replace('/^\/?storage\//', '', $path);
+
+        // 3. Gắn link tuyệt đối chuẩn xác (asset sẽ tự sinh ra https://domain/...)
+        return asset('storage/' . $cleanPath);
     };
 
     if (isset($post) && $post) {
