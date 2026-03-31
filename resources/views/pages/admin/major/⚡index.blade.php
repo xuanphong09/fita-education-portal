@@ -104,6 +104,10 @@ new class extends Component {
             $this->slug = Str::slug($this->name_vi);
             $this->validateOnly('slug');
         }
+
+        if($property === 'slug') {
+            $this->slug = Str::slug($this->slug);
+        }
     }
 
     public function openEdit(int $id): void
