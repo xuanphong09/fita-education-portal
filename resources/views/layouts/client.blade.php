@@ -252,9 +252,9 @@
             <x-menu-item title="{{__('Home page')}}" link="{{route('client.home')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.home')"/>
             <x-menu-sub title="{{__('Introduction')}}" class="rounded-none hover:bg-fita! hover:text-white!" >
                 <x-menu-item title="{{__('Faculty of Information Technology')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
-                <x-menu-item title="{{__('Lecturers - Staff')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
+                <x-menu-item title="{{__('Lecturers - Staff')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.lecturers.index')}}" :active="request()->routeIs('client.lecturers.index')"/>
             </x-menu-sub>
-            <x-menu-item title="{{__('Posts')}}" link="{{route('client.posts.index')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.posts.index')"/>
+            <x-menu-item title="{{__('News')}}" link="{{route('client.posts.index', ['danh-muc'=>'tin-tuc'])}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.posts.index')"/>
             <x-menu-sub title="{{__('Training Programs')}}" class="rounded-none hover:bg-fita! hover:text-white!" :active="request()->routeIs('client.training-programs.*')">
 {{--                <x-menu-item title="Tất cả chương trình đào tạo" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.training-programs.index')}}" :active="request()->routeIs('client.training-programs.index')"/>--}}
                 @foreach($trainingMajors as $major)

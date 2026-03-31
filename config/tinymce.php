@@ -28,7 +28,7 @@ return [
         'pagebreak nonbreaking anchor | ' .
         'searchreplace visualblocks code fullscreen| ' .
         'help',
-
+    'quickbars_selection_toolbar' => 'bold italic underline | forecolor backcolor |align link',
     // 5. Cấu hình phụ trợ (Để các nút hoạt động đúng)
 //    'image_title' => true,
 //    'automatic_uploads' => true,
@@ -36,8 +36,8 @@ return [
 //    'paste_data_images' => true,
 //    'images_upload_url' => '/admin/post/editor-upload',
 
-    'autosave_ask_before_unload' => true, // Hỏi trước khi tắt tab
+//    'autosave_ask_before_unload' => true, // Hỏi trước khi tắt tab
     'autosave_interval' => '10s',         // Cứ 10 giây lưu 1 lần vào trình duyệt
-    'autosave_restore_when_empty' => true, // Nếu lỡ F5 trang trắng bóc, tự động đổ lại chữ vào
+//    'autosave_restore_when_empty' => true, // Nếu lỡ F5 trang trắng bóc, tự động đổ lại chữ vào
     'autosave_retention' => '1440m',
     ];

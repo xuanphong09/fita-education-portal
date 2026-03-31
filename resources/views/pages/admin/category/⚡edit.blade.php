@@ -244,44 +244,44 @@ new class extends Component {
             </x-card>
 
             {{-- Ảnh đại diện --}}
-            <x-card title="Ảnh đại diện" shadow class="p-3!">
-                <div
-                    x-data="{ previewUrl: null }"
-                    x-on:livewire-upload-start="previewUrl = null"
-                >
-                    {{-- Ảnh hiện tại --}}
-                    @if ($currentThumbnail)
-                        <div class="mb-3" x-show="!previewUrl">
-                            <img src="{{ Storage::url($currentThumbnail) }}" alt="Thumbnail hiện tại"
-                                 class="size-32 rounded object-cover ring-1 ring-gray-200"/>
-                            <x-button
-                                label="Xóa ảnh"
-                                icon="o-trash"
-                                class="btn-md btn-ghost text-error mt-2"
-                                wire:click="removeThumbnail"
-                                spinner="removeThumbnail"
-                                confirm="Bạn có chắc muốn xóa ảnh này không?"
-                            />
-                        </div>
-                    @endif
+{{--            <x-card title="Ảnh đại diện" shadow class="p-3!">--}}
+{{--                <div--}}
+{{--                    x-data="{ previewUrl: null }"--}}
+{{--                    x-on:livewire-upload-start="previewUrl = null"--}}
+{{--                >--}}
+{{--                    --}}{{-- Ảnh hiện tại --}}
+{{--                    @if ($currentThumbnail)--}}
+{{--                        <div class="mb-3" x-show="!previewUrl">--}}
+{{--                            <img src="{{ Storage::url($currentThumbnail) }}" alt="Thumbnail hiện tại"--}}
+{{--                                 class="size-32 rounded object-cover ring-1 ring-gray-200"/>--}}
+{{--                            <x-button--}}
+{{--                                label="Xóa ảnh"--}}
+{{--                                icon="o-trash"--}}
+{{--                                class="btn-md btn-ghost text-error mt-2"--}}
+{{--                                wire:click="removeThumbnail"--}}
+{{--                                spinner="removeThumbnail"--}}
+{{--                                confirm="Bạn có chắc muốn xóa ảnh này không?"--}}
+{{--                            />--}}
+{{--                        </div>--}}
+{{--                    @endif--}}
 
-                    <x-file
-                        wire:model="thumbnail"
-                        label="{{ $currentThumbnail ? 'Thay ảnh mới' : 'Ảnh thumbnail' }}"
-                        hint="jpg, jpeg, png, webp – tối đa 2MB"
-                        accept="image/*"
-                        x-on:change="previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null"
-                    />
+{{--                    <x-file--}}
+{{--                        wire:model="thumbnail"--}}
+{{--                        label="{{ $currentThumbnail ? 'Thay ảnh mới' : 'Ảnh thumbnail' }}"--}}
+{{--                        hint="jpg, jpeg, png, webp – tối đa 2MB"--}}
+{{--                        accept="image/*"--}}
+{{--                        x-on:change="previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null"--}}
+{{--                    />--}}
 
-                    {{-- Preview ảnh mới --}}
-                    <div class="mt-3">
-                        <template x-if="previewUrl">
-                            <img src="#" :src="previewUrl" alt="Preview thumbnail mới"
-                                 class="size-32 rounded object-cover ring-1 ring-gray-200"/>
-                        </template>
-                    </div>
-                </div>
-            </x-card>
+{{--                    --}}{{-- Preview ảnh mới --}}
+{{--                    <div class="mt-3">--}}
+{{--                        <template x-if="previewUrl">--}}
+{{--                            <img src="#" :src="previewUrl" alt="Preview thumbnail mới"--}}
+{{--                                 class="size-32 rounded object-cover ring-1 ring-gray-200"/>--}}
+{{--                        </template>--}}
+{{--                    </div>--}}
+{{--                </div>--}}
+{{--            </x-card>--}}
 
         </div>
 

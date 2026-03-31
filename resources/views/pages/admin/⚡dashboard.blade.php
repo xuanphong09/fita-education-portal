@@ -20,9 +20,9 @@ class extends Component {
 
 {{-- start - breadcrumb --}}
     <x-slot:breadcrumb>
-        <a href="#" class="font-semibold text-slate-700">{{__('List of articles')}}</a>
-        <span class="mx-1">/</span>
-        <span>{{__('Add post')}}</span>
+{{--        <a href="#" class="font-semibold text-slate-700">{{__('List of articles')}}</a>--}}
+{{--        <span class="mx-1">/</span>--}}
+{{--        <span>{{__('Add post')}}</span>--}}
     </x-slot:breadcrumb>
 {{-- end - breadcrumb --}}
 

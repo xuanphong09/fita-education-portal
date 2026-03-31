@@ -67,10 +67,10 @@ new class extends Component {
             'status'             => 'required|in:draft,published,archived',
             'is_featured'        => 'boolean',
             'published_at'       => 'nullable|date',
-            'seo_title_vi'       => 'nullable|string|max:60',
-            'seo_title_en'       => 'nullable|string|max:60',
-            'seo_description_vi' => 'nullable|string|max:160',
-            'seo_description_en' => 'nullable|string|max:160',
+            'seo_title_vi'       => 'nullable|string|max:255',
+            'seo_title_en'       => 'nullable|string|max:255',
+            'seo_description_vi' => 'nullable|string|max:500',
+            'seo_description_en' => 'nullable|string|max:500',
             'thumbnail'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
         ];
     }
@@ -86,10 +86,10 @@ new class extends Component {
         'status.required'       => 'Trạng thái không được để trống.',
         'status.in'             => 'Trạng thái không hợp lệ.',
         'published_at.date'     => 'Thời gian đăng phải là định dạng ngày tháng hợp lệ.',
-        'seo_title_vi.max'     => 'SEO Tiêu đề (Tiếng Việt) không được vượt quá 60 ký tự.',
-        'seo_title_en.max'     => 'SEO Tiêu đề (Tiếng Anh) không được vượt quá 60 ký tự.',
-        'seo_description_vi.max' => 'SEO Mô tả (Tiếng Việt) không được vượt quá 160 ký tự.',
-        'seo_description_en.max' => 'SEO Mô tả (Tiếng Anh) không được vượt quá 160 ký tự.',
+        'seo_title_vi.max'     => 'SEO Tiêu đề (Tiếng Việt) không được vượt quá 255 ký tự.',
+        'seo_title_en.max'     => 'SEO Tiêu đề (Tiếng Anh) không được vượt quá 255 ký tự.',
+        'seo_description_vi.max' => 'SEO Mô tả (Tiếng Việt) không được vượt quá 500 ký tự.',
+        'seo_description_en.max' => 'SEO Mô tả (Tiếng Anh) không được vượt quá 500 ký tự.',
     ];
 
     public function updatedTitleVi($value): void
@@ -431,6 +431,7 @@ new class extends Component {
                                 :config="config('tinymce')"
                                 class="h-full"
                                 label="Nội dung chi tiết (EN)"
+                                folder="uploads/posts/editor"
                             />
                         </div>
 

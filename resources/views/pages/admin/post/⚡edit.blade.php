@@ -436,19 +436,19 @@ new class extends Component {
 
                         {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input wire:model.live.debounce.400ms="title_en" label="Title"
+                            <x-input wire:model.live.debounce.400ms="title_en" label="Tiêu đề (EN)"
                                      placeholder="Ex: Admission announcement 2025"
                             />
                             <x-textarea wire:model="excerpt_en"
                                         placeholder="Short description" rows="3"
                                         hint="Max 500 characters"
-                                        label="Short description"
+                                        label="Mô tả ngắn (EN)"
                             />
                             <x-editor
                                 wire:model="content_en"
                                 :config="config('tinymce')"
                                 class="h-full"
-                                label="Content details"
+                                label="Nội dung chi tiết (EN)"
                                 folder="uploads/posts/editor"
                             />
                         </div>
@@ -476,24 +476,17 @@ new class extends Component {
                         {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
                             <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-sm text-blue-700 space-y-1">
-                                <p><strong>SEO Title</strong> hiển thị trên tab trình duyệt và kết quả Google (khác title bài viết).</p>
-                                <p><strong>SEO Description</strong> là mô tả dưới tiêu đề trên Google (khác short description).</p>
-                            </div>
-                            <div class="flex items-center justify-end mb-3">
-                                <button type="button"
-                                        wire:click="fillSeoEn"
-                                        class="text-xs text-primary hover:underline">
-                                    Điền nhanh SEO EN
-                                </button>
+                                <p><strong>SEO Tiêu đề</strong> hiển thị trên tab trình duyệt và kết quả Google (khác tiêu đề bài viết).</p>
+                                <p><strong>SEO Mô tả</strong> là mô tả dưới tiêu đề trên Google (khác mô tả ngắn).</p>
                             </div>
                             <div class="flex flex-col gap-3">
                                 <div>
                                     <div class="flex items-center justify-between mb-1">
-                                        <span class="fieldset-legend">SEO Title</span>
+                                        <span class="fieldset-legend">SEO Tiêu đề</span>
                                         <button type="button"
                                                 wire:click="$set('seo_title_en', $wire.title_en)"
                                                 class="text-xs text-primary hover:underline">
-                                            ↖ Lấy từ title EN
+                                            ↖ Lấy từ Tiêu đề (EN)
                                         </button>
                                     </div>
                                     <x-input wire:model="seo_title_en" placeholder="Để trống = dùng title bài viết"/>
@@ -504,11 +497,11 @@ new class extends Component {
                                 </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-1">
-                                        <span class="fieldset-legend">SEO Description</span>
+                                        <span class="fieldset-legend">SEO Mô tả</span>
                                         <button type="button"
                                                 wire:click="$set('seo_description_en', $wire.excerpt_en)"
                                                 class="text-xs text-primary hover:underline">
-                                            ↖ Lấy từ short description EN
+                                            ↖ Lấy từ Mô tả ngắn (EN)
                                         </button>
                                     </div>
                                     <x-textarea wire:model="seo_description_en" rows="2"

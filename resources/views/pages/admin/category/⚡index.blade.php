@@ -23,11 +23,33 @@ new class extends Component {
             ->with('parent');  // eager load để tránh N+1 query
 
         if (!empty($this->search)) {
-            $search = "%{$this->search}%";
-            $q->where(function ($q) use ($search) {
-                $q->where('slug', 'like', $search)
-                    ->orWhere('name', 'like', $search);
-            });
+            $search = trim((string) $this->search);
+            $terms = preg_split('/\s+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            foreach ($terms as $term) {
+                $keyword = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term) . '%';
+
+                $q->where(function ($inner) use ($keyword) {
+                    $inner->where('slug', 'like', $keyword)
+                        ->orWhereRaw(
+                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                            [$keyword]
+                        )
+                        ->orWhereRaw(
+                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                            [$keyword]
+                        )
+                        ->orWhereHas('parent', function ($parentQuery) use ($keyword) {
+                            $parentQuery->whereRaw(
+                                "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                                [$keyword]
+                            )->orWhereRaw(
+                                "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
+                                [$keyword]
+                            );
+                        });
+                });
+            }
         }
 
         $q->orderBy(...array_values($this->sortBy));
@@ -39,7 +61,7 @@ new class extends Component {
     {
         return [
             ['key' => 'id', 'label' => '#', 'class' => 'w-10'],
-            ['key' => 'thumbnail', 'label' => 'Ảnh', 'sortable' => false, 'class' => 'w-16'],
+//            ['key' => 'thumbnail', 'label' => 'Ảnh', 'sortable' => false, 'class' => 'w-16'],
             ['key' => 'name', 'label' => 'Tên danh mục', 'class' => 'w-64'],
             ['key' => 'parent', 'label' => 'Danh mục cha', 'sortable' => false, 'class' => 'w-48'],
             ['key' => 'posts_count', 'label' => 'Số bài', 'class' => 'w-24'],
@@ -129,16 +151,16 @@ new class extends Component {
             {{ ($this->categories->currentPage() - 1) * $this->categories->perPage() + $loop->iteration }}
             @endscope
 
-            @scope('cell_thumbnail', $category)
-            @if($category->thumbnail)
-                <img src="{{ Storage::url($category->thumbnail) }}" alt="{{ $category->getTranslatedName() }}"
-                     class="w-10 h-10 rounded object-cover ring-1 ring-gray-200"/>
-            @else
-                <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
-                    <x-icon name="o-photo" class="w-5 h-5 text-gray-400"/>
-                </div>
-            @endif
-            @endscope
+{{--            @scope('cell_thumbnail', $category)--}}
+{{--            @if($category->thumbnail)--}}
+{{--                <img src="{{ Storage::url($category->thumbnail) }}" alt="{{ $category->getTranslatedName() }}"--}}
+{{--                     class="w-10 h-10 rounded object-cover ring-1 ring-gray-200"/>--}}
+{{--            @else--}}
+{{--                <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">--}}
+{{--                    <x-icon name="o-photo" class="w-5 h-5 text-gray-400"/>--}}
+{{--                </div>--}}
+{{--            @endif--}}
+{{--            @endscope--}}
 
             @scope('cell_name', $category)
             <div class="font-medium">{{ $category->getTranslatedName() }}</div>

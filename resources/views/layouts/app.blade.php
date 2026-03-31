@@ -92,6 +92,20 @@
             {{-- end logo sidebar mobile --}}
 
             <x-menu-item title="Trang chủ" icon="o-home" link="{{route('admin.dashboard')}}" :active="request()->routeIs('admin.dashboard')"/>
+            @can('quan_ly_bai_viet')
+                <x-menu-sub title="Quản lý bài viết" icon="o-newspaper">
+                    <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
+                    <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
+                </x-menu-sub>
+            @endcan
+            @can('quan_ly_dao_tao')
+                <x-menu-sub title="Quản lý đào tạo" icon="o-book-open">
+                    <x-menu-item title="Chương trình đào tạo" link="{{route('admin.training-program.index')}}" :active="request()->routeIs('admin.training-program.*')"/>
+                    <x-menu-item title="Nhóm môn học" link="{{route('admin.group-subject.index')}}" :active="request()->routeIs('admin.group-subject.*')"/>
+                    <x-menu-item title="Môn học" link="{{route('admin.subject.index')}}" :active="request()->routeIs('admin.subject.*')"/>
+                </x-menu-sub>
+            @endcan
+
             @can('cai_dat_giao_dien')
                 <x-menu-sub title="{{__('Page configuration')}}" icon="o-document">
                     <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
@@ -101,29 +115,18 @@
                     <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
                 </x-menu-sub>
             @endcan
+            <x-menu-item title="Danh sách đối tác" icon="o-briefcase" link="{{route('admin.partner.index')}}" :active="request()->routeIs('admin.partner.*')"/>
 
             @can('quan_ly_nguoi_dung')
-            <x-menu-sub title="{{__('User management')}}" icon="o-users">
-                <x-menu-item title="{{__('User list')}}" link="{{route('admin.user.user-list')}}" :active="request()->routeIs('admin.user.*')"/>
-                <x-menu-item title="{{__('Roles and Permissions')}}" link="{{route('admin.role.index')}}" :active="request()->routeIs('admin.role.*')"/>
-            </x-menu-sub>
-            @endcan
-
-            @can('quan_ly_bai_viet')
-            <x-menu-sub title="Quản lý bài viết" icon="o-newspaper">
-                <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
-                <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
-            </x-menu-sub>
-            @endcan
-
-            @canany(['quan_ly_dao_tao', 'quan_ly_bai_viet'])
-                <x-menu-sub title="Quản lý đào tạo" icon="o-book-open">
-                    <x-menu-item title="Chương trình đào tạo" link="{{route('admin.training-program.index')}}" :active="request()->routeIs('admin.training-program.*')"/>
-                    <x-menu-item title="Nhóm môn học" link="{{route('admin.group-subject.index')}}" :active="request()->routeIs('admin.group-subject.*')"/>
-                    <x-menu-item title="Môn học" link="{{route('admin.subject.index')}}" :active="request()->routeIs('admin.subject.*')"/>
+                <x-menu-sub title="{{__('User management')}}" icon="o-users">
+                    <x-menu-item title="{{__('User list')}}" link="{{route('admin.user.user-list')}}" :active="request()->routeIs('admin.user.*')"/>
+                    <x-menu-item title="{{__('Roles and Permissions')}}" link="{{route('admin.role.index')}}" :active="request()->routeIs('admin.role.*')"/>
                 </x-menu-sub>
-            @endcanany
-            <x-menu-item title="Danh sách đối tác" icon="o-briefcase" link="{{route('admin.partner.index')}}" :active="request()->routeIs('admin.partner.*')"/>
+            @endcan
+
+
+
+
 
         </x-menu>
     </x-slot:sidebar>
