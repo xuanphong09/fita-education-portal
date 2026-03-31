@@ -8,7 +8,7 @@ new class extends Component
 };
 ?>
 
-<div class=" bg-fita border-t border-gray-200 px-10 text-center lg:text-left lg:px-6 py-3 text-white gap-3 flex justify-center items-center @if($this->layout == "admin") bg-mauchudao! @endif">
+<div class=" bg-fita border-t border-gray-200 px-8 text-center lg:text-left lg:px-6 py-3 text-white gap-3 flex justify-center items-center @if($this->layout == "admin") bg-mauchudao! @endif">
     <div class="w-[90%] lg:w-330">
         {{__("Copyright")}}
         <a href="{{route('client.home')}}" class="text-white hover:text-limitless-teal font-medium underline underline-offset-4 transition">:

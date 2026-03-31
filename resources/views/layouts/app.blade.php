@@ -31,14 +31,14 @@
 {{--  end navbar right  --}}
 
 {{--  start navbar left  --}}
-    <x-slot:actions>
+    <x-slot:actions class="hidden md:block">
         {{--        <x-button label="Messages" icon="o-envelope" link="###" class="btn-ghost btn-sm" responsive />--}}
         {{--        <x-button label="Notifications" icon="o-bell" link="###" class="btn-ghost btn-sm" responsive />--}}
 {{--        <livewire:language-switcher />--}}
         <x-dropdown position="bottom-end" right no-x-anchor class="btn-ghost rounded-btn px-0 py-0 hover:bg-white/5">
 
             <x-slot:trigger>
-                <div class="flex items-center gap-3 px-3 py-2 me-10 cursor-pointer">
+                <div class="flex items-center gap-3 px-3 py-2 me-0 lg:me-10 cursor-pointer">
                     {{-- Avatar --}}
                     <x-avatar :image="auth()->user()->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode(auth()->user()->name).'&background=random'" class="w-8! h-8! border border-white/10" />
 
