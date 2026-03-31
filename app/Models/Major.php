@@ -13,6 +13,9 @@ class Major extends Model
     protected $fillable = [
         'name',
         'slug',
+        'code',
+        'order',
+        'is_active',
     ];
 
     public array $translatable = [
@@ -22,6 +25,16 @@ class Major extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    protected $casts = [
+        'order' => 'integer',
+        'is_active' => 'boolean',
+    ];
+
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('order')->orderBy('name->vi');
     }
 
     public function students():HasMany

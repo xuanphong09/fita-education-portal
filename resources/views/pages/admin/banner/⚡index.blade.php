@@ -378,8 +378,12 @@ class extends Component {
             </x-slot:empty>
         </x-table>
 
-        <div wire:loading.flex class="absolute inset-0 z-5 items-center justify-center bg-white/40 backdrop-blur-sm rounded-md">
-            <x-loading class="text-primary loading-lg"/>
+        <div wire:loading.flex
+             class="absolute inset-0 z-5 items-center justify-center bg-white/30 backdrop-blur-sm rounded-md transition-all duration-300">
+            <div class="flex flex-col items-center gap-2 flex-1">
+                <x-loading class="text-primary loading-lg"/>
+                <span class="text-sm font-medium text-gray-500">Đang tải dữ liệu...</span>
+            </div>
         </div>
     </div>
 

@@ -79,6 +79,9 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/group-subject/create', 'pages::admin.group-subject.create')->name('admin.group-subject.create');
         Route::livewire('/group-subject/edit/{id}', 'pages::admin.group-subject.edit')->name('admin.group-subject.edit');
 
+        // Majors (Chuyên ngành)
+        Route::livewire('/major/index', 'pages::admin.major.index')->name('admin.major.index');
+
         Route::livewire('/subject/index', 'pages::admin.subject.index')->name('admin.subject.index');
         Route::livewire('/subject/trash', 'pages::admin.subject.trash')->name('admin.subject.trash');
         Route::livewire('/subject/create', 'pages::admin.subject.create')->name('admin.subject.create');
