@@ -39,6 +39,9 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/configuration/footer', 'pages::admin.configuration.footer')->name('admin.configuration.footer');
         Route::livewire('/banner/index', 'pages::admin.banner.index')->name('admin.banner.index');
         Route::livewire('/banner/trash', 'pages::admin.banner.trash')->name('admin.banner.trash');
+    });
+
+    Route::middleware('permission:Quan_ly_doi_tac')->group(function () {
         Route::livewire('/partner/index', 'pages::admin.partner.index')->name('admin.partner.index');
         Route::livewire('/partner/trash', 'pages::admin.partner.trash')->name('admin.partner.trash');
     });

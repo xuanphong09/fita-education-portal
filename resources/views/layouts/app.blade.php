@@ -107,8 +107,9 @@
                     <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
                 </x-menu-sub>
             @endcan
+            @can('Quan_ly_doi_tac')
             <x-menu-item title="Danh sách đối tác" icon="o-briefcase" link="{{route('admin.partner.index')}}" :active="request()->routeIs('admin.partner.*')"/>
-
+            @endcan
             @can('quan_ly_nguoi_dung')
                 <x-menu-sub title="{{__('User management')}}" icon="o-users">
                     <x-menu-item title="{{__('User list')}}" link="{{route('admin.user.user-list')}}" :active="request()->routeIs('admin.user.*')"/>
