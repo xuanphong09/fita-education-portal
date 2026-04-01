@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -16,13 +17,13 @@ class extends Component {
     public bool $remember = false;
 
     protected array $rules = [
-        'email'    => 'required|email',
+        'email' => 'required|email',
         'password' => 'required',
     ];
 
     protected array $messages = [
-        'email.required'    => 'Email không được để trống',
-        'email.email'       => 'Email không hợp lệ',
+        'email.required' => 'Email không được để trống',
+        'email.email' => 'Email không hợp lệ',
         'password.required' => 'Mật khẩu không được để trống',
     ];
 
@@ -49,27 +50,40 @@ class extends Component {
     {
         $data = $this->validate($this->rules, $this->getTranslatedMessages());
 
-        if (!Auth::attempt(['email' => $data['email'], 'password' => $data['password']], $this->remember)) {
+        if (!Auth::attempt(['email' => $data['email'], 'password' => $data['password'], 'is_active' => true], $this->remember)) {
             $locale = app()->getLocale();
-            $errorMsg = $locale === 'vi'
-                ? 'Email hoặc mật khẩu không đúng'
-                : 'Email or password is incorrect';
 
-            $this->addError('fail', $errorMsg);
-            $this->addError('email',' ');
-            $this->addError('password',' ');
-            $this->error($errorMsg);
-            $this->reset('password');
-            return;
+            $user = User::where('email', $data['email'])->first();
+
+            if ($user && Hash::check($data['password'], $user->password) && !$user->is_active) {
+
+                $errorMsg = __('auth.inactive');
+                $this->addError('fail', $errorMsg);
+                $this->error($errorMsg);
+
+                return;
+
+            } else {
+                $errorMsg = $locale === 'vi'
+                    ? 'Email hoặc mật khẩu không đúng'
+                    : 'Email or password is incorrect';
+
+                $this->addError('fail', $errorMsg);
+                $this->addError('email', ' ');
+                $this->addError('password', ' ');
+                $this->error($errorMsg);
+                $this->reset('password'); // Xóa trắng ô password
+
+                return;
+            }
         }
 
-        // Regenerate session ngay sau khi đăng nhập để đồng bộ CSRF/session ID.
+        // 4. Regenerate session ngay sau khi đăng nhập thành công
         request()->session()->regenerate();
 
-        // Dùng full redirect sau login để tránh xung đột request khi navigate SPA.
+        // 5. Dùng full redirect sau login để tránh xung đột request khi navigate SPA
         return redirect()->route('client.home');
     }
-
     // Form login chỉ validate lúc submit để tránh race-condition request nền.
 };
 ?>
@@ -86,7 +100,8 @@ class extends Component {
         <div class="text-center mb-6">
 
             <div class="flex justify-center gap-4 mb-4">
-                <img src="{{asset('assets/images/Logo Học viện.png')}}" alt="Logo Học viện" class="w-16 h-16 object-contain">
+                <img src="{{asset('assets/images/Logo Học viện.png')}}" alt="Logo Học viện"
+                     class="w-16 h-16 object-contain">
                 <img src="{{asset('assets/images/FITA.png')}}" alt="FITA logo" class="w-16 h-16 object-contain">
             </div>
 
