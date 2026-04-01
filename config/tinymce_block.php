@@ -4,7 +4,7 @@ return [
     'license_key' => 'gpl',
     'language' => 'vi',
     // 2. Chiều cao & Giao diện
-    'height' => 500,
+    'height' => 400,
     'menubar' => false,
     'branding' => false,
     'promotion' => false,
@@ -12,10 +12,14 @@ return [
 
     'toolbar' => [
         'undo redo | ' .
-        'bold italic underline strikethrough forecolor| ' .
+        'bold italic underline strikethrough| ' .
         'align lineheight | ' .
         'numlist bullist indent outdent| ' .
-        'link table| ' .
+        'link image table| ' .
         'searchreplace help| '
     ],
+    'quickbars_selection_toolbar' => 'bold italic underline | align link',
+
+//    'autosave_interval' => '10s',
+//    'autosave_retention' => '1440m',
 ];

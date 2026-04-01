@@ -398,6 +398,10 @@ new class extends Component {
 
                 {{-- ================= TAB TIẾNG ANH ================= --}}
                 <x-tab name="tab-en" label="Tiếng Anh" class="pt-2!">
+                    <div class="mb-2 flex items-center gap-2">
+                        <x-button label="Lấy từ Tiếng Việt" class="btn-sm btn-ghost" wire:click="fillEnFromVi"/>
+                        <div class="text-xs text-gray-500">(Chỉ điền nếu trống)</div>
+                    </div>
                     <div x-data="{ open: true }"
                          class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
 

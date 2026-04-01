@@ -107,14 +107,18 @@
                     <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
                 </x-menu-sub>
             @endcan
+            @can('Quan_ly_doi_tac')
             <x-menu-item title="Danh sách đối tác" icon="o-briefcase" link="{{route('admin.partner.index')}}" :active="request()->routeIs('admin.partner.*')"/>
-
+            @endcan
             @can('quan_ly_nguoi_dung')
                 <x-menu-sub title="{{__('User management')}}" icon="o-users">
                     <x-menu-item title="{{__('User list')}}" link="{{route('admin.user.user-list')}}" :active="request()->routeIs('admin.user.*')"/>
                     <x-menu-item title="{{__('Roles and Permissions')}}" link="{{route('admin.role.index')}}" :active="request()->routeIs('admin.role.*')"/>
                 </x-menu-sub>
             @endcan
+            @role('giang_vien')
+                <x-menu-item title="Trang giảng viên" icon="o-document-text" link="{{route('admin.lecturer.manager', auth()->user()->lecturer->slug) ?? ''}}" :active="request()->routeIs('admin.lecturer.manager')"/>
+            @endrole
 
 
 
