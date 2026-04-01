@@ -115,6 +115,9 @@
                     <x-menu-item title="{{__('Roles and Permissions')}}" link="{{route('admin.role.index')}}" :active="request()->routeIs('admin.role.*')"/>
                 </x-menu-sub>
             @endcan
+            @role('giang_vien')
+                <x-menu-item title="Trang giảng viên" icon="o-document-text" link="{{route('admin.lecturer.manager', auth()->user()->lecturer->slug) ?? ''}}" :active="request()->routeIs('admin.lecturer.manager')"/>
+            @endrole
 
 
 

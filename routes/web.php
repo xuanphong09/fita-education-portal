@@ -43,6 +43,10 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/partner/trash', 'pages::admin.partner.trash')->name('admin.partner.trash');
     });
 
+    Route::middleware('role:giang_vien')->group(function () {
+        Route::livewire('/lecturer/manager/{slug}', 'pages::admin.lecturer.manager')->name('admin.lecturer.manager');
+    });
+
     // ---- Quản lý người dùng & vai trò ----
     Route::middleware('permission:quan_ly_nguoi_dung')->group(function () {
         Route::livewire('/user/user-list', 'pages::admin.user.user-list')->name('admin.user.user-list');
@@ -93,4 +97,5 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::livewire('/preview/header-footer', 'pages::admin.preview.header-footer')->name('admin.preview.header-footer');
     Route::livewire('/preview/post/{id}', 'pages::admin.preview.post')->name('admin.preview.post');
     Route::livewire('/preview/post-new', 'pages::admin.preview.post-new')->name('admin.preview.post.new');
+    Route::livewire('/preview/lecturer/{slug}', 'pages::admin.preview.lecturer')->name('admin.preview.lecturer');
 });

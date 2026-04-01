@@ -165,6 +165,7 @@ class extends Component {
             label="{{__('Login with ST SSO')}}"
             class="w-full bg-white text-blue-500 border border-blue-500"
             link="/sso/login"
+            disabled
         />
 
     </x-card>
