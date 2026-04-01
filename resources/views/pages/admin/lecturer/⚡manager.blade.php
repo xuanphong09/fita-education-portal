@@ -59,7 +59,7 @@ new class extends Component {
             'degree' => 'nullable|string|max:50',
             'academic_title_other' => 'required_if:academic_title,other|nullable|string|max:255',
             'degree_other' => 'required_if:degree,other|nullable|string|max:255',
-            'introduction_vi' => 'required|string',
+            'introduction_vi' => 'nullable|string',
             'introduction_en' => 'nullable|string',
             'avatar' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ];
@@ -95,7 +95,7 @@ new class extends Component {
         'degree_other.required_if' => 'Học vị khác là bắt buộc khi chọn "Khác".',
         'degree_other.string' => 'Học vị (khác) phải là chuỗi.',
         'degree_other.max' => 'Học vị (khác) không được vượt quá 255 ký tự.',
-        'introduction_vi.required' => 'Nội dung giới thiệu (Tiếng Việt) không được để trống.',
+//        'introduction_vi.required' => 'Nội dung giới thiệu (Tiếng Việt) không được để trống.',
         'introduction_vi.string' => 'Nội dung giới thiệu (Tiếng Việt) phải là chuỗi.',
         'introduction_en.string' => 'Nội dung giới thiệu (Tiếng Anh) phải là chuỗi.',
         'avatar.image' => 'File tải lên phải là hình ảnh.',
