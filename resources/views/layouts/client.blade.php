@@ -70,13 +70,14 @@
 
                     <ul tabindex="0"
                         class="cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md  p-1 text-gray-700">
-
-                        <li>
-                            <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100" href="{{route('admin.dashboard')}}">
-                                <x-icon name="o-wrench" class="w-5 h-5"/>
-                                {{__('Admin Dashboard')}}
-                            </a>
-                        </li>
+                        @unlessrole('sinh_vien')
+                            <li>
+                                <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100" href="{{route('admin.dashboard')}}">
+                                    <x-icon name="o-wrench" class="w-5 h-5"/>
+                                    {{__('Admin Dashboard')}}
+                                </a>
+                            </li>
+                        @endunlessrole
                         @if(auth() && auth()->user()->hasRole('giang_vien'))
                         <li>
                             @php
