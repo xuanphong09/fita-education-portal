@@ -82,14 +82,14 @@
                             @php
                                 $myLecturer = auth()->user()->lecturer;
                                 $profileUrl = $myLecturer
-                                    ? route('client.lecturers.profile', ['slug' => $myLecturer->staff_code])
+                                    ? route('client.lecturers.profile', ['slug' => $myLecturer->slug])
                                     : '#';
                             @endphp
                             <a
                                 href="{{ $profileUrl }}"
                                 class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100"
                             >
-                                <x-icon name="o-document" class="w-5 h-5"/>
+                                <x-icon name="o-document-text" class="w-5 h-5"/>
                                 {{__('Personal website')}}
                             </a>
                         </li>

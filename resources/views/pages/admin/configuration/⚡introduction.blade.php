@@ -507,6 +507,11 @@ new class extends Component {
                                 </div>
                             </div>
                         @endforeach
+                            @if(empty($data['en']['dynamicBlocks']))
+                                <div class="text-center py-10 text-gray-400 border border-dashed rounded-lg bg-gray-50">
+                                    Chưa có khối nào. Vui lòng bấm "Thêm khối động" ở góc phải.
+                                </div>
+                            @endif
                     </div>
 
                 </x-tab>

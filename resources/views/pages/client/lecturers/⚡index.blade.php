@@ -256,7 +256,7 @@ class extends Component {
         </div>
     </section>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-5 gap-6 relative">
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6 relative">
         @forelse($lecturers as $lecturer)
             @php
                 $profileUrl = route('client.lecturers.profile', ['slug' => $lecturer->slug]);
