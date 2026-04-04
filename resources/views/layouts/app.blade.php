@@ -12,6 +12,9 @@
 
     {{-- Sortable.js --}}
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.1/Sortable.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/photoswipe.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/umd/photoswipe.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/photoswipe@5.4.3/dist/umd/photoswipe-lightbox.umd.min.js"></script>
     {{-- Vite --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
@@ -105,6 +108,12 @@
                 <x-menu-sub title="{{__('Interface configuration')}}" icon="o-cog-6-tooth">
                     <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
                     <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
+                </x-menu-sub>
+            @endcan
+            @can('quan_ly_anh')
+                <x-menu-sub title="Quản lý ảnh" icon="o-photo">
+                    <x-menu-item title="Album" link="{{route('admin.album.index')}}" :active="request()->routeIs('admin.album.*')"/>
+                    <x-menu-item title="Thư viện ảnh" link="{{route('admin.gallery')}}" :active="request()->routeIs('admin.gallery')"/>
                 </x-menu-sub>
             @endcan
             @can('Quan_ly_doi_tac')

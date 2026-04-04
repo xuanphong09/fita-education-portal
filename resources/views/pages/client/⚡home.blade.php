@@ -2,6 +2,8 @@
 
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use App\Models\Album;
+use App\Models\AlbumImage;
 use App\Models\Banner;
 use App\Models\Post;
 use Illuminate\Support\Facades\Storage;
@@ -25,44 +27,6 @@ class extends Component {
 //        ],
     ];
 
-
-   public $images = [
-       '/assets/images/Album/1.jpg',
-       '/assets/images/Album/2.jpg',
-       '/assets/images/Album/3.jpg',
-       '/assets/images/Album/4.jpg',
-       '/assets/images/Album/5.jpg',
-       '/assets/images/Album/6.jpg',
-       '/assets/images/Album/7.jpg',
-         '/assets/images/Album/8.jpg',
-       '/assets/images/Album/9.jpg',
-       '/assets/images/Album/10.jpg',
-       '/assets/images/Album/11.jpg',
-       '/assets/images/Album/12.jpg',
-       '/assets/images/Album/13.jpg',
-       '/assets/images/Album/14.jpg',
-       '/assets/images/Album/15.jpg',
-       '/assets/images/Album/16.jpg',
-       '/assets/images/Album/17.jpg',
-         '/assets/images/Album/18.jpg',
-       '/assets/images/Album/19.jpg',
-       '/assets/images/Album/20.jpg',
-       '/assets/images/Album/21.jpg',
-       '/assets/images/Album/21.jpg',
-       '/assets/images/Album/22.jpg',
-       '/assets/images/Album/23.jpg',
-       '/assets/images/Album/24.jpg',
-       '/assets/images/Album/25.jpg',
-       '/assets/images/Album/26.jpg',
-       '/assets/images/Album/27.jpg',
-         '/assets/images/Album/28.jpg',
-       '/assets/images/Album/29.jpg',
-       '/assets/images/Album/30.jpg',
-       '/assets/images/Album/31.jpg',
-       '/assets/images/Album/32.jpg',
-
-
-   ];
 
     protected function hasMeaningfulTranslation(Post $post, string $field, string $locale): bool
     {
@@ -209,12 +173,61 @@ class extends Component {
             }
         }
 
+        $featuredAlbum = Album::query()
+            ->featuredForHome()
+            ->orderByDesc('updated_at')
+            ->first();
+
+        $imagesQuery = AlbumImage::query()
+            ->whereNull('album_images.deleted_at');
+
+        if ($featuredAlbum) {
+            $imagesQuery
+                ->whereHas('albums', fn ($query) => $query->where('albums.id', $featuredAlbum->id))
+                ->orderByDesc('album_images.created_at')
+                ->orderByDesc('album_images.id');
+        } else {
+            $imagesQuery
+                ->orderByDesc('album_images.created_at')
+                ->orderByDesc('album_images.id')
+                ->limit(20);
+        }
+
+        $images = $imagesQuery
+            ->get()
+            ->filter(fn (AlbumImage $image) => filled($image->image_path) && Storage::disk('public')->exists($image->image_path))
+            ->map(fn (AlbumImage $image) => [
+                'url' => Storage::url($image->image_path),
+                'alt' => $image->caption,
+                'caption' => $image->caption,
+            ])
+            ->values()
+            ->toArray();
+
+        if ($featuredAlbum && count($images) === 0) {
+            $images = AlbumImage::query()
+                ->whereNull('album_images.deleted_at')
+                ->orderByDesc('album_images.created_at')
+                ->orderByDesc('album_images.id')
+                ->limit(20)
+                ->get()
+                ->filter(fn (AlbumImage $image) => filled($image->image_path) && Storage::disk('public')->exists($image->image_path))
+                ->map(fn (AlbumImage $image) => [
+                    'url' => Storage::url($image->image_path),
+                    'alt' => $image->caption,
+                    'caption' => $image->caption,
+                ])
+                ->values()
+                ->toArray();
+        }
+
         return [
             'slides' => $slides,
             'featuredPosts' => $featuredPosts,
             'latestPosts' => $latestPosts,
             'featurePostsSlideImages' => $featurePostsSlideImages,
             'latestPostsSlideImages' => $latestPostsSlideImages,
+            'images' => $images,
         ];
     }
 };
