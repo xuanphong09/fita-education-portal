@@ -384,6 +384,7 @@ class extends Component {
     protected function resetImageForm(): void
     {
         $this->reset(['images', 'caption', 'uploadAlbumId', 'uploadImagesError']);
+        $this->resetErrorBag();
     }
 };
 ?>
