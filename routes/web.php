@@ -111,3 +111,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::livewire('/preview/post-new', 'pages::admin.preview.post-new')->name('admin.preview.post.new');
     Route::livewire('/preview/lecturer/{slug}', 'pages::admin.preview.lecturer')->name('admin.preview.lecturer');
 });
+
+Route::get('/check-php', function () {
+    phpinfo();
+});
