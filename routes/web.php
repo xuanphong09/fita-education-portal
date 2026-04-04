@@ -42,7 +42,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     });
 
 //    anh
-    Route::middleware('permission:cai_dat_giao_dien')->group(function () {
+    Route::middleware('permission:quan_ly_anh')->group(function () {
         Route::livewire('/album/index', 'pages::admin.album.index')->name('admin.album.index');
         Route::livewire('/album/trash', 'pages::admin.album.trash')->name('admin.album.trash');
         Route::livewire('/album/{id}/images', 'pages::admin.album.show')->name('admin.album.show');
