@@ -225,7 +225,7 @@ class extends Component {
                         <div>
                             <p class="font-semibold text-base leading-5">{{ $album->name }}</p>
                         </div>
-                        <x-badge :value="$album->images_count . ' ảnh'" class="badge-outline"/>
+                        <x-badge :value="$album->images_count . ' ảnh'" class="badge-outline whitespace-nowrap"/>
                     </div>
 
                     @if($album->description)
