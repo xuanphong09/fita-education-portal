@@ -49,17 +49,17 @@ new class extends Component {
     {
         if ($this->editingId) {
             return [
-                'name_vi' => 'required|string|max:255|unique:Departments,name->vi,' . $this->editingId,
-                'name_en' => 'required|string|max:255|unique:Departments,name->en,' . $this->editingId,
-                'slug' => 'required|string|max:255|unique:Departments,slug,' . $this->editingId,
+                'name_vi' => 'required|string|max:255|unique:departments,name->vi,' . $this->editingId,
+                'name_en' => 'required|string|max:255|unique:departments,name->en,' . $this->editingId,
+                'slug' => 'required|string|max:255|unique:departments,slug,' . $this->editingId,
                 'order' => 'nullable|integer|min:0',
             ];
         }
 
         return [
-            'name_vi' => 'required|string|max:255|unique:Departments,name->vi',
-            'name_en' => 'required|string|max:255|unique:Departments,name->en',
-            'slug' => 'required|string|max:255|unique:Departments,slug',
+            'name_vi' => 'required|string|max:255|unique:departments,name->vi',
+            'name_en' => 'required|string|max:255|unique:departments,name->en',
+            'slug' => 'required|string|max:255|unique:departments,slug',
             'order' => 'nullable|integer|min:0',
         ];
     }
