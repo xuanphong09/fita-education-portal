@@ -12,6 +12,8 @@ class Department extends Model
 
     protected $fillable = [
         'name',
+        'slug',
+        'order',
     ];
 
     public array $translatable = ['name'];

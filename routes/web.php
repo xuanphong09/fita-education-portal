@@ -97,6 +97,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
 
         // Majors (Chuyên ngành)
         Route::livewire('/major/index', 'pages::admin.major.index')->name('admin.major.index');
+        // Department - Bộ môn
+        Route::livewire('/department/index', 'pages::admin.department.index')->name('admin.department.index');
 
         Route::livewire('/subject/index', 'pages::admin.subject.index')->name('admin.subject.index');
         Route::livewire('/subject/trash', 'pages::admin.subject.trash')->name('admin.subject.trash');
