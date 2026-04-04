@@ -41,6 +41,15 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/banner/trash', 'pages::admin.banner.trash')->name('admin.banner.trash');
     });
 
+//    anh
+    Route::middleware('permission:cai_dat_giao_dien')->group(function () {
+        Route::livewire('/album/index', 'pages::admin.album.index')->name('admin.album.index');
+        Route::livewire('/album/trash', 'pages::admin.album.trash')->name('admin.album.trash');
+        Route::livewire('/album/{id}/images', 'pages::admin.album.show')->name('admin.album.show');
+        Route::livewire('/album/gallery', 'pages::admin.album.gallery')->name('admin.gallery');
+    });
+
+
     Route::middleware('permission:Quan_ly_doi_tac')->group(function () {
         Route::livewire('/partner/index', 'pages::admin.partner.index')->name('admin.partner.index');
         Route::livewire('/partner/trash', 'pages::admin.partner.trash')->name('admin.partner.trash');

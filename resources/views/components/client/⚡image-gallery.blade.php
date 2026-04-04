@@ -59,24 +59,29 @@ new class extends Component
     <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-100! lg:h-125! pb-10!">
         <div class="swiper-wrapper">
             @foreach($images as $image)
+                @php
+                    $src = is_array($image) ? ($image['url'] ?? '') : $image;
+                    $alt = is_array($image) ? ($image['alt'] ?? '') : '';
+                @endphp
+                @continue(blank($src))
                 {{-- SWIPER SLIDE --}}
                 {{-- Chiều cao calc(...) là bắt buộc để chia đều 2 hàng --}}
                 <div class="swiper-slide h-[calc((100%-20px)/2)]! md:h-[calc((100%-30px)/2)]! rounded-md overflow-hidden shadow-sm border border-gray-200">
 
                     {{-- Thẻ A của PhotoSwipe --}}
                     <a
-                        href="{{ $image }}"
+                        href="{{ $src }}"
                         target="_blank"
                         data-pswp-width="1200"
                         data-pswp-height="800"
                         class="block w-full h-full cursor-pointer group/img"
                     >
                         <img
-                            src="{{ $image }}"
+                            src="{{ $src }}"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-110"
                             onload="this.parentNode.setAttribute('data-pswp-width', this.naturalWidth); this.parentNode.setAttribute('data-pswp-height', this.naturalHeight)"
                             loading="lazy"
-                            alt=""
+                            alt="{{ $alt }}"
                         />
                         {{-- Overlay đen mờ khi hover --}}
                         <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-all duration-300"></div>
