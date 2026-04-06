@@ -278,7 +278,7 @@ class extends Component {
                 <h2 class="text-[28px] lg:text-[36px] font-bold text-fita  font-barlow uppercase">{{ __('Why choose us?') }}</h2>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
                 {{-- Card 1: Đội ngũ giảng viên --}}
                 <div
                     class="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-blue-200/50"
@@ -402,8 +402,8 @@ class extends Component {
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
             {{__('News and events')}}
         </h1>
-        <div class="relative flex h-140 w-[90%] lg:w-330 mx-auto gap-10">
-            <div class="w-[50%] hidden lg:block relative">
+        <div class="relative flex flex-col lg:flex-row w-[90%] lg:w-330 mx-auto gap-10">
+            <div class="lg:w-[50%] w-full relative h-60 lg:h-140">
                 @php
                     $leftHighlightPost = $tabSelected === 'tab-feature-post'
                         ? $featuredPosts->first()
@@ -419,7 +419,7 @@ class extends Component {
                     <a
                         href="{{ route('client.posts.show', $leftHighlightPost->slug) }}"
                         wire:navigate
-                        class="group relative block h-140 overflow-hidden border border-base-300 bg-slate-900 rounded-2xl"
+                        class="group relative block h-full overflow-hidden border border-base-300 bg-slate-900 rounded-2xl"
                     >
                         @if($leftHighlightImage)
                             <img
@@ -447,10 +447,10 @@ class extends Component {
                         @endif
 
                         <div class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
-                            <div class="text-[40px]/[44px] font-bold">
+                            <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold">
                                 {{ $leftHighlightPost->published_at?->isoFormat('DD') }}
                             </div>
-                            <div class="text-[24px]/[26px] font-bold mt-3">
+                            <div class="text-[18px]/[30px] lg:text-[24px]/[26px] font-bold mt-0 lg:mt-3">
                                 {{ app()->getLocale() === 'vi'
                                     ? 'tháng ' . $leftHighlightPost->published_at?->isoFormat('M')
                                     : $leftHighlightPost->published_at?->isoFormat('MMMM') }}
@@ -460,10 +460,10 @@ class extends Component {
                         <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-black/15 to-transparent"></div>
 
                         <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
-                            <h3 class="line-clamp-2 text-[20px]/[24px] font-bold">
+                            <h3 class="line-clamp-2 text-[18px]/[20px] lg:text-[20px]/[24px] font-bold">
                                 {{ $leftHighlightPost->getTranslation('title', app()->getLocale()) }}
                             </h3>
-                            <p class="mt-3 line-clamp-2 text-[18px]/[22px] text-white/90">
+                            <p class="mt-3 line-clamp-2 text-[16px]/[18px] lg:text-[18px]/[22px] text-white/90">
                                 {{ $leftHighlightPost->getExcerptOrAuto(app()->getLocale(), 170) }}
                             </p>
                         </div>
@@ -489,7 +489,7 @@ class extends Component {
                     <x-tab name="tab-feature-post" label="{{__('Featured News')}}" icon="">
                         <div class="flex flex-col gap-4">
                             @forelse($featuredPosts->skip(1)->take(3) as $post)
-                                <div class="flex gap-5 bg-white rounded-2xl px-4 py-3 border border-slate-300">
+                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
@@ -517,7 +517,7 @@ class extends Component {
                     <x-tab name="tab-new-post" label="{{__('Latest News')}}">
                         <div class="flex flex-col gap-4">
                             @forelse($latestPosts->skip(1)->take(3) as $post)
-                                <div class="flex gap-5 bg-white rounded-2xl px-4 py-3 border border-slate-300">
+                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
@@ -547,7 +547,7 @@ class extends Component {
             </div>
         </div>
     </div>
-    <section class="js-reveal reveal-on-scroll mt-8 lg:mt-10 bg-slate-200/40 pt-15 ">
+    <section class="mt-8 lg:mt-10 bg-slate-200/40 pt-15 ">
         <div class="mx-auto w-[90%] lg:w-330 ">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-15">
                 @foreach($counterStats as $stat)
