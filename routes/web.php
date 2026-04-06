@@ -4,7 +4,7 @@ use App\Http\Controllers\AuthenticateController;
 use App\Http\Middleware\SetAdminLocale;
 use App\Http\Controllers\TinyMCEController;
 
-Route::livewire('/', 'pages::client.home')->name('client.home');
+Route::livewire('/', 'pages::client.home2')->name('client.home');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
 Route::livewire('/search', 'pages::client.search')->name('client.search');
 Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');

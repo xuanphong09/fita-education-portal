@@ -37,15 +37,15 @@ new class extends Component
             @endif
         </div>
 
-        <ul tabindex="0" class="text-black dropdown-content z-1 menu drop-shadow-lg bg-base-100 w-35 p-0 border border-gray-300">
+        <ul tabindex="0" class="text-black dropdown-content z-1 menu drop-shadow-lg bg-base-100 w-30 p-0 border border-gray-300">
             <li>
                 <button type="button" wire:click="changeLanguage('vi')" class="text-[15px] py-2.5 ps-4 pe-2 rounded-none  font-normal active:bg-fita active:text-white">
-                    🇻🇳 Tiếng Việt
+                    Tiếng Việt
                 </button>
             </li>
             <li>
                 <button type="button" wire:click="changeLanguage('en')" class="text-[15px] py-2.5 ps-4 pe-2 rounded-none  font-normal active:bg-fita active:text-white">
-                    🇬🇧 English
+                    English
                 </button>
             </li>
         </ul>

@@ -22,7 +22,8 @@
     --color-danger: #EF4444;
     --color-info: #049aad;
     --color-primary: #0c83ff;
-    --color-fita: #0071BD;
+    /*--color-fita: #0071BD;*/
+    --color-fita: #0961AA;
     --color-fita2: #0c83d8;
 }
 
@@ -337,3 +338,4 @@ span.relative.inline-flex.rounded-md {
 nav div div p.text-gray-700.leading-5{
     font-size: 14px;
 }
+
