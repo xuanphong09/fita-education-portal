@@ -29,28 +29,28 @@
             <x-icon name="o-bars-3" class="cursor-pointer" />
         </label>
 
-       <livewire:logo/>
+       <livewire:logo layout="admin"/>
     </x-slot:brand>
 {{--  end navbar right  --}}
 
 {{--  start navbar left  --}}
     <x-slot:actions class="hidden md:block">
         {{--        <x-button label="Messages" icon="o-envelope" link="###" class="btn-ghost btn-sm" responsive />--}}
-        {{--        <x-button label="Notifications" icon="o-bell" link="###" class="btn-ghost btn-sm" responsive />--}}
+                <x-button label="Trang chủ" icon="o-home" link="{{route('client.home')}}" class="btn-ghost mb-3" responsive />
 {{--        <livewire:language-switcher />--}}
         <x-dropdown position="bottom-end" right no-x-anchor class="btn-ghost rounded-btn px-0 py-0 hover:bg-white/5">
 
             <x-slot:trigger>
-                <div class="flex items-center gap-3 px-3 py-2 me-0 lg:me-10 cursor-pointer">
+                <div class="flex items-center gap-3 px-3 pt-4 me-0 lg:me-10 cursor-pointer">
                     {{-- Avatar --}}
                     <x-avatar :image="auth()->user()->avatar ?? 'https://ui-avatars.com/api/?name='.urlencode(auth()->user()->name).'&background=random'" class="w-8! h-8! border border-white/10" />
 
                     {{-- Tên User (Chỉ hiện trên PC) --}}
                     <div class="hidden md:flex flex-col items-start text-left leading-tight">
-                        <span class="font-semibold text-white truncate max-w-25">
+                        <span class="font-semibold text-white truncate max-w-25 select-none">
                             {{ auth()->user()->name ?? 'Guest' }}
                         </span>
-                        <span class="text-[13px] text-gray-400">{{ auth()->user()->email ?? 'Guest' }}</span>
+                        <span class="text-[13px] text-gray-400 select-none">{{ auth()->user()->email ?? 'Guest' }}</span>
                     </div>
                 </div>
             </x-slot:trigger>
@@ -85,7 +85,7 @@
             </div>
             {{-- end logo sidebar mobile --}}
 
-            <x-menu-item title="Trang chủ" icon="o-home" link="{{route('admin.dashboard')}}" :active="request()->routeIs('admin.dashboard')"/>
+            <x-menu-item title="Dashboard" icon="o-home" link="{{route('admin.dashboard')}}" :active="request()->routeIs('admin.dashboard')"/>
             @can('quan_ly_bai_viet')
                 <x-menu-sub title="Quản lý bài viết" icon="o-newspaper">
                     <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
@@ -129,8 +129,9 @@
             @role('giang_vien')
                 <x-menu-item title="Trang giảng viên" icon="o-document-text" link="{{route('admin.lecturer.manager', auth()->user()->lecturer->slug) ?? ''}}" :active="request()->routeIs('admin.lecturer.manager')"/>
             @endrole
-
-
+            @can('quan_ly_lien_he')
+                <livewire:contact-message-menu-item />
+            @endcan
 
 
 

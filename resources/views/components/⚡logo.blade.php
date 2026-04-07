@@ -8,7 +8,7 @@ new class extends Component
 };
 ?>
 
-<a href="{{route('client.home')}}" class="flex items-center ms-5 gap-3 @if($this->layout == "footer") m-0! @endif" wire:navigate>
+<a href=" @if($this->layout == "admin"){{route('admin.dashboard')}} @else {{route('client.home')}} @endif" class="flex items-center ms-5 gap-3 @if($this->layout == "footer") m-0! @endif" wire:navigate>
     <img src="{{asset('assets/images/FITA.png')}}" class="size-12 @if($this->layout == "footer") size-16! @endif rounded-[50%] object-cover" alt="Logo" />
     <div class="md:flex flex-col ms-2 wow fadeInDown @if(app()->getLocale() == 'en' && $this->layout == "client") hidden @endif">
         <h1 class="font-semibold tracking-wider uppercase text-white md:text-[20px]/[24px] text-[16px]/[20px] font-barlow whitespace-nowrap @if($this->layout == "client") text-fita! @endif">{{__('Faculty of Information Technology')}}</h1>
