@@ -275,6 +275,9 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
 .modalAddImage div.modal-box{
     @apply lg:w-300 max-w-[90%] lg:max-h-169 py-4
 }
+.modalContactMessage div.modal-box{
+    @apply lg:w-250 max-w-[90%] lg:max-h-169 py-4 bg-slate-100
+}
 
 .mary-table-pagination span[aria-current="page"] > span {
     @apply bg-primary font-bold mb-3 text-white
@@ -337,5 +340,55 @@ span.relative.inline-flex.rounded-md {
 
 nav div div p.text-gray-700.leading-5{
     font-size: 14px;
+}
+
+/* Why choose us - brand palette variables (blue, yellow, green, brown) */
+:root {
+    --why-blue-main: #0071BD;
+    --why-blue-soft: #1B8CD8;
+    --why-blue-border: rgba(0, 113, 189, 0.30);
+    --why-blue-badge-bg: rgba(0, 113, 189, 0.15);
+    --why-blue-badge-text: #0071BD;
+    --why-blue-title: #0071BD;
+
+    --why-yellow-main: #F6A309;
+    --why-yellow-soft: #FFB52B;
+    --why-yellow-border: rgba(246, 163, 9, 0.35);
+    --why-yellow-badge-bg: rgba(246, 163, 9, 0.20);
+    --why-yellow-badge-text: #B87400;
+    --why-yellow-title: #B87400;
+
+    --why-green-main: #066140;
+    --why-green-soft: #0A7F54;
+    --why-green-border: rgba(6, 97, 64, 0.30);
+    --why-green-badge-bg: rgba(6, 97, 64, 0.15);
+    --why-green-badge-text: #066140;
+    --why-green-title: #066140;
+
+    --why-brown-main: #4E3636;
+    --why-brown-soft: #6B4A4A;
+    --why-brown-border: rgba(78, 54, 54, 0.30);
+    --why-brown-badge-bg: rgba(78, 54, 54, 0.15);
+    --why-brown-badge-text: #4E3636;
+    --why-brown-title: #4E3636;
+}
+
+.why-card {
+    border-color: var(--why-border);
+}
+
+.why-card .why-icon-glow,
+.why-card .why-icon-bg,
+.why-card .why-accent {
+    background-image: linear-gradient(to right, var(--why-main), var(--why-soft));
+}
+
+.why-card .why-badge {
+    background: var(--why-badge-bg);
+    color: var(--why-badge-text);
+}
+
+.why-card:hover .why-title {
+    color: var(--why-title-hover);
 }
 

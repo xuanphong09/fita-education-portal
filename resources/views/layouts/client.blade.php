@@ -42,6 +42,31 @@
 
         {{-- Bên phải: Link phụ (ICETAI, Sổ tay...) --}}
         <div class="flex items-center font-medium @if(app()->getLocale() == 'en') flex-1 justify-end @endif">
+            <div class="hidden md:block">
+                <div class="dropdown dropdown-hover dropdown-end">
+
+                    <div tabindex="0" role="button"
+                         class="hover:cursor-pointer hover:opacity-90 hover:text-white hover:font-semibold font-normal text-slate-200
+                                 after:content-[''] after:inline-block after:align-[0.255em]
+                                 after:border-t-5 after:border-r-5 after:border-r-transparent
+                                 after:border-b-0 after:border-l-5 after:border-l-transparent
+                                 hover:after:border-t-white">
+                        {{ __('Tools') }}
+                    </div>
+
+                    <ul tabindex="0"
+                        class="cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
+                        <li>
+                            <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100" target="_blank" href="https://st-dse.vnua.edu.vn:6896/">
+                                {{__('ST-Chatbot supports students')}}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <span class="separator text-[18px] lg:ms-3 ms-2 lf:me-2 me-2 text-white">|</span>
+                <a href="{{route('client.contact')}}" class="font-normal text-slate-200 hover:text-white hover:font-semibold">{{__('Contact')}}</a>
+                <span class="separator text-[18px] lg:ms-3 ms-2 lf:me-2 me-2 text-white">|</span>
+            </div>
             <livewire:client.global-search />
             <span class="separator text-[18px] lg:ms-3 ms-2 lf:me-2 me-1 text-white">|</span>
             <livewire:language-switcher layout="client"/>
@@ -69,7 +94,7 @@
                     </div>
 
                     <ul tabindex="0"
-                        class="cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md  p-1 text-gray-700">
+                        class="cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
                         @unlessrole('sinh_vien')
                             <li>
                                 <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100" href="{{route('admin.dashboard')}}">
@@ -160,6 +185,12 @@
                             label="{{__('Lecturers - Staff')}}"
                             link="{{route('client.lecturers.index')}}"
                         ></x-button>
+                        <x-button
+                            link="{{route('client.contact')}}"
+                            class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"
+                            label="{{__('Contact')}}"
+                        >
+                        </x-button>
                     </li>
 {{--                    <li class="w-full">--}}
 {{--                        <x-button--}}
@@ -254,6 +285,7 @@
             <x-menu-sub title="{{__('Introduction')}}" class="rounded-none hover:bg-fita! hover:text-white!" >
                 <x-menu-item title="{{__('Faculty of Information Technology')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
                 <x-menu-item title="{{__('Lecturers - Staff')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.lecturers.index')}}" :active="request()->routeIs('client.lecturers.index')"/>
+                <x-menu-item title="{{__('Contact')}}" link="{{route('client.contact')}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.contact')"/>
             </x-menu-sub>
             <x-menu-item title="{{__('News')}}" link="{{route('client.posts.index', ['danh-muc'=>'tin-tuc'])}}" class="rounded-none hover:bg-fita hover:text-white" :active="request()->routeIs('client.posts.index')"/>
             <x-menu-sub title="{{__('Training Programs')}}" class="rounded-none hover:bg-fita! hover:text-white!" :active="request()->routeIs('client.training-programs.*')">

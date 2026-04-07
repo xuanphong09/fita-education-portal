@@ -281,7 +281,7 @@ class extends Component {
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
                 {{-- Card 1: Đội ngũ giảng viên --}}
                 <div
-                    class="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-blue-200/50"
+                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
                     x-data="{ revealed: false }"
                     x-intersect="
                         if (!revealed) {
@@ -289,28 +289,28 @@ class extends Component {
                             $el.classList.add('animate-fade-in-up');
                         }
                     "
-                    style="animation-delay: 0ms"
+                    style="--why-main: var(--why-blue-main); --why-soft: var(--why-blue-soft); --why-border: var(--why-blue-border); --why-badge-bg: var(--why-blue-badge-bg); --why-badge-text: var(--why-blue-badge-text); --why-title-hover: var(--why-blue-title); animation-delay: 0ms"
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="relative bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-3">
+                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div class="why-icon-bg relative rounded-xl p-3">
                                 <x-icon name="o-academic-cap" class="w-6 h-6 text-white" />
                             </div>
                         </div>
                     </div>
-                    <div class="absolute top-4 right-4 bg-blue-100 text-fita rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">01</div>
+                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">01</div>
 
                     <div class="mt-6">
-                        <h3 class="text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 group-hover:text-fita transition-colors">{{ __('Faculty of lecturers') }}</h3>
+                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Faculty of lecturers') }}</h3>
                         <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Experienced instructors and industry experts with strong practical backgrounds, dedicated to supporting learners throughout their journey.') }}</p>
-                        <div class="mt-4 h-1 w-12 bg-gradient-to-r from-blue-500 to-blue-600 group-hover:w-full transition-all duration-300"></div>
+                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
                     </div>
                 </div>
 
                 {{-- Card 2: Cơ sở vật chất --}}
                 <div
-                    class="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-green-200/50"
+                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
                     x-data="{ revealed: false }"
                     x-intersect="
                         if (!revealed) {
@@ -318,28 +318,28 @@ class extends Component {
                             $el.classList.add('animate-fade-in-up');
                         }
                     "
-                    style="animation-delay: 80ms"
+                    style="--why-main: var(--why-yellow-main); --why-soft: var(--why-yellow-soft); --why-border: var(--why-yellow-border); --why-badge-bg: var(--why-yellow-badge-bg); --why-badge-text: var(--why-yellow-badge-text); --why-title-hover: var(--why-yellow-title); animation-delay: 80ms"
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="absolute inset-0 bg-gradient-to-r from-green-400 to-green-500 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="relative bg-gradient-to-r from-green-500 to-green-600 rounded-xl p-3">
+                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div class="why-icon-bg relative rounded-xl p-3">
                                 <x-icon name="o-building-office" class="w-6 h-6 text-white" />
                             </div>
                         </div>
                     </div>
-                    <div class="absolute top-4 right-4 bg-green-100 text-green-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">02</div>
+                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">02</div>
 
                     <div class="mt-6">
-                        <h3 class="text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 group-hover:text-green-600 transition-colors">{{ __('Quality facilities') }}</h3>
+                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Quality facilities') }}</h3>
                         <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Modern lab facilities with high-performance equipment, regularly upgraded to meet learning and practice needs.') }}</p>
-                        <div class="mt-4 h-1 w-12 bg-gradient-to-r from-green-500 to-green-600 group-hover:w-full transition-all duration-300"></div>
+                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
                     </div>
                 </div>
 
                 {{-- Card 3: Chương trình đào tạo --}}
                 <div
-                    class="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-amber-200/50"
+                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
                     x-data="{ revealed: false }"
                     x-intersect="
                         if (!revealed) {
@@ -347,28 +347,28 @@ class extends Component {
                             $el.classList.add('animate-fade-in-up');
                         }
                     "
-                    style="animation-delay: 160ms"
+                    style="--why-main: var(--why-green-main); --why-soft: var(--why-green-soft); --why-border: var(--why-green-border); --why-badge-bg: var(--why-green-badge-bg); --why-badge-text: var(--why-green-badge-text); --why-title-hover: var(--why-green-title); animation-delay: 160ms"
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="absolute inset-0 bg-gradient-to-r from-amber-400 to-amber-500 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="relative bg-gradient-to-r from-amber-500 to-amber-600 rounded-xl p-3">
+                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div class="why-icon-bg relative rounded-xl p-3">
                                 <x-icon name="o-book-open" class="w-6 h-6 text-white" />
                             </div>
                         </div>
                     </div>
-                    <div class="absolute top-4 right-4 bg-amber-100 text-amber-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">03</div>
+                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">03</div>
 
                     <div class="mt-6">
-                        <h3 class="text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 group-hover:text-amber-600 transition-colors">{{ __('Training Programs') }}</h3>
+                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Training Programs') }}</h3>
                         <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Curriculum updated to international standards, aligned with the latest technology trends to prepare learners for the job market.') }}</p>
-                        <div class="mt-4 h-1 w-12 bg-gradient-to-r from-amber-500 to-amber-600 group-hover:w-full transition-all duration-300"></div>
+                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
                     </div>
                 </div>
 
                 {{-- Card 4: Phương pháp giảng dạy --}}
                 <div
-                    class="group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border border-purple-200/50"
+                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
                     x-data="{ revealed: false }"
                     x-intersect="
                         if (!revealed) {
@@ -376,22 +376,22 @@ class extends Component {
                             $el.classList.add('animate-fade-in-up');
                         }
                     "
-                    style="animation-delay: 240ms"
+                    style="--why-main: var(--why-brown-main); --why-soft: var(--why-brown-soft); --why-border: var(--why-brown-border); --why-badge-bg: var(--why-brown-badge-bg); --why-badge-text: var(--why-brown-badge-text); --why-title-hover: var(--why-brown-title); animation-delay: 240ms"
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="absolute inset-0 bg-gradient-to-r from-purple-400 to-purple-500 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="relative bg-gradient-to-r from-purple-500 to-purple-600 rounded-xl p-3">
+                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div class="why-icon-bg relative rounded-xl p-3">
                                 <x-icon name="o-light-bulb" class="w-6 h-6 text-white" />
                             </div>
                         </div>
                     </div>
-                    <div class="absolute top-4 right-4 bg-purple-100 text-purple-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">04</div>
+                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">04</div>
 
                     <div class="mt-6">
-                        <h3 class="text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 group-hover:text-purple-600 transition-colors">{{ __('Teaching method') }}</h3>
+                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Teaching method') }}</h3>
                         <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Practice-oriented approach through real-world projects, enabling learners to gain experience and meet IT industry demands.') }}</p>
-                        <div class="mt-4 h-1 w-12 bg-gradient-to-r from-purple-500 to-purple-600 group-hover:w-full transition-all duration-300"></div>
+                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
                     </div>
                 </div>
             </div>
@@ -457,7 +457,7 @@ class extends Component {
                             </div>
                         </div>
 
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/45 via-black/15 to-transparent"></div>
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
 
                         <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
                             <h3 class="line-clamp-2 text-[18px]/[20px] lg:text-[20px]/[24px] font-bold">

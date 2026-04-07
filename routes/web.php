@@ -2,10 +2,10 @@
 
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Middleware\SetAdminLocale;
-use App\Http\Controllers\TinyMCEController;
 
 Route::livewire('/', 'pages::client.home2')->name('client.home');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
+Route::livewire('/lien-he', 'pages::client.contact')->name('client.contact');
 Route::livewire('/search', 'pages::client.search')->name('client.search');
 Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');
 Route::livewire('/dao-tao/chuyen-nganh/{major}', 'pages::client.training-programs.major')->name('client.training-programs.major');
@@ -81,6 +81,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/post/edit/{id}', 'pages::admin.post.edit')->name('admin.post.edit');
         Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
 
+        Route::livewire('/contact-message/index', 'pages::admin.contact-message.index')->name('admin.contact-message.index');
+        Route::livewire('/contact-message/trash', 'pages::admin.contact-message.trash')->name('admin.contact-message.trash');
     });
 
     // ---- Quản lý đào tạo ----
