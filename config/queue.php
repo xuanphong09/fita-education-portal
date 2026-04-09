@@ -15,6 +15,9 @@ return [
 
     'default' => env('QUEUE_CONNECTION', 'database'),
 
+    // Dedicated queue name for outbound emails/notifications.
+    'mail_queue' => env('MAIL_QUEUE', 'mail'),
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections

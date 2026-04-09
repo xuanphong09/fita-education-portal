@@ -36,8 +36,13 @@
     <div class="bg-fita text-white text-sm py-2 lg:px-4 px-2 flex items-center h-8 justify-between">
 
         {{-- Bên trái: Tên trường --}}
-        <div class="flex items-center gap-3 lg:ms-10 text-[14px] uppercase whitespace-nowrap @if(app()->getLocale() == 'en') hidden @endif">
-            <a href="@if(app()->getLocale() == 'vi') https://vnua.edu.vn  @else https://eng.vnua.edu.vn/ @endif" class="">{{__('Vietnam National University of Agriculture')}}</a>
+        <div class="
+                    items-center gap-3 lg:ms-10 text-[14px] uppercase whitespace-nowrap
+                    @if(app()->getLocale() == 'en') hidden lg:flex @else flex @endif
+                ">
+            <a href="@if(app()->getLocale() == 'vi') https://vnua.edu.vn @else https://eng.vnua.edu.vn/ @endif">
+                {{ __('Vietnam National University of Agriculture') }}
+            </a>
         </div>
 
         {{-- Bên phải: Link phụ (ICETAI, Sổ tay...) --}}
@@ -94,7 +99,7 @@
                     </div>
 
                     <ul tabindex="0"
-                        class="cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
+                        class="cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-44 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
                         @unlessrole('sinh_vien')
                             <li>
                                 <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100" href="{{route('admin.dashboard')}}">
@@ -122,7 +127,7 @@
                         @endif
 
                         <li>
-                            <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100">
+                            <a class="flex items-center gap-3 px-4 py-2 hover:bg-gray-100" href="{{ route('client.account') }}">
                                 <x-icon name="o-user" class="w-5 h-5"/>
                                 {{__('Account')}}
                             </a>

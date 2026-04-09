@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\BrandedResetPasswordNotification;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -28,6 +29,7 @@ class User extends Authenticatable
         'is_active',
         'last_login_at',
         'access_token',
+        'sso_password_setup_sent_at',
         'user_type'
     ];
 
@@ -54,6 +56,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'sso_password_setup_sent_at' => 'datetime',
         ];
     }
 
@@ -83,5 +86,10 @@ class User extends Authenticatable
             'admin' => 'Quản trị viên',
             default => 'Không xác định'
         };
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new BrandedResetPasswordNotification($token));
     }
 }

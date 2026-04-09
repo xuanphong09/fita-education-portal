@@ -112,4 +112,14 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    'sso' => [
+        'url' => env('SSO_URL', 'https://st.sso.dev:8882'),
+        'ip' => env('SSO_IP', '127.0.0.1:8000'),
+        'client_id' => env('SSO_CLIENT_ID', 'client_id'),
+        'client_secret' => env('SSO_CLIENT_SECRET', 'client_secret'),
+        'api_key' => env('SSO_API_KEY', 'api_key'),
+        // Minimum minutes between first-time password setup emails for users without a password.
+        'password_setup_resend_cooldown' => env('SSO_PASSWORD_SETUP_RESEND_COOLDOWN', 60),
+    ],
+
 ];
