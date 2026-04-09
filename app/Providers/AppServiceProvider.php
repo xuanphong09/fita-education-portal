@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Models\User;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
+
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
@@ -22,5 +25,12 @@ class AppServiceProvider extends ServiceProvider
         if (env('APP_ENV') !== 'local') {
             URL::forceScheme('https');
         }
+
+        ResetPassword::createUrlUsing(function (User $user, string $token) {
+            return route('password.setup', [
+                'token' => $token,
+                'email' => $user->email,
+            ]);
+        });
     }
 }

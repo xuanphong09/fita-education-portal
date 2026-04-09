@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -97,7 +98,7 @@ class extends Component {
     <x-card class="w-full max-w-md shadow-xl p-8">
 
         {{-- logo --}}
-        <div class="text-center mb-6">
+        <div class="text-center mb-6 relative">
 
             <div class="flex justify-center gap-4 mb-4">
                 <img src="{{asset('assets/images/Logo Học viện.png')}}" alt="Logo Học viện"
@@ -112,10 +113,20 @@ class extends Component {
             <p class="text-gray-900 font-medium text-lg">
                 {{__('Faculty of Information Technology')}}
             </p>
-
+            <div class="absolute -top-5 -left-4 p-2">
+                <x-button class="btn-ghost text-fita btn-xs" link="{{route('client.home')}}" tooltip="Trang chủ" icon="o-arrow-uturn-left"></x-button>
+            </div>
         </div>
         <div class="text-center">
+            @if (session('status'))
+                <span class="text-success text-sm">{{ session('status') }}</span>
+            @endif
+
             @error('fail')
+            <span class="text-error text-sm">{{ $message }}</span>
+            @enderror
+
+            @error('msg')
             <span class="text-error text-sm">{{ $message }}</span>
             @enderror
         </div>
@@ -145,7 +156,7 @@ class extends Component {
                     </span>
                 </label>
 
-                <a href="#" class="text-[15px] text-blue-500 hover:underline">
+                <a href="{{ route('password.request') }}" class="text-[15px] text-blue-500 hover:underline" wire:navigate>
                     {{__('Forgot password?')}}
                 </a>
 
@@ -176,12 +187,12 @@ class extends Component {
         </div>
 
 
-        <x-button
-            label="{{__('Login with ST SSO')}}"
-            class="w-full bg-white text-blue-500 border border-blue-500"
-            link="/sso/login"
-            disabled
-        />
+        <a
+            class="w-full bg-white text-blue-500 border border-blue-500 btn hover:bg-blue-50"
+            href="{{route('sso.redirect')}}"
+        >
+            {{__('Login with ST SSO')}}
+        </a>
 
     </x-card>
 

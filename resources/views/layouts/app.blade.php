@@ -57,7 +57,7 @@
 
             <div class="font-normal text-black">
                 {{-- Items --}}
-                <x-menu-item title="Tài khoản" icon="o-user" link="###" />
+                <x-menu-item title="Tài khoản" icon="o-user" link="{{route('client.account')}}" />
                 <x-menu-item title="Đăng xuất" icon="o-power" link="{{ route('handleLogout') }}" no-wire-navigate class="text-red-500 hover:bg-red-50 hover:text-red-600 text-sm" />
             </div>
         </x-dropdown>

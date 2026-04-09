@@ -21,9 +21,18 @@ Route::livewire('/giang-vien/{slug}', 'pages::client.lecturers.profile')->name('
 
 
 // Auth
-Route::livewire('/login', 'pages::client.auth.login')->name('login');
-Route::get('/logout', [AuthenticateController::class, 'logout'])->name('handleLogout');
+Route::livewire('/login', 'pages::client.auth.login')->name('login')->middleware('guest');
+Route::livewire('/forgot-password', 'pages::client.auth.forgot-password')->name('password.request')->middleware('guest');
+Route::get('/logout', [AuthenticateController::class, 'logout'])->name('handleLogout')->middleware('auth');
+Route::get('auth/redirect', [AuthenticateController::class, 'redirectToSSO'])->name('sso.redirect')->middleware('guest');
+Route::get('auth/callback', [AuthenticateController::class, 'handleSSOCallback'])->name('sso.callback');
+Route::livewire('/setup-password/{token}', 'pages::client.auth.setup-password')->name('password.setup');
 
+
+Route::middleware('auth')->group(function () {
+    Route::livewire('/tai-khoan', 'pages::client.account')->middleware('auth')->name('client.account');
+    Route::livewire('/doi-mat-khau', 'pages::client.account-password')->middleware('auth')->name('client.account.password');
+});
 
 // ============================================================
 // ADMIN — middleware chung: auth + locale
@@ -114,4 +123,17 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::livewire('/preview/post/{id}', 'pages::admin.preview.post')->name('admin.preview.post');
     Route::livewire('/preview/post-new', 'pages::admin.preview.post-new')->name('admin.preview.post.new');
     Route::livewire('/preview/lecturer/{slug}', 'pages::admin.preview.lecturer')->name('admin.preview.lecturer');
+});
+use App\Models\User;
+use App\Mail\FirstTimePasswordSetup;
+
+Route::get('/test-email', function () {
+    // Tạo một User giả lập hoặc lấy User đầu tiên trong DB
+    $user = User::first() ?? new User(['name' => 'Nguyễn Văn A', 'email' => 'nva@vnua.edu.vn']);
+
+    // Giả lập URL thiết lập mật khẩu
+    $fakeUrl = url('/thiet-lap-mat-khau?token=demo-token-123456');
+
+    // Return thẳng Mailable ra trình duyệt
+    return new FirstTimePasswordSetup($user, $fakeUrl);
 });
