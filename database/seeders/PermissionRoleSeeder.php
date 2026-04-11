@@ -47,12 +47,12 @@ class PermissionRoleSeeder extends Seeder
         Role::query()->updateOrCreate(
             ['name' => 'ban_chu_nhiem', 'guard_name' => 'web'],
             ['display_name' => 'Ban Chủ Nhiệm Khoa']
-        )->syncPermissions(['quan_ly_bai_viet', 'viet_bai_viet', 'duyet_bai_viet', 'xuat_ban_bai_viet', 'quan_ly_dao_tao', 'Quan_ly_doi_tac']);
+        )->syncPermissions(['quan_ly_bai_viet', 'viet_bai_viet', 'duyet_bai_viet', 'quan_ly_dao_tao', 'Quan_ly_doi_tac']);
 
         Role::query()->updateOrCreate(
             ['name' => 'quan_tri_vien', 'guard_name' => 'web'],
             ['display_name' => 'Quản trị viên']
-        )->syncPermissions(['quan_ly_nguoi_dung', 'quan_ly_giao_dien', 'quan_ly_bai_viet', 'viet_bai_viet', 'duyet_bai_viet', 'xuat_ban_bai_viet', 'quan_ly_dao_tao']);
+        )->syncPermissions(['quan_ly_nguoi_dung', 'quan_ly_giao_dien', 'quan_ly_bai_viet', 'viet_bai_viet', 'duyet_bai_viet', 'quan_ly_dao_tao']);
 
         // Super admin vẫn dùng Gate::before để bypass permission.
         Role::query()->updateOrCreate(
