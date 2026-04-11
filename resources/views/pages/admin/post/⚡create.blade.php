@@ -5,6 +5,7 @@ use Livewire\WithFileUploads;
 use App\Models\Post;
 use App\Models\PostApprovalHistory;
 use App\Models\Category;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -82,6 +83,8 @@ new class extends Component {
 
     protected function rules(): array
     {
+        $primaryCategoryId = $this->category_ids[0] ?? null;
+
         return [
             'title_vi'           => 'nullable|string|max:255',
             'title_en'           => 'nullable|string|max:255',
@@ -89,7 +92,20 @@ new class extends Component {
             'content_en'         => 'nullable|string',
             'excerpt_vi'         => 'nullable|string|max:500',
             'excerpt_en'         => 'nullable|string|max:500',
-            'slug'               => 'required|string|max:255|unique:posts,slug',
+            'slug'               => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('posts', 'slug')->where(function ($query) use ($primaryCategoryId) {
+                    $query->whereNull('deleted_at');
+
+                    if ($primaryCategoryId) {
+                        $query->where('category_id', $primaryCategoryId);
+                    } else {
+                        $query->whereNull('category_id');
+                    }
+                }),
+            ],
             'category_ids'       => 'nullable|array',
             'category_ids.*'     => 'integer|exists:categories,id',
             'status'             => 'required|in:draft,pending_review,rejected,published,archived',

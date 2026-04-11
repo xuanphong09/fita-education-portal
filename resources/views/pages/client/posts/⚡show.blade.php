@@ -62,11 +62,18 @@ class extends Component {
         $this->relatedPosts = collect();
         $this->recentPosts = collect();
 
-        // Tìm bài viết theo slug (canonical hoặc từ slug_translations)
+        // Tìm bài viết theo cặp category + slug để hỗ trợ trùng slug khác danh mục.
         $this->post = $this->publishedPostsQuery()
-            ->where(function($q) use ($slug, $locale) {
-                $q->where('slug', $slug)
-                  ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(slug_translations, '$.{$locale}')) = ?", [$slug]);
+            ->where(function($postQuery) use ($slug, $locale) {
+                $postQuery->where('slug', $slug)
+                    ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(slug_translations, '$.{$locale}')) = ?", [$slug]);
+            })
+            ->where(function ($postQuery) use ($categorySlug) {
+                $postQuery->whereHas('categories', function ($categoryQuery) use ($categorySlug) {
+                    $categoryQuery->where('categories.slug', $categorySlug);
+                })->orWhereHas('category', function ($categoryQuery) use ($categorySlug) {
+                    $categoryQuery->where('slug', $categorySlug);
+                });
             })
             ->firstOrFail();
 
