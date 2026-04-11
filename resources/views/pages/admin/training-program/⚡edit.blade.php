@@ -273,7 +273,7 @@ new class extends Component {
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <x-select label="{{ __('Major') }}" wire:model.live.debounce.400ms="major_id" :options="$this->majorOptions" option-value="id" option-label="name" placeholder="{{ __('(General program)') }}" placeholder-value=""/>
+                    <x-select label="Chuyên ngành/Hướng chuyên sâu" wire:model.live.debounce.400ms="major_id" :options="$this->majorOptions" option-value="id" option-label="name" placeholder="{{ __('(General program)') }}" placeholder-value=""/>
                     <x-select label="Khóa" wire:model.live.debounce.400ms="intake_id" :options="$this->intakeOptions" option-value="id" option-label="name" required placeholder="Chọn khóa học"/>
                     <x-input label="Thời gian đào tạo (năm)" type="number" min="1" wire:model.live.debounce.400ms="duration_time" required placeholder="4"/>
                 </div>

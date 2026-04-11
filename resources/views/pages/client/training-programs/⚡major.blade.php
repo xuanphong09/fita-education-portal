@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Major;
+use App\Models\ProgramMajor;
 use App\Models\Subject;
 use App\Models\TrainingProgram;
 use Illuminate\Support\Str;
@@ -11,7 +12,13 @@ use Livewire\Component;
 new
 #[Layout('layouts.client')]
 class extends Component {
-    public Major $major;
+    public ?Major $major = null;
+
+    #[Url(as: 'nganh')]
+    public ?string $programMajorSlug = null;
+
+    #[Url(as: 'chuyen-nganh')]
+    public ?string $selectedMajorSlug = null;
 
     #[Url(as: 'phien-ban')]
     public ?string $version = null;
@@ -30,9 +37,105 @@ class extends Component {
 
     public array $expanded = [];
 
-    public function mount(Major $major): void
+    public function mount(): void
     {
-        $this->major = $major;
+        if ($this->selectedMajorSlug) {
+            $selectedMajor = Major::query()->where('slug', $this->selectedMajorSlug)->first();
+            if ($selectedMajor) {
+                $this->major = $selectedMajor;
+                $this->programMajorSlug = $selectedMajor->programMajor?->slug;
+            }
+        }
+
+        if (!$this->major) {
+            $fallbackMajor = Major::query()
+                ->where('is_active', true)
+                ->whereHas('trainingPrograms', function ($query) {
+                    $query->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                })
+                ->ordered()
+                ->first();
+
+            if ($fallbackMajor) {
+                $this->major = $fallbackMajor;
+                $this->selectedMajorSlug = $fallbackMajor->slug;
+                $this->programMajorSlug = $fallbackMajor->programMajor?->slug;
+            }
+        }
+    }
+
+    public function updatedProgramMajorSlug(): void
+    {
+        $programMajorId = ProgramMajor::query()
+            ->where('slug', $this->programMajorSlug)
+            ->value('id');
+
+        $firstMajor = Major::query()
+            ->where('is_active', true)
+            ->when($programMajorId, fn ($query) => $query->where('program_major_id', (int) $programMajorId))
+            ->whereHas('trainingPrograms', function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            })
+            ->ordered()
+            ->first();
+
+        $this->selectedMajorSlug = $firstMajor?->slug;
+
+        if ($firstMajor) {
+            $this->major = $firstMajor;
+            $this->redirectToCanonicalMajorUrl($firstMajor);
+        }
+
+        $this->version = null;
+        $this->semesterNo = null;
+        $this->expanded = [];
+    }
+
+    public function updatedSelectedMajorSlug(): void
+    {
+        if (!$this->selectedMajorSlug) {
+            return;
+        }
+
+        $selectedMajor = Major::query()
+            ->where('slug', $this->selectedMajorSlug)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$selectedMajor) {
+            return;
+        }
+
+        $this->major = $selectedMajor;
+        $this->programMajorSlug = $selectedMajor->programMajor?->slug;
+        $this->version = null;
+        $this->semesterNo = null;
+        $this->expanded = [];
+
+        $this->redirectToCanonicalMajorUrl($selectedMajor);
+    }
+
+    protected function redirectToCanonicalMajorUrl(Major $major): void
+    {
+        if ((string) request()->query('chuyen-nganh', '') === (string) $major->slug) {
+            return;
+        }
+
+        $params = [
+            'chuyen-nganh' => (string) $major->slug,
+            'nganh' => $major->programMajor?->slug,
+            'phien-ban' => $this->version,
+            'hoc-ky' => $this->semesterNo,
+            'kieu' => $this->viewMode !== 'semester' ? $this->viewMode : null,
+            'tim' => trim($this->search) !== '' ? $this->search : null,
+            'loai' => $this->typeFilter !== '' ? $this->typeFilter : null,
+        ];
+
+        $this->redirectRoute('client.training-programs.major', array_filter($params, fn ($value) => $value !== null), navigate: true);
     }
 
     public function updatedVersion(): void
@@ -255,10 +358,64 @@ class extends Component {
 
     public function with(): array
     {
+        $programMajorOptions = ProgramMajor::query()
+            ->where('is_active', true)
+            ->whereHas('majors.trainingPrograms', function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            })
+            ->ordered()
+            ->get();
+
+        if (!$this->programMajorSlug && $this->major?->programMajor) {
+            $this->programMajorSlug = $this->major->programMajor->slug;
+        }
+
+        if (!$this->programMajorSlug) {
+            $this->programMajorSlug = $programMajorOptions->first()?->slug;
+        }
+
+        $majorOptions = Major::query()
+            ->where('is_active', true)
+            ->when($this->programMajorSlug, function ($query) {
+                $query->whereHas('programMajor', fn ($programMajorQuery) => $programMajorQuery->where('slug', $this->programMajorSlug));
+            })
+            ->whereHas('trainingPrograms', function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            })
+            ->ordered()
+            ->get(['id', 'name', 'slug', 'program_major_id']);
+
+        $selectedMajor = $majorOptions->firstWhere('slug', $this->selectedMajorSlug);
+
+        if (!$selectedMajor && $majorOptions->isNotEmpty()) {
+            $selectedMajor = $majorOptions->first();
+            $this->selectedMajorSlug = $selectedMajor?->slug;
+        }
+
+        $this->major = $selectedMajor;
+
+        if (!$this->major) {
+            return [
+                'programs' => collect(),
+                'versionOptions' => [],
+                'activeProgram' => null,
+                'semesterBlocks' => collect(),
+                'groupBlocks' => collect(),
+                'programMajorOptions' => $programMajorOptions,
+                'majorOptions' => $majorOptions,
+            ];
+        }
+
         $normalizedKeyword = $this->normalizeSearchText($this->search);
 
+        $majorId = (int) $this->major->id;
+
         $programs = TrainingProgram::query()
-            ->where('major_id', $this->major->id)
+            ->where('major_id', $majorId)
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
@@ -295,7 +452,7 @@ class extends Component {
 
         if ($this->version) {
             $activeProgram = TrainingProgram::query()
-                ->where('major_id', $this->major->id)
+                ->where('major_id', $majorId)
                 ->where('version', $this->version)
                 ->where('status', 'published')
                 ->whereNotNull('published_at')
@@ -465,6 +622,8 @@ class extends Component {
             'activeProgram' => $activeProgram,
             'semesterBlocks' => $semesterBlocks,
             'groupBlocks' => $groupBlocks,
+            'programMajorOptions' => $programMajorOptions,
+            'majorOptions' => $majorOptions,
         ];
     }
 };
@@ -472,14 +631,14 @@ class extends Component {
 
 <div class="container mx-auto px-4 py-8">
     @php
-        $majorLabel = $this->localizedName($major);
+        $majorLabel = $this->localizedName($this->major);
     @endphp
 
     <x-slot:title>{{ __('Training Programs') }} - {{ $majorLabel }}</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>
-        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
+{{--        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>--}}
+{{--        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>--}}
         <span class="whitespace-nowrap line-clamp-1">{{ $majorLabel }}</span>
     </x-slot:breadcrumb>
 
@@ -489,11 +648,38 @@ class extends Component {
 
     <div class="space-y-4">
         <x-card shadow>
-            <div class="flex flex-wrap items-end gap-4">
-                <div class="w-full sm:w-50">
-                    <x-select label="{{__('Version')}}" wire:model.live.debounce.300ms="version" :options="$versionOptions" option-value="code" option-label="code" />
+            <div class="grid grid-cols-5 gap-4">
+                <div class="w-full md:col-span-2 col-span-5">
+                    <x-select
+                        label="{{__('Major')}}"
+                        wire:model.live="programMajorSlug"
+                        :options="$programMajorOptions->map(fn ($item) => [
+                            'value' => $item->slug,
+                            'label' => $this->localizedName($item),
+                        ])->values()->toArray()"
+                        option-value="value"
+                        option-label="label"
+                    />
                 </div>
 
+                <div class="w-full md:col-span-2 col-span-5">
+                    <x-select
+                        label="{{__('Specialization/Area of specialization')}}"
+                        wire:model.live="selectedMajorSlug"
+                        :options="$majorOptions->map(fn ($item) => [
+                            'value' => $item->slug,
+                            'label' => $this->localizedName($item),
+                        ])->values()->toArray()"
+                        option-value="value"
+                        option-label="label"
+                    />
+                </div>
+
+                <div class="w-full md:col-span-1 col-span-5">
+                    <x-select label="{{__('Version')}}" wire:model.live.debounce.300ms="version" :options="$versionOptions" option-value="code" option-label="code" />
+                </div>
+            </div>
+            <div class="flex flex-wrap items-end gap-4 mt-2">
                 <div class="w-full sm:w-50">
                     @php
                         $semesterOptions = $activeProgram
@@ -566,7 +752,7 @@ class extends Component {
                 $programDuration = $activeProgram->duration_time
                     ? ($activeProgram->duration_time . ' ' . (app()->getLocale() === 'en' ? 'years' : 'năm'))
                     : 'N/A';
-                $majorCode = $activeProgram->major?->code ?: 'N/A';
+                $majorCode = $activeProgram->major?->programMajor?->code ?: 'N/A';
             @endphp
 
             <x-card shadow>
@@ -592,7 +778,7 @@ class extends Component {
             <div class="relative min-h-60">
                 <div
                     wire:loading.delay.short
-                    wire:target="version,semesterNo,viewMode,search,typeFilter"
+                    wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
                     class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
                 >
                     <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
@@ -604,7 +790,7 @@ class extends Component {
                 <div
                     wire:loading.class="opacity-60 pointer-events-none"
                     wire:loading.class.remove="opacity-100"
-                    wire:target="version,semesterNo,viewMode,search,typeFilter"
+                    wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
                     class="transition-opacity duration-150"
                 >
                     @if($viewMode === 'semester')

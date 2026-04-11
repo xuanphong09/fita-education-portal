@@ -1,11 +1,10 @@
 <?php
 
+use App\Models\ProgramMajor;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
-use App\Models\Major;
-use App\Models\ProgramMajor;
 use Mary\Traits\Toast;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -27,20 +26,20 @@ new class extends Component {
     public string $name_en = '';
     public string $slug = '';
     public string $code = '';
-    public ?int $program_major_id = null;
     public int $order = 0;
     public bool $is_active = true;
 
-    public function getMajorsProperty()
+    public function getProgramMajorsProperty()
     {
-        $q = Major::query()->withCount('students')->with('programMajor');
+        $q = ProgramMajor::query();
 
         if (!empty($this->search)) {
             $term = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $this->search) . '%';
             $q->where(function ($inner) use ($term) {
                 $inner->where('slug', 'like', $term)
                     ->orWhereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ?", [$term])
-                    ->orWhereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ?", [$term]);
+                    ->orWhereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ?", [$term])
+                    ->orWhere('code', 'like', $term);
             });
         }
 
@@ -53,49 +52,44 @@ new class extends Component {
     {
         if ($this->editingId) {
             return [
-                'name_vi' => 'required|string|max:255|unique:majors,name->vi,' . $this->editingId,
-                'name_en' => 'required|string|max:255|unique:majors,name->en,' . $this->editingId,
-                'slug' => 'required|string|max:255|unique:majors,slug,' . $this->editingId,
-                'code' => 'nullable|string|max:50',
-                'program_major_id' => ['required', 'exists:program_majors,id'],
+                'name_vi' => 'required|string|max:255|unique:program_majors,name->vi,' . $this->editingId,
+                'name_en' => 'required|string|max:255|unique:program_majors,name->en,' . $this->editingId,
+                'slug' => 'required|string|max:255|unique:program_majors,slug,' . $this->editingId,
+                'code' => 'required|string|max:50',
                 'order' => 'nullable|integer|min:0',
             ];
         }
 
         return [
-            'name_vi' => 'required|string|max:255|unique:majors,name->vi',
-            'name_en' => 'required|string|max:255|unique:majors,name->en',
-            'slug' => 'required|string|max:255|unique:majors,slug',
-            'code' => 'nullable|string|max:50',
-            'program_major_id' => ['required', 'exists:program_majors,id'],
+            'name_vi' => 'required|string|max:255|unique:program_majors,name->vi',
+            'name_en' => 'required|string|max:255|unique:program_majors,name->en',
+            'slug' => 'required|string|max:255|unique:program_majors,slug',
+            'code' => 'required|string|max:50',
             'order' => 'nullable|integer|min:0',
         ];
     }
 
     protected $messages = [
-        'name_vi.required' => 'Tên chuyên ngành (Tiếng Việt) không được để trống.',
-        'name_en.required' => 'Tên chuyên ngành (Tiếng Anh) không được để trống.',
+        'name_vi.required' => 'Tên ngành (Tiếng Việt) không được để trống.',
+        'name_en.required' => 'Tên ngành (Tiếng Anh) không được để trống.',
         'slug.required' => 'Slug không được để trống.',
-        'name_vi.unique' => 'Tên chuyên ngành (Tiếng Việt) đã tồn tại.',
-        'name_en.unique' => 'Tên chuyên ngành (Tiếng Anh) đã tồn tại.',
+        'name_vi.unique' => 'Tên ngành (Tiếng Việt) đã tồn tại.',
+        'name_en.unique' => 'Tên ngành (Tiếng Anh) đã tồn tại.',
         'slug.unique' => 'Slug đã tồn tại.',
-        'code.max' => 'Mã chuyên ngành không được vượt quá 50 ký tự.',
+        'code.max' => 'Mã ngành không được vượt quá 50 ký tự.',
         'order.integer' => 'Thứ tự phải là một số nguyên.',
         'order.min' => 'Thứ tự phải lớn hơn hoặc bằng 0.',
-        'code.string' => 'Mã chuyên ngành phải là một chuỗi ký tự.',
-        'program_major_id.required' => 'Ngành là bắt buộc.',
-        'program_major_id.exists' => 'Ngành không tồn tại.',
+        'code.string' => 'Mã ngành phải là một chuỗi ký tự.',
+        'name_vi.string' => 'Tên ngành (Tiếng Việt) phải là một chuỗi ký tự.',
+        'name_en.string' => 'Tên ngành (Tiếng Anh) phải là một chuỗi ký tự.',
+        'slug.string' => 'Slug phải là một chuỗi ký tự.',
+        'code.required' => 'Mã ngành không được để trống.',
     ];
-
-    public function getProgramMajorOptionsProperty()
-    {
-        return ProgramMajor::query()->ordered()->get();
-    }
 
     public function openCreate(): void
     {
         $this->resetCreateForm();
-        $this->order = Major::max('order') + 1;
+        $this->order = ProgramMajor::max('order') + 1;
         $this->showCreate = true;
     }
 
@@ -103,7 +97,6 @@ new class extends Component {
     {
         $this->editingId = null;
         $this->name_vi = $this->name_en = $this->slug = $this->code = '';
-        $this->program_major_id = null;
         $this->order = 0;
         $this->is_active = true;
         $this->resetErrorBag();
@@ -111,7 +104,7 @@ new class extends Component {
 
     public function updated($property): void
     {
-        $this->ValidateOnly($property);
+        $this->validateOnly($property);
         if ($property === 'name_vi' && !$this->slug) {
             $this->slug = Str::slug($this->name_vi);
             $this->validateOnly('slug');
@@ -124,15 +117,14 @@ new class extends Component {
 
     public function openEdit(int $id): void
     {
-        $major = Major::findOrFail($id);
-        $this->editingId = $major->id;
-        $this->name_vi = $major->getTranslation('name', 'vi', true) ?: '';
-        $this->name_en = $major->getTranslation('name', 'en', true) ?: '';
-        $this->slug = $major->slug;
-        $this->code = $major->code ?: '';
-        $this->program_major_id = $major->program_major_id;
-        $this->order = $major->order;
-        $this->is_active = $major->is_active;
+        $programMajor = ProgramMajor::findOrFail($id);
+        $this->editingId = $programMajor->id;
+        $this->name_vi = $programMajor->getTranslation('name', 'vi', true) ?: '';
+        $this->name_en = $programMajor->getTranslation('name', 'en', true) ?: '';
+        $this->slug = $programMajor->slug;
+        $this->code = $programMajor->code ?: '';
+        $this->order = $programMajor->order;
+        $this->is_active = $programMajor->is_active;
         $this->showEdit = true;
     }
 
@@ -145,24 +137,23 @@ new class extends Component {
             throw $e;
         }
 
-        Major::create([
+        ProgramMajor::create([
             'name' => ['vi' => $this->name_vi, 'en' => $this->name_en ?: ''],
             'slug' => $this->slug ?: Str::slug($this->name_vi),
             'code' => $this->code ?: null,
-            'program_major_id' => $this->program_major_id,
             'order' => $this->order,
             'is_active' => $this->is_active,
         ]);
 
         $this->showCreate = false;
-        $this->success('Tạo chuyên ngành thành công');
+        $this->success('Tạo ngành thành công');
         $this->resetPage();
     }
 
     public function update(): void
     {
         if (!$this->editingId) {
-            $this->error('Không tìm thấy chuyên ngành để cập nhật.');
+            $this->error('Không tìm thấy ngành để cập nhật.');
             return;
         }
 
@@ -173,18 +164,17 @@ new class extends Component {
             throw $e;
         }
 
-        $major = Major::findOrFail($this->editingId);
-        $major->update([
+        $programMajor = ProgramMajor::findOrFail($this->editingId);
+        $programMajor->update([
             'name' => ['vi' => $this->name_vi, 'en' => $this->name_en ?: ''],
             'slug' => $this->slug ?: Str::slug($this->name_vi),
             'code' => $this->code,
-            'program_major_id' => $this->program_major_id,
             'order' => $this->order,
             'is_active' => $this->is_active,
         ]);
 
         $this->showEdit = false;
-        $this->success('Cập nhật chuyên ngành thành công');
+        $this->success('Cập nhật ngành thành công');
         $this->resetPage();
     }
 
@@ -192,30 +182,22 @@ new class extends Component {
     {
         return [
             ['key' => 'order', 'label' => 'STT', 'class' => 'w-5'],
-            ['key' => 'program_major', 'label' => 'Ngành', 'class' => 'w-48'],
-            ['key' => 'name', 'label' => 'Tên chuyên ngành', 'class' => 'w-94'],
-            ['key' => 'code', 'label' => 'Mã ngành', 'class' => 'w-24'],
-//            ['key' => 'is_active', 'label' => 'Kích hoạt', 'class' => 'w-20'],
+            ['key' => 'name', 'label' => 'Tên ngành', 'class' => 'w-94'],
+            ['key' => 'code', 'label' => 'Mã', 'class' => 'w-24'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-28'],
         ];
     }
 
     public function delete($id)
     {
-        $major = Major::query()->withCount('students', 'trainingPrograms')->findOrFail($id);
-
-        if ($major->students_count > 0) {
-            $this->error('Chuyên ngành đang có sinh viên, không thể xóa.');
-            return;
-        }
-
-        if ($major->training_programs_count > 0) {
-            $this->error('Chuyên ngành đang có chương trình đào tạo, không thể xóa.');
+        $programMajor = ProgramMajor::query()->withCount('majors')->findOrFail($id);
+        if ($programMajor->majors_count > 0) {
+            $this->error('Ngành này đang có chuyên ngành phụ thuộc, không thể xóa.');
             return;
         }
 
         $this->dispatch('modal:confirm', [
-            'title' => 'Bạn có chắc chắn muốn xóa chuyên ngành này không?',
+            'title' => 'Bạn có chắc chắn muốn xóa ngành này không?',
             'icon' => 'question',
             'confirmButtonText' => 'Xác nhận',
             'cancelButtonText' => 'Hủy',
@@ -227,20 +209,14 @@ new class extends Component {
     #[On('confirmDelete')]
     public function confirmDelete($id)
     {
-        $major = Major::query()->withCount('students', 'trainingPrograms')->findOrFail($id);
-
-        if ($major->students_count > 0) {
-            $this->error('Chuyên ngành đang có sinh viên, không thể xóa.');
+        $programMajor = ProgramMajor::query()->withCount('majors')->findOrFail($id);
+        if ($programMajor->majors_count > 0) {
+            $this->error('Ngành này đang có chuyên ngành phụ thuộc, không thể xóa.');
             return;
         }
 
-        if ($major->training_programs_count > 0) {
-            $this->error('Chuyên ngành đang có chương trình đào tạo, không thể xóa.');
-            return;
-        }
-
-        $major->delete();
-        $this->success('Đã xóa chuyên ngành thành công.');
+        $programMajor->delete();
+        $this->success('Đã xóa ngành thành công.');
     }
 
     public function updatedSearch(): void
@@ -251,11 +227,11 @@ new class extends Component {
 ?>
 
 <div>
-    <x-slot:title>Danh sách chuyên ngành</x-slot:title>
+    <x-slot:title>Danh sách ngành</x-slot:title>
     <x-slot:breadcrumb>
-        Quản lý chuyên ngành
+        Quản lý ngành
     </x-slot:breadcrumb>
-    <x-header title="Danh sách chuyên ngành" separator>
+    <x-header title="Danh sách ngành" separator>
         <x-slot:middle class="justify-end!">
             <x-input placeholder="Tìm tên hoặc mã..." wire:model.live.debounce.300ms="search" class="w-full lg:w-96"
                      clearable/>
@@ -267,7 +243,7 @@ new class extends Component {
     </x-header>
 
     <div class="shadow-md ring-1 ring-gray-200 rounded-md relative">
-        <x-table :headers="$this->headers()" :rows="$this->majors" :sort-by="$this->sortBy" with-pagination
+        <x-table :headers="$this->headers()" :rows="$this->programMajors" :sort-by="$this->sortBy" with-pagination
                  per-page="perPage"
                  class="
                 bg-white
@@ -277,49 +253,35 @@ new class extends Component {
             "
         >
 
-            @scope('cell_order', $major)
-            {{ ($this->majors->currentPage() - 1) * $this->majors->perPage() + $loop->iteration }}
+            @scope('cell_order', $programMajor)
+            {{ ($this->programMajors->currentPage() - 1) * $this->programMajors->perPage() + $loop->iteration }}
             @endscope
 
-            @scope('cell_name', $major)
-            <div class="font-medium">{{ $major->getTranslation('name', 'vi', true) }}</div>
-            <div class="text-sm text-gray-400">{{ $major->getTranslation('name', 'en', true) }}</div>
+            @scope('cell_name', $programMajor)
+            <div class="font-medium">{{ $programMajor->getTranslation('name', 'vi', true) }}</div>
+            <div class="text-sm text-gray-400">{{ $programMajor->getTranslation('name', 'en', true) }}</div>
             @endscope
 
-            @scope('cell_program_major', $major)
-            {{ $major->programMajor?->getTranslation('name', 'vi', false)
-                ?: $major->programMajor?->getTranslation('name', 'en', false)
-                ?: '—' }}
+            @scope('cell_code', $programMajor)
+            {{ $programMajor->code ?? '—' }}
             @endscope
 
-            @scope('cell_code', $major)
-            {{ $major->programMajor->code ?? '—' }}
-            @endscope
-
-            {{--            @scope('cell_is_active', $major)--}}
-            {{--            @if($major->is_active)--}}
-            {{--                <x-badge value="Kích hoạt" class="badge-success"/>--}}
-            {{--            @else--}}
-            {{--                <x-badge value="Tắt" class="badge-error"/>--}}
-            {{--            @endif--}}
-            {{--            @endscope--}}
-
-            @scope('cell_actions', $major)
+            @scope('cell_actions', $programMajor)
             <div class="flex space-x-2">
                 <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary"
-                          wire:click="openEdit({{ $major->id }})"/>
-                <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" wire:click="delete({{ $major->id }})"/>
+                          wire:click="openEdit({{ $programMajor->id }})"/>
+                <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" wire:click="delete({{ $programMajor->id }})"/>
             </div>
             @endscope
 
             <x-slot:empty>
                 <div class="text-center py-5">
-                    <x-icon name="o-user" class="w-10 h-10 text-gray-400 mx-auto"/>
-                    <p class="mt-2 text-gray-500">Không có chuyên ngành nào.</p>
+                    <x-icon name="o-folder" class="w-10 h-10 text-gray-400 mx-auto"/>
+                    <p class="mt-2 text-gray-500">Không có ngành nào.</p>
                 </div>
             </x-slot:empty>
 
-            <x-pagination :rows="$this->majors" wire:model.live="perPage"/>
+            <x-pagination :rows="$this->programMajors" wire:model.live="perPage"/>
         </x-table>
         <div wire:loading.flex
              class="absolute inset-0 z-5 items-center justify-center bg-white/30 backdrop-blur-sm rounded-md transition-all duration-300">
@@ -331,24 +293,18 @@ new class extends Component {
     </div>
 
     {{-- Modal Create --}}
-    <x-modal wire:model="showCreate" title="Tạo chuyên ngành" separator class="modalMajor">
+    <x-modal wire:model="showCreate" title="Tạo ngành" separator class="modalMajor">
         <div class="space-y-0">
             <x-input label="Tên (Tiếng Việt)" wire:model.live.debounce.300ms="name_vi" required
-                     placeholder="Nhập tên chuyên ngành Tiếng Việt "/>
+                     placeholder="Nhập tên ngành Tiếng Việt "/>
             <x-input label="Tên (Tiếng Anh)" wire:model.live.debounce.300ms="name_en"
-                     placeholder="Nhập tên chuyên ngành Tiếng Anh "/>
+                     placeholder="Nhập tên ngành Tiếng Anh "/>
             <x-input label="Slug" wire:model.live.debounce.500ms="slug" placeholder="Nhập đường dẫn slug"/>
-            <x-select label="Ngành" wire:model.live="program_major_id" :options="$this->programMajorOptions"
-                     option-value="id"
-                     option-label="name"
-                      placeholder="Chọn ngành"
-                     required>
-            </x-select>
-{{--            <div class="grid grid-cols-2 gap-4">--}}
-{{--                <x-input label="Mã ngành" wire:model.live.debounce.300ms="code" placeholder="Nhập mã chuyên ngành"/>--}}
+            <div class="grid grid-cols-2 gap-4">
+                <x-input label="Mã ngành" wire:model.live.debounce.300ms="code" placeholder="Nhập mã ngành"/>
                 <x-input label="Thứ tự" wire:model.number="order" type="number" min="0"
                          placeholder="Nhập số thứ tự hiển thị"/>
-{{--            </div>--}}
+            </div>
         </div>
         <x-slot:actions>
             <x-button label="Hủy" wire:click="$wire.showCreate = false"/>
@@ -357,30 +313,23 @@ new class extends Component {
     </x-modal>
 
     {{-- Modal Edit --}}
-    <x-modal wire:model="showEdit" title="Chỉnh sửa chuyên ngành" separator class="modalMajor">
-        <div class="space-y-0">
+    <x-modal wire:model="showEdit" title="Chỉnh sửa ngành" separator class="modalMajor">
+        <div class="space-y-3">
             <x-input label="Tên (Tiếng Việt)" wire:model.live.debounce.300ms="name_vi" required
-                     placeholder="Nhập tên chuyên ngành Tiếng Việt "/>
+                     placeholder="Nhập tên ngành Tiếng Việt "/>
             <x-input label="Tên (Tiếng Anh)" wire:model.live.debounce.300ms="name_en"
-                     placeholder="Nhập tên chuyên ngành Tiếng Anh "/>
+                     placeholder="Nhập tên ngành Tiếng Anh "/>
             <x-input label="Slug" wire:model.live.debounce.500ms="slug" placeholder="Nhập đường dẫn slug"/>
-            <x-select label="Ngành" wire:model.live="program_major_id" :options="$this->programMajorOptions"
-                     option-value="id"
-                     option-label="name"
-                     required>
-            </x-select>
-{{--            <div class="grid grid-cols-2 gap-4">--}}
-{{--                <x-input label="Mã ngành" wire:model.live.debounce.300ms="code" placeholder="Nhập mã chuyên ngành"/>--}}
+            <div class="grid grid-cols-2 gap-4">
+                <x-input label="Mã ngành" wire:model.live.debounce.300ms="code" placeholder="Nhập mã ngành"/>
                 <x-input label="Thứ tự" wire:model.number="order" type="number" min="0"
                          placeholder="Nhập số thứ tự hiển thị"/>
-{{--            </div>--}}
+            </div>
         </div>
         <x-slot:actions>
-            <x-button label="Hủy" wire:click="$wire.showEdit =  false"/>
+            <x-button label="Hủy" wire:click="$wire.showEdit = false"/>
             <x-button label="Cập nhật" class="btn-primary" wire:click="update" spinner="update"/>
         </x-slot:actions>
     </x-modal>
 </div>
-
-
 

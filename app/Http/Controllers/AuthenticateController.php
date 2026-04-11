@@ -102,7 +102,8 @@ class AuthenticateController extends Controller
     public function getAccessToken(string $code)
     {
         // server: url -> ip
-        $response = Http::asForm()->post(config('auth.sso.url').'/oauth/token', [
+//        $response = Http::asForm()->post(config('auth.sso.url').'/oauth/token', [
+        $response = Http::asForm()->post(config('auth.sso.ip').'/oauth/token', [
             'grant_type' => 'authorization_code',
             'client_id' => config('auth.sso.client_id'),
             'client_secret' => config('auth.sso.client_secret'),
@@ -116,7 +117,8 @@ class AuthenticateController extends Controller
     public function getUserData(string $accessToken)
     {
         // server: url -> ip
-        $response = Http::withToken($accessToken)->get(config('auth.sso.url').'/api/user');
+//        $response = Http::withToken($accessToken)->get(config('auth.sso.url').'/api/user');
+        $response = Http::withToken($accessToken)->get(config('auth.sso.ip').'/api/user');
         return $response->json();
     }
     public function findOrCreateUser(array $userData, string $accessToken)

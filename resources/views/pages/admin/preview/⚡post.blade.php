@@ -38,6 +38,19 @@ class extends Component {
         $this->isDraft = request()->boolean('draft');
         $this->locale  = app()->getLocale();
 
+        $post = Post::findOrFail($id);
+        $isReviewer = auth()->user()?->can('duyet_bai_viet')
+            || auth()->user()?->can('xuat_ban_bai_viet')
+            || auth()->user()?->can('quan_ly_bai_viet');
+
+        if (! $isReviewer && (int) $post->user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
+        if ($post->status === 'draft' && (int) $post->user_id !== (int) auth()->id()) {
+            abort(403);
+        }
+
         $this->loadData();
     }
 
