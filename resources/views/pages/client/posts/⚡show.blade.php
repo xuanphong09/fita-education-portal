@@ -18,7 +18,8 @@ class extends Component {
     protected function publishedPostsQuery()
     {
         return Post::with([
-            'categories' => fn($q) => $q->where('is_active', true),
+//            'categories' => fn($q) => $q->where('is_active', true),
+            'categories',
             'user'
         ])
             ->where('status', 'published')

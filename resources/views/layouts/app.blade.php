@@ -92,9 +92,9 @@
                         <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
                     @endcan
                     <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
-                    @canany(['duyet_bai_viet', 'quan_ly_bai_viet'])
-                        <x-menu-item title="Bài chờ duyệt" link="{{route('admin.posts.pending')}}" :active="request()->routeIs('admin.posts.pending')"/>
-                    @endcanany
+{{--                    @canany(['duyet_bai_viet', 'quan_ly_bai_viet'])--}}
+{{--                        <x-menu-item title="Bài chờ duyệt" link="{{route('admin.posts.pending')}}" :active="request()->routeIs('admin.posts.pending')"/>--}}
+{{--                    @endcanany--}}
                 </x-menu-sub>
             @endcanany
             @can('quan_ly_dao_tao')

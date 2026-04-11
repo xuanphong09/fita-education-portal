@@ -127,7 +127,7 @@ class Post extends Model
 
             $legacyCategorySlugCache[$this->category_id] = Category::query()
                 ->whereKey($this->category_id)
-                ->where('is_active', true)
+//                ->where('is_active', true)
                 ->value('slug');
 
             return $this->normalizeCategorySlug($legacyCategorySlugCache[$this->category_id]);
@@ -143,7 +143,7 @@ class Post extends Model
         }
 
         $categorySlug = $this->categories()
-            ->where('categories.is_active', true)
+//            ->where('categories.is_active', true)
             ->value('categories.slug');
 
         if (!empty($categorySlug)) {
