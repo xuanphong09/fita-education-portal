@@ -115,7 +115,7 @@ new class extends Component {
                                 @if(count($results['posts']) > 0)
                                     <div class="px-2 py-1 text-[10px] font-bold text-gray-400 uppercase">Tin tức</div>
                                     @foreach($results['posts'] as $post)
-                                        <a href="{{ route('client.posts.show', $post->slug) }}"
+                                        <a href="{{ $post->client_url }}"
                                            class="block px-2 py-2 hover:bg-blue-50 rounded-lg transition" wire:navigate>
                                             <div class="text-sm font-medium text-gray-700 truncate flex items-center gap-2">
                                                 @if($post->is_featured)

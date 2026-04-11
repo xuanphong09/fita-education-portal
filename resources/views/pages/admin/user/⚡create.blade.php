@@ -440,7 +440,7 @@ new class extends Component {
                                 required
                             />
                             <x-select
-                                label="{{ __('Major') }}"
+                                label="Chuyên ngành"
                                 wire:model.live.debounce.500ms="major_id"
                                 :options="$this->majors"
                                 placeholder="{{ __('Select major') }}"

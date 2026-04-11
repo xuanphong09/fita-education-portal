@@ -17,7 +17,10 @@ class extends Component {
 
     protected function publishedPostsQuery()
     {
-        return Post::with(['categories', 'user'])
+        return Post::with([
+            'categories' => fn($q) => $q->where('is_active', true),
+            'user'
+        ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now());
@@ -50,7 +53,7 @@ class extends Component {
             && $this->hasMeaningfulTranslation($post, 'content', 'en');
     }
 
-    public function mount(string $slug)
+    public function mount(string $categorySlug, string $slug)
     {
         $locale = app()->getLocale();
 
@@ -66,6 +69,14 @@ class extends Component {
             })
             ->firstOrFail();
 
+        $canonicalCategorySlug = $this->post->getPrimaryCategorySlug() ?: 'bai-viet';
+        if ($categorySlug !== $canonicalCategorySlug) {
+            return redirect()->route('client.posts.show', [
+                'categorySlug' => $canonicalCategorySlug,
+                'slug' => $this->post->slug,
+            ], 301);
+        }
+
         if (! $this->isVisibleInLocale($this->post, $locale)) {
             return redirect()->route('client.posts.index');
         }
@@ -75,7 +86,7 @@ class extends Component {
 
         // Bài viết liên quan (cùng một trong các danh mục)
         $categoryIds = $this->post->categories->pluck('id')->all();
-        if (!empty($categoryIds)) {
+        if ($this->post->show_related_posts && !empty($categoryIds)) {
             $this->relatedPosts = $this->publishedPostsQuery()
                 ->whereHas('categories', fn ($q) => $q->whereIn('categories.id', $categoryIds))
                 ->where('id', '!=', $this->post->id)
@@ -142,21 +153,24 @@ class extends Component {
     </x-slot:seo>
 
     <x-slot:breadcrumb>
-        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Post list')}}</a>
         @if($post->categories->isNotEmpty())
-        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
+{{--        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>--}}
         <a href="{{route('client.posts.index', ['danh-muc' => $post->categories->first()->slug])}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{$post->categories->first()->getTranslation('name', app()->getLocale())}}</a>
+        @else
+                    <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Post list')}}</a>
         @endif
             <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
         <span class="line-clamp-1 max-w-200">{{ $post->getTranslation('title', app()->getLocale()) }}</span>
     </x-slot:breadcrumb>
 
     <x-slot:titleBreadcrumb>
-        @if($post->categories->isNotEmpty())
-            {{$post->categories->first()->getTranslation('name', app()->getLocale())}}
-        @else
-            {{__('Posts')}}
-        @endif
+        <span class="uppercase">
+            @if($post->categories->isNotEmpty())
+                {{$post->categories->first()->getTranslation('name', app()->getLocale())}}
+            @else
+                {{__('Posts')}}
+            @endif
+        </span>
     </x-slot:titleBreadcrumb>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -176,7 +190,7 @@ class extends Component {
 
                 <div class="p-4 lg:p-6">
                     {{-- Category Badge --}}
-                    @if($post->categories->isNotEmpty())
+                    @if($post->show_category && $post->categories->isNotEmpty())
                         <div class="flex flex-wrap gap-2 mb-4">
                             @foreach($post->categories as $postCategory)
                                 @if($postCategory->getTranslation('name', app()->getLocale(), false))
@@ -199,20 +213,24 @@ class extends Component {
 
                     {{-- Meta Info --}}
                     <div class="flex flex-wrap items-center gap-4 text-sm text-gray-600 pb-6 mb-6 border-b">
-                        @if($post->user)
+                        @if($post->show_author && $post->user)
                             <div class="flex items-center gap-2">
                                 <x-icon name="o-user" class="w-4 h-4" />
                                 <span>{{ $post->user->name }}</span>
                             </div>
                         @endif
-                        <div class="flex items-center gap-2">
-                            <x-icon name="o-calendar" class="w-4 h-4" />
-                            <span>{{ $post->published_at->isoFormat(app()->getLocale() === 'vi' ? 'DD [tháng] MM YYYY' : 'DD MMMM YYYY') }}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <x-icon name="o-eye" class="w-4 h-4" />
-                            <span>{{ number_format($post->views) }} {{ __('views') }}</span>
-                        </div>
+                        @if($post->show_published_at)
+                            <div class="flex items-center gap-2">
+                                <x-icon name="o-calendar" class="w-4 h-4" />
+                                <span>{{ $post->published_at->isoFormat(app()->getLocale() === 'vi' ? 'DD [tháng] MM YYYY' : 'DD MMMM YYYY') }}</span>
+                            </div>
+                        @endif
+                        @if($post->show_views)
+                            <div class="flex items-center gap-2">
+                                <x-icon name="o-eye" class="w-4 h-4" />
+                                <span>{{ number_format($post->views) }} {{ __('views') }}</span>
+                            </div>
+                        @endif
                     </div>
 
                     {{-- Excerpt --}}
@@ -264,12 +282,12 @@ class extends Component {
             </article>
 
             {{-- Related Posts --}}
-            @if($relatedPosts->isNotEmpty())
+            @if($post->show_related_posts && $relatedPosts->isNotEmpty())
                 <div class="mt-8">
                     <h2 class="text-2xl font-bold mb-4">{{ __('Related Posts') }}</h2>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         @foreach($relatedPosts as $related)
-                            <a href="{{ route('client.posts.show', $related->slug) }}" wire:navigate class="group">
+                            <a href="{{ $related->client_url }}" wire:navigate class="group">
                                 <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
                                     <div class="aspect-video bg-gray-200 overflow-hidden">
                                         @if($related->thumbnail)
@@ -308,7 +326,7 @@ class extends Component {
                     <h3 class="font-bold text-xl mb-4">{{ __('Recent Posts') }}</h3>
                     <div class="space-y-4">
                         @foreach($recentPosts as $recent)
-                            <a href="{{ route('client.posts.show', $recent->slug) }}" wire:navigate class="group flex gap-3">
+                            <a href="{{ $recent->client_url }}" wire:navigate class="group flex gap-3">
                                 <div class="w-20 h-20 shrink-0 bg-gray-200 rounded overflow-hidden">
                                     @if($recent->thumbnail)
                                         <img

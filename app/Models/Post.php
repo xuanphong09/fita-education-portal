@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Support\Str;
@@ -11,6 +13,27 @@ use Illuminate\Support\Str;
 class Post extends Model
 {
     use HasTranslations, SoftDeletes;
+
+    public const APPROVAL_PENDING = 'pending_review';
+    public const APPROVAL_APPROVED = 'approved';
+    public const APPROVAL_REJECTED = 'rejected';
+
+    protected const RESERVED_POST_ROUTE_SEGMENTS = [
+        'admin',
+        'gioi-thieu',
+        'lien-he',
+        'search',
+        'dao-tao',
+        'giang-vien',
+        'login',
+        'forgot-password',
+        'logout',
+        'auth',
+        'setup-password',
+        'tai-khoan',
+        'doi-mat-khau',
+        'test-email',
+    ];
 
     protected $fillable = [
         'title',
@@ -27,6 +50,15 @@ class Post extends Model
         'is_featured',
         'published_at',
         'views',
+        'show_author',
+        'show_published_at',
+        'show_views',
+        'show_category',
+        'show_related_posts',
+        'submitted_at',
+        'reviewed_by',
+        'reviewed_at',
+        'rejection_reason',
     ];
 
     public array $translatable = ['title', 'content', 'excerpt', 'seo_title', 'seo_description', 'slug_translations'];
@@ -35,6 +67,13 @@ class Post extends Model
         'published_at' => 'datetime',
         'is_featured' => 'boolean',
         'views' => 'integer',
+        'show_author' => 'boolean',
+        'show_published_at' => 'boolean',
+        'show_views' => 'boolean',
+        'show_category' => 'boolean',
+        'show_related_posts' => 'boolean',
+        'submitted_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     public function category()
@@ -53,6 +92,87 @@ class Post extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function reviewer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function approvalHistories(): HasMany
+    {
+        return $this->hasMany(\App\Models\PostApprovalHistory::class)->latest();
+    }
+
+    public function scopePendingReview($query)
+    {
+        return $query->where('status', self::APPROVAL_PENDING);
+    }
+
+    public function getPrimaryCategorySlug(): ?string
+    {
+        if ($this->relationLoaded('category')) {
+            $legacyCategory = $this->category;
+            if ($legacyCategory && $legacyCategory->is_active && !empty($legacyCategory->slug)) {
+                return $this->normalizeCategorySlug($legacyCategory->slug);
+            }
+        }
+
+        if ($this->category_id) {
+            static $legacyCategorySlugCache = [];
+
+            if (array_key_exists($this->category_id, $legacyCategorySlugCache)) {
+                return $this->normalizeCategorySlug($legacyCategorySlugCache[$this->category_id]);
+            }
+
+            $legacyCategorySlugCache[$this->category_id] = Category::query()
+                ->whereKey($this->category_id)
+                ->where('is_active', true)
+                ->value('slug');
+
+            return $this->normalizeCategorySlug($legacyCategorySlugCache[$this->category_id]);
+        }
+
+        if ($this->relationLoaded('categories')) {
+            $loadedCategory = $this->categories
+                ->first(fn (Category $category) => (bool) $category->is_active && !empty($category->slug));
+
+            if ($loadedCategory) {
+                return $this->normalizeCategorySlug($loadedCategory->slug);
+            }
+        }
+
+        $categorySlug = $this->categories()
+            ->where('categories.is_active', true)
+            ->value('categories.slug');
+
+        if (!empty($categorySlug)) {
+            return $this->normalizeCategorySlug($categorySlug);
+        }
+
+        return null;
+    }
+
+    protected function normalizeCategorySlug(?string $slug): ?string
+    {
+        if (empty($slug) || in_array($slug, self::RESERVED_POST_ROUTE_SEGMENTS, true)) {
+            return null;
+        }
+
+        return $slug;
+    }
+
+    public function getClientRouteParameters(): array
+    {
+        return [
+            'categorySlug' => $this->getPrimaryCategorySlug() ?: 'bai-viet',
+            'slug' => $this->slug,
+        ];
+    }
+
+    public function getClientUrlAttribute(): string
+    {
+        return route('client.posts.show', $this->getClientRouteParameters());
     }
 
     public function scopeFeatured($query)
@@ -129,13 +249,18 @@ class Post extends Model
     {
         $locale = $locale ?? app()->getLocale();
         $excerpt = $this->getTranslation('excerpt', $locale, true);
-        if (!empty($excerpt)) {
+
+        if (!empty(trim((string) $excerpt))) {
             return $excerpt;
         }
 
-        $content = $this->getTranslation('content', $locale, true);
-        $plain = trim(strip_tags($content));
-        return Str::limit($plain, $limit);
+        $content = (string) $this->getTranslation('content', $locale, true);
+
+        $content = html_entity_decode($content, ENT_QUOTES, 'UTF-8');
+        $content = str_replace(['</p>', '<br>', '<br/>', '<br />', '</div>', '</li>', '</h1>', '</h2>', '</h3>'], ' ', $content);
+        $plain = strip_tags($content);
+        $plain = preg_replace('/\s+/', ' ', $plain);
+        return Str::limit(trim($plain), $limit);
     }
 
     // Boot logic: auto-generate slug from title for canonical slug if missing

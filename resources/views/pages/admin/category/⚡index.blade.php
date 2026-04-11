@@ -183,7 +183,7 @@ new class extends Component {
             @if($category->is_active)
                 <x-badge value="Kích hoạt" class="badge-success badge-md text-white font-semibold"/>
             @else
-                <x-badge value="Tắt" class="badge-error badge-md text-white font-semibold"/>
+                <x-badge value="Ẩn" class="badge-error badge-md text-white font-semibold"/>
             @endif
             @endscope
 

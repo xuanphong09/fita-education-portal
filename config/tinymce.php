@@ -14,6 +14,11 @@ return [
     // Các cái bạn thiếu lúc nãy: emoticons, codesample, directionality, pagebreak, nonbreaking...
     'plugins' => 'autosave accordion advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount emoticons codesample directionality pagebreak nonbreaking save visualchars',
 //    'plugins' => 'lists link image table code preview',
+// 1. ÉP PHÔNG MẶC ĐỊNH CHO VÙNG SOẠN THẢO (Cỡ chữ 16px cho hiện đại, chuẩn web)
+    'content_style' => 'body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; font-size: 16px; line-height: 1.6; color: #1e293b; }',
+
+    // 2. KHAI BÁO VÀO MENU ĐỂ NẾU XÓA ĐỊNH DẠNG CŨNG QUAY VỀ ĐÂY ĐƯỢC
+    'font_family_formats' => 'Phông hệ thống=system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; Arial=arial,helvetica,sans-serif; Times New Roman=times new roman,times; Tahoma=tahoma,arial,helvetica,sans-serif;',
     // 4. THANH CÔNG CỤ (Đã sắp xếp khoa học)
     'toolbar' =>
         'restoredraft undo redo | ' .

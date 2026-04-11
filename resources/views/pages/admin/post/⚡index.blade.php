@@ -20,6 +20,28 @@ new class extends Component {
     public ?int $filterCategory = null;
     public string $filterFeatured = '';
     public string $filterLanguage = '';
+    public bool $pendingOnlyMode = false;
+
+    public function mount(): void
+    {
+        $this->pendingOnlyMode = request()->routeIs('admin.post.pending');
+
+        if ($this->pendingOnlyMode && ! $this->canReview()) {
+            abort(403);
+        }
+
+        if ($this->pendingOnlyMode) {
+            $this->filterStatus = Post::APPROVAL_PENDING;
+        }
+    }
+
+    public function canReview(): bool
+    {
+        $user = auth()->user();
+
+        return $user?->can('duyet_bai_viet')
+            || $user?->can('quan_ly_bai_viet');
+    }
 
     public function getPostsProperty()
     {
@@ -27,6 +49,14 @@ new class extends Component {
 
         return Post::query()
             ->with(['categories', 'user'])
+            ->when(
+                ! $this->canReview(),
+                fn ($q) => $q->where('user_id', auth()->id()),
+                fn ($q) => $q->where(function ($inner) {
+                    $inner->where('status', '!=', 'draft')
+                        ->orWhere('user_id', auth()->id());
+                })
+            )
             ->when($this->filterLanguage !== '', fn($q) => $this->applyLanguageFilter($q, $this->filterLanguage))
             ->when($search !== '', fn($q) => $this->applySearchFilter($q, $search, $this->filterLanguage))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
@@ -97,7 +127,7 @@ new class extends Component {
             ['key' => 'category', 'label' => 'Danh mục', 'sortable' => false, 'class' => 'w-36'],
             ['key' => 'status', 'label' => 'Trạng thái', 'sortable' => false, 'class' => 'w-28'],
             ['key' => 'featured', 'label' => 'Nổi bật', 'sortable' => false, 'class' => 'w-24'],
-            ['key' => 'views', 'label' => 'Lượt xem', 'class' => 'w-24'],
+//            ['key' => 'views', 'label' => 'Lượt xem', 'class' => 'w-24'],
             ['key' => 'created_at', 'label' => 'Ngày tạo', 'class' => 'w-32'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-24'],
         ];
@@ -140,6 +170,9 @@ new class extends Component {
         $this->filterCategory = null;
         $this->filterLanguage = '';
         $this->filterFeatured = '';
+        if ($this->pendingOnlyMode) {
+            $this->filterStatus = Post::APPROVAL_PENDING;
+        }
         $this->resetPage();
     }
 
@@ -152,8 +185,24 @@ new class extends Component {
             || $this->filterLanguage !== '';
     }
 
+    public function canDeletePost(Post $post): bool
+    {
+        if ($this->canReview()) {
+            return true;
+        }
+
+        return $post->status === 'draft' && (int) $post->user_id === (int) auth()->id();
+    }
+
     public function delete(int $id): void
     {
+        $post = Post::findOrFail($id);
+
+        if (! $this->canDeletePost($post)) {
+            $this->error('Bạn chỉ có thể xóa bài nháp của chính mình.');
+            return;
+        }
+
         $this->dispatch('modal:confirm', [
             'title' => 'Bạn có chắc chắn muốn xóa bài viết này không?',
             'icon' => 'question',
@@ -168,6 +217,12 @@ new class extends Component {
     public function confirmDelete(int $id): void
     {
         $post = Post::findOrFail($id);
+
+        if (! $this->canDeletePost($post)) {
+            $this->error('Bạn không có quyền xóa bài viết này.');
+            return;
+        }
+
         if ($post->thumbnail) {
             Storage::disk('public')->delete($post->thumbnail);
         }
@@ -177,6 +232,11 @@ new class extends Component {
 
     public function toggleFeatured(int $id): void
     {
+        if (! $this->canReview()) {
+            $this->error('Bạn không có quyền thay đổi trạng thái nổi bật.');
+            return;
+        }
+
         $post = Post::findOrFail($id);
 
         if ($post->status !== 'published') {
@@ -209,13 +269,13 @@ new class extends Component {
     x-on:livewire:response.window="loading = false"
     x-on:livewire:error.window="loading = false"
 >
-    <x-slot:title>Danh sách bài viết</x-slot:title>
+    <x-slot:title>{{ $pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết' }}</x-slot:title>
 
     <x-slot:breadcrumb>
-        <span>Danh sách bài viết</span>
+        <span>{{ $pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết' }}</span>
     </x-slot:breadcrumb>
 
-    <x-header title="Danh sách bài viết" class="pb-3 mb-5! border-b border-gray-300">
+    <x-header :title="$pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết'" class="pb-3 mb-5! border-b border-gray-300">
         <x-slot:middle class="justify-end!">
             <x-input
                 icon="o-magnifying-glass"
@@ -226,7 +286,9 @@ new class extends Component {
             />
         </x-slot:middle>
         <x-slot:actions>
-            <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.post.trash') }}"/>
+            @if($this->canReview())
+                <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.post.trash') }}"/>
+            @endif
             <x-button icon="o-plus" class="btn-primary text-white" label="Tạo bài viết"
                       link="{{ route('admin.post.create') }}"/>
         </x-slot:actions>
@@ -252,6 +314,8 @@ new class extends Component {
             placeholder-value=""
             :options="[
                 ['id'=>'draft',     'name'=>'Nháp'],
+                ['id'=>'pending_review', 'name'=>'Chờ duyệt'],
+                ['id'=>'rejected', 'name'=>'Từ chối'],
                 ['id'=>'published', 'name'=>'Đã đăng'],
                 ['id'=>'archived',  'name'=>'Lưu trữ'],
             ]"
@@ -333,7 +397,7 @@ new class extends Component {
                     ?: '—';
             @endphp
             <div class="font-medium line-clamp-1">{{ $title }}</div>
-            <div class="text-xs text-gray-400">{{ $post->slug }}</div>
+            <div class="text-sm text-gray-400 line-clamp-1">{{ $post->slug }}</div>
             @endscope
 
             @scope('cell_category', $post)
@@ -344,13 +408,15 @@ new class extends Component {
                     @endforeach
                 </div>
             @else
-                <span class="text-xs text-gray-400">—</span>
+                <span class="text-sm text-gray-400">—</span>
             @endif
             @endscope
 
             @scope('cell_status', $post)
             @php
                 $map = ['draft'=>['label'=>'Nháp','class'=>'badge-ghost text-black!'],
+                        'pending_review'=>['label'=>'Chờ duyệt','class'=>'badge-warning text-white'],
+                        'rejected'=>['label'=>'Từ chối','class'=>'badge-error text-white'],
                         'published'=>['label'=>'Đã đăng','class'=>'badge-success'],
                         'archived'=>['label'=>'Lưu trữ','class'=>'badge-warning']];
                 $s = $map[$post->status] ?? $map['draft'];
@@ -363,7 +429,7 @@ new class extends Component {
             @if($post->is_featured)
                 <x-badge value="Nổi bật" class="badge-info badge-md text-white font-semibold whitespace-nowrap"/>
             @else
-                <span class="text-xs text-gray-400">—</span>
+                <span class="text-sm text-gray-400">—</span>
             @endif
             @endscope
 
@@ -372,15 +438,15 @@ new class extends Component {
             @endscope
 
             @scope('cell_created_at', $post)
-            <span class="text-xs text-gray-500">{{ $post->created_at->format('d/m/Y') }}</span>
+            <span class="text-sm text-gray-500">{{ $post->created_at->format('d/m/Y') }}</span>
             @endscope
 
             @scope('cell_actions', $post)
             <div class="flex gap-1">
-                <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa"
-                          link="{{ route('admin.post.edit', $post->id) }}"/>
+            <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa"
+                      link="{{ route('admin.post.edit', $post->id) }}"/>
 
-                @if($post->status === 'published')
+                @if($this->canReview() && $post->status === 'published')
                     <x-button
                         :icon="$post->is_featured ? 's-star' : 'o-star'"
                         class="btn-sm btn-ghost {{ $post->is_featured ? 'text-warning' : 'text-gray-500' }}"
@@ -390,8 +456,10 @@ new class extends Component {
                     />
                 @endif
 
-                <x-button icon="o-trash" class="btn-sm btn-ghost text-error" tooltip="Xóa"
-                          wire:click="delete({{ $post->id }})" spinner="delete({{ $post->id }})"/>
+                @if($this->canDeletePost($post))
+                    <x-button icon="o-trash" class="btn-sm btn-ghost text-error" tooltip="Xóa"
+                              wire:click="delete({{ $post->id }})" spinner="delete({{ $post->id }})"/>
+                @endif
             </div>
             @endscope
 

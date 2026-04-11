@@ -95,7 +95,10 @@ class extends Component {
         $selectedCategoryId = $currentCategory?->id;
 
         $postQuery = Post::query()
-            ->with(['categories', 'user'])
+            ->with([
+                'categories' => fn($q) => $q->where('is_active', true),
+                'user'
+            ])
             ->tap($applyPublished)
             ->when($selectedCategoryId, fn ($q) => $q->whereHas('categories', fn ($cq) => $cq->where('categories.id', $selectedCategoryId)));
 
@@ -273,17 +276,17 @@ class extends Component {
                         $featuredSlides = [];
                         foreach ($featuredPosts as $post) {
                             $featuredSlides[] = [
-                                'url' => route('client.posts.show', $post->slug),
+                                'url' => $post->client_url,
                                 'title' => $post->getTranslation('title', app()->getLocale()),
                                 'excerpt' => $post->getExcerptOrAuto(app()->getLocale(), 220),
-                                'categories' => $post->categories
+                                'categories' => $post->show_category ? $post->categories
                                     ->map(fn ($c) => $c->getTranslation('name', app()->getLocale(), false))
                                     ->filter()
                                     ->values()
-                                    ->all(),
-                                'author' => optional($post->user)->name,
-                                'date' => optional($post->published_at)->format('d/m/Y'),
-                                'views' => number_format($post->views),
+                                    ->all() : [],
+                                'author' => $post->show_author ? optional($post->user)->name : null,
+                                'date' => $post->show_published_at ? optional($post->published_at)->format('d/m/Y') : null,
+                                'views' => $post->show_views ? number_format($post->views) : null,
                                 'thumbnail' => $post->thumbnail ? Storage::url($post->thumbnail) : null,
                             ];
                         }
@@ -423,7 +426,7 @@ class extends Component {
                 @if($listPosts->isNotEmpty())
                 <div class="bg-white rounded-2xl shadow-md divide-y">
                     @foreach($listPosts as $post)
-                        <a href="{{ route('client.posts.show', $post->slug) }}" wire:navigate class="group block p-4 sm:p-5 hover:bg-slate-50 transition-colors">
+                        <a href="{{ $post->client_url }}" wire:navigate class="group block p-4 sm:p-5 hover:bg-slate-50 transition-colors">
                             <div class="flex flex-col sm:flex-row gap-4">
                                 <div class="w-full sm:w-44 lg:h-28 h-50 bg-gray-200 rounded-lg overflow-hidden shrink-0">
                                     @if($post->thumbnail)
@@ -447,26 +450,30 @@ class extends Component {
                                                 Nổi bật
                                             </span>
                                         @endif
-                                        @if($post->categories->isNotEmpty())
-                                            @foreach($post->categories as $postCategory)
-                                                @if($postCategory->getTranslation('name', app()->getLocale(), false))
-                                                    <span class="inline-block bg-fita text-white px-2 py-1 rounded">
-                                                        {{ $postCategory->getTranslation('name', app()->getLocale()) }}
-                                                    </span>
-                                                @endif
-                                            @endforeach
-                                        @endif
-                                        @if($post->user)
-                                            <span class="inline-flex items-center gap-1">
-                                                <x-icon name="o-user" class="w-4.5 h-4.5" />
-                                                {{ $post->user->name }}
-                                            </span>
-                                        @endif
-                                        <span>{{ $post->published_at->format('d/m/Y') }}</span>
-                                        <span class="inline-flex items-center gap-1">
-                                            <x-icon name="o-eye" class="w-4.5 h-4.5" />
-                                            {{ number_format($post->views) }}
-                                        </span>
+                                         @if($post->show_category && $post->categories->isNotEmpty())
+                                             @foreach($post->categories as $postCategory)
+                                                 @if($postCategory->getTranslation('name', app()->getLocale(), false))
+                                                     <span class="inline-block bg-fita text-white px-2 py-1 rounded">
+                                                         {{ $postCategory->getTranslation('name', app()->getLocale()) }}
+                                                     </span>
+                                                 @endif
+                                             @endforeach
+                                         @endif
+                                         @if($post->show_author && $post->user)
+                                             <span class="inline-flex items-center gap-1">
+                                                 <x-icon name="o-user" class="w-4.5 h-4.5" />
+                                                 {{ $post->user->name }}
+                                             </span>
+                                         @endif
+                                         @if($post->show_published_at)
+                                             <span>{{ $post->published_at->format('d/m/Y') }}</span>
+                                         @endif
+                                         @if($post->show_views)
+                                             <span class="inline-flex items-center gap-1">
+                                                 <x-icon name="o-eye" class="w-4.5 h-4.5" />
+                                                 {{ number_format($post->views) }}
+                                             </span>
+                                         @endif
                                     </div>
 
                                     <h3 class="font-bold text-lg mb-2 line-clamp-2 group-hover:text-fita transition-colors">

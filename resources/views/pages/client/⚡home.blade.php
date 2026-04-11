@@ -114,7 +114,10 @@ class extends Component {
         $slides = count($dbSlides) > 0 ? $dbSlides : $fallbackSlides;
 
         $baseQuery = Post::query()
-            ->with(['categories', 'user'])
+            ->with([
+                'categories' => fn($q) => $q->where('is_active', true),
+                'user'
+            ])
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
@@ -136,7 +139,7 @@ class extends Component {
                             'image' => Storage::url($post->thumbnail),
                             'day' => $post->published_at?->isoFormat('DD'),
                             'month' => $post->published_at?->isoFormat('MMMM'),
-                            'url' => route('client.posts.show', $post->slug),
+                            'url' => $post->client_url,
                         ];
                     }
                 } catch (\Exception $e) {
@@ -163,7 +166,7 @@ class extends Component {
                             'image' => Storage::url($post->thumbnail),
                             'day' => $post->published_at?->isoFormat('DD'),
                             'month' => $post->published_at?->isoFormat('MMMM'),
-                            'url' => route('client.posts.show', $post->slug),
+                            'url' => $post->client_url,
                         ];
                     }
                 } catch (\Exception $e) {
@@ -346,7 +349,7 @@ class extends Component {
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
-                                        <a href="{{ route('client.posts.show', $post->slug) }}" wire:navigate class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                        <a href="{{ $post->client_url }}" wire:navigate class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
                                             {{ $post->getTranslation('title', app()->getLocale()) }}
                                         </a>
                                         <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
@@ -374,7 +377,7 @@ class extends Component {
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
-                                        <a href="{{ route('client.posts.show', $post->slug) }}" wire:navigate class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                        <a href="{{ $post->client_url }}" wire:navigate class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
                                             {{ $post->getTranslation('title', app()->getLocale()) }}
                                         </a>
                                         <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">

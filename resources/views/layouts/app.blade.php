@@ -86,18 +86,24 @@
             {{-- end logo sidebar mobile --}}
 
             <x-menu-item title="Dashboard" icon="o-home" link="{{route('admin.dashboard')}}" :active="request()->routeIs('admin.dashboard')"/>
-            @can('quan_ly_bai_viet')
+            @canany(['quan_ly_bai_viet', 'viet_bai_viet', 'duyet_bai_viet'])
                 <x-menu-sub title="Quản lý bài viết" icon="o-newspaper">
-                    <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
+                    @can('quan_ly_bai_viet')
+                        <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
+                    @endcan
                     <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
+                    @canany(['duyet_bai_viet', 'quan_ly_bai_viet'])
+                        <x-menu-item title="Bài chờ duyệt" link="{{route('admin.posts.pending')}}" :active="request()->routeIs('admin.posts.pending')"/>
+                    @endcanany
                 </x-menu-sub>
-            @endcan
+            @endcanany
             @can('quan_ly_dao_tao')
                 <x-menu-sub title="Quản lý đào tạo" icon="o-book-open">
                     <x-menu-item title="Chương trình đào tạo" link="{{route('admin.training-program.index')}}" :active="request()->routeIs('admin.training-program.*')"/>
                     <x-menu-item title="Nhóm môn học" link="{{route('admin.group-subject.index')}}" :active="request()->routeIs('admin.group-subject.*')"/>
                     <x-menu-item title="Môn học" link="{{route('admin.subject.index')}}" :active="request()->routeIs('admin.subject.*')"/>
                     <x-menu-item title="Bộ môn" link="{{route('admin.department.index')}}" :active="request()->routeIs('admin.department.*')"/>
+                    <x-menu-item title="Ngành" link="{{route('admin.program-major.index')}}" :active="request()->routeIs('admin.program-major.*')"/>
                     <x-menu-item title="Chuyên ngành" link="{{route('admin.major.index')}}" :active="request()->routeIs('admin.major.*')"/>
                 </x-menu-sub>
             @endcan
@@ -107,6 +113,7 @@
                     <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
                 </x-menu-sub>
                 <x-menu-sub title="{{__('Interface configuration')}}" icon="o-cog-6-tooth">
+                    <x-menu-item title="Menu tiêu đề" link="{{route('admin.configuration.header')}}" :active="request()->routeIs('admin.configuration.header')"/>
                     <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
                     <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
                 </x-menu-sub>

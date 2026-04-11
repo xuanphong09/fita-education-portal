@@ -107,7 +107,8 @@
     "Latest News": "Tin mới",
     "Photo library": "Thư viện ảnh",
     "List of partners": "Danh sách đối tác",
-    "Major": "Chuyên ngành",
+    "Major": "Ngành",
+    "Specialization/Area of specialization": "Chuyên ngành/Hướng chuyên sâu",
     "All majors": "Tất cả chuyên ngành",
     "Filter by major": "Lọc theo chuyên ngành",
     "Major:": "Chuyên ngành:",
@@ -241,5 +242,8 @@
     "Tools": "Công cụ",
     "ST-Chatbot supports students": "ST-Chatbot hỗ trợ sinh viên",
     "Submit a request": "Gửi yêu cầu",
-    "Enter your email address to receive a password reset link.": "Nhập email của bạn để nhận liên kết đặt lại mật khẩu."
+    "Enter your email address to receive a password reset link.": "Nhập email của bạn để nhận liên kết đặt lại mật khẩu.",
+    "Approved": "Đã duyệt",
+    "Submitted": "Đã gửi duyệt bài viết",
+    "Rejected": "Đã từ chối"
 }

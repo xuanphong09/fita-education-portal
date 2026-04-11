@@ -8,11 +8,13 @@ Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.inform
 Route::livewire('/lien-he', 'pages::client.contact')->name('client.contact');
 Route::livewire('/search', 'pages::client.search')->name('client.search');
 Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');
-Route::livewire('/dao-tao/chuyen-nganh/{major}', 'pages::client.training-programs.major')->name('client.training-programs.major');
+Route::livewire('/chuong-trinh-dao-tao', 'pages::client.training-programs.major')->name('client.training-programs.major');
 
 // Posts
 Route::livewire('/bai-viet', 'pages::client.posts.index')->name('client.posts.index');
-Route::livewire('/bai-viet/{slug}', 'pages::client.posts.show')
+Route::livewire('/{categorySlug}/{slug}', 'pages::client.posts.show')
+    ->where('categorySlug', '^(?!admin$|gioi-thieu$|lien-he$|search$|dao-tao$|giang-vien$|login$|forgot-password$|logout$|auth$|setup-password$|tai-khoan$|doi-mat-khau$|test-email$)[a-z0-9-]+$')
+    ->where('slug', '[a-z0-9-]+')
     ->middleware('throttle:60,1') // Giới hạn 60 requests/phút để chống bot spam
     ->name('client.posts.show');
 
@@ -45,6 +47,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     // ---- Cấu hình giao diện ----
     Route::middleware('permission:cai_dat_giao_dien')->group(function () {
         Route::livewire('/configuration/introduction-page', 'pages::admin.configuration.introduction')->name('admin.configuration.introduction');
+        Route::livewire('/configuration/header', 'pages::admin.configuration.header')->name('admin.configuration.header');
         Route::livewire('/configuration/footer', 'pages::admin.configuration.footer')->name('admin.configuration.footer');
         Route::livewire('/banner/index', 'pages::admin.banner.index')->name('admin.banner.index');
         Route::livewire('/banner/trash', 'pages::admin.banner.trash')->name('admin.banner.trash');
@@ -84,12 +87,20 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/category/index', 'pages::admin.category.index')->name('admin.category.index');
         Route::livewire('/category/create', 'pages::admin.category.create')->name('admin.category.create');
         Route::livewire('/category/edit/{id}', 'pages::admin.category.edit')->name('admin.category.edit');
+    });
 
+    Route::middleware('permission:quan_ly_bai_viet|viet_bai_viet|duyet_bai_viet|xuat_ban_bai_viet')->group(function () {
         Route::livewire('/post/index', 'pages::admin.post.index')->name('admin.post.index');
+        Route::livewire('/post/pending', 'pages::admin.post.index')->name('admin.posts.pending');
         Route::livewire('/post/create', 'pages::admin.post.create')->name('admin.post.create');
         Route::livewire('/post/edit/{id}', 'pages::admin.post.edit')->name('admin.post.edit');
-        Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
+    });
 
+    Route::middleware('permission:quan_ly_bai_viet')->group(function () {
+        Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
+    });
+
+    Route::middleware('permission:quan_ly_bai_viet')->group(function () {
         Route::livewire('/contact-message/index', 'pages::admin.contact-message.index')->name('admin.contact-message.index');
         Route::livewire('/contact-message/trash', 'pages::admin.contact-message.trash')->name('admin.contact-message.trash');
     });
@@ -108,6 +119,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
 
         // Majors (Chuyên ngành)
         Route::livewire('/major/index', 'pages::admin.major.index')->name('admin.major.index');
+        // Program Majors (Ngành)
+        Route::livewire('/program-major/index', 'pages::admin.program-major.index')->name('admin.program-major.index');
         // Department - Bộ môn
         Route::livewire('/department/index', 'pages::admin.department.index')->name('admin.department.index');
 
