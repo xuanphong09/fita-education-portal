@@ -275,7 +275,16 @@ class Post extends Model
                     $base = Str::slug($title);
                     $slug = $base;
                     $i = 1;
-                    while (self::where('slug', $slug)->where('id', '<>', $post->id ?? 0)->exists()) {
+                    while (self::query()
+                        ->where('slug', $slug)
+                        ->where('id', '<>', $post->id ?? 0)
+                        ->when($post->category_id, function ($query) use ($post) {
+                            $query->where('category_id', $post->category_id);
+                        }, function ($query) {
+                            $query->whereNull('category_id');
+                        })
+                        ->whereNull('deleted_at')
+                        ->exists()) {
                         $slug = $base . '-' . $i++;
                     }
                     $post->slug = $slug;

@@ -6,6 +6,7 @@ use Livewire\WithFileUploads;
 use App\Models\Post;
 use App\Models\PostApprovalHistory;
 use App\Models\Category;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -104,6 +105,8 @@ new class extends Component {
 
     protected function rules(): array
     {
+        $primaryCategoryId = $this->category_ids[0] ?? null;
+
         return [
             'title_vi'           => 'nullable|string|max:255',
             'title_en'           => 'nullable|string|max:255',
@@ -111,7 +114,22 @@ new class extends Component {
             'content_en'         => 'nullable|string',
             'excerpt_vi'         => 'nullable|string|max:500',
             'excerpt_en'         => 'nullable|string|max:500',
-            'slug'               => 'required|string|max:255|unique:posts,slug,' . $this->id,
+            'slug'               => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('posts', 'slug')
+                    ->ignore($this->id)
+                    ->where(function ($query) use ($primaryCategoryId) {
+                        $query->whereNull('deleted_at');
+
+                        if ($primaryCategoryId) {
+                            $query->where('category_id', $primaryCategoryId);
+                        } else {
+                            $query->whereNull('category_id');
+                        }
+                    }),
+            ],
             'category_ids'       => 'nullable|array',
             'category_ids.*'     => 'integer|exists:categories,id',
             'status'             => 'required|in:draft,pending_review,rejected,published,archived',
@@ -847,8 +865,8 @@ new class extends Component {
                 <x-button label="Xem trước" class="bg-warning text-white w-full my-1"
                           wire:click="previewDraft" spinner="previewDraft"/>
             </x-card>
-
-            <x-card title="Duyệt bài viết" shadow class="p-3!">
+            @if($status === \App\Models\Post::APPROVAL_PENDING)
+                <x-card title="Duyệt bài viết" shadow class="p-3!">
                 @php
                     $approvalMap = [
                         \App\Models\Post::APPROVAL_PENDING => ['label' => 'Chờ duyệt', 'class' => 'badge-warning'],
@@ -901,6 +919,7 @@ new class extends Component {
                     </div>
                 @endif
             </x-card>
+            @endif
             {{-- Xuất bản --}}
             <x-card title="Xuất bản" shadow class="p-3!">
                 <x-input label="Đường dẫn" wire:model.live.debounce.1000ms="slug"
