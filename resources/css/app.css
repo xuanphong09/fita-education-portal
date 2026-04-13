@@ -258,6 +258,12 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     @apply rounded-none hover:bg-fita hover:text-white
 }
 
+.client-menu-level-2 > li:not(:last-child),
+.client-menu-level-3 > li:not(:last-child),
+.client-top-menu-level-2 > li:not(:last-child) {
+    border-bottom: 1px solid rgba(148,163,184,0.38);
+}
+
 .modalAddSubject div.modal-box{
     @apply lg:w-250 max-w-[90%] lg:max-h-169 py-4
 }

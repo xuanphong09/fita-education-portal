@@ -33,7 +33,7 @@
 {{-- start nav bar--}}
 <div class="sticky top-0 z-50 w-full">
     {{-- start top nav bar--}}
-    <div class="bg-fita text-white text-sm py-2 lg:px-4 px-2 flex items-center h-8 justify-between">
+    <div class="bg-fita text-white text-sm py-2 lg:px-4 px-2 flex items-center h-8 justify-between relative">
         @php
             $topHeaderPage = \App\Models\Page::query()->where('slug', 'dau-trang')->first();
             $topHeaderRaw = [];
@@ -117,7 +117,7 @@
                         </div>
 
                         <ul tabindex="0"
-                            class="cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
+                            class="client-top-menu-level-2 cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
                             @foreach($topMenuItem['children'] as $topChild)
                                 <li>
                                     <a href="{{ $topChild['url'] }}" class="block px-4 py-2 hover:bg-gray-100">
@@ -271,10 +271,14 @@
         }
     @endphp
 
-    <x-nav full-width class="h-15 bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none">
+    <x-nav full-width class="bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none"
+           x-data="{ isScrolled: false }"
+           @scroll.window="isScrolled = (window.pageYOffset > 50)"
+           x-bind:class="isScrolled ? 'h-15' : 'md:h-20 h-15'"
+    >
 
         {{--  start navbar right  --}}
-        <x-slot:brand class="">
+        <x-slot:brand>
             <livewire:logo layout="client"/>
         </x-slot:brand>
         {{--  end navbar right  --}}
@@ -289,11 +293,14 @@
                                 tabindex="0"
                                 class="btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                 responsive
+                                x-data="{ isScrolled: false }"
+                                @scroll.window="isScrolled = (window.pageYOffset > 50)"
+                                x-bind:class="isScrolled ? 'text-[18px]/[60px]' : 'text-[18px]/[78px]'"
                             >
                                 {{ $item['name'] }}
                             </x-button>
 
-                            <ul tabindex="0" class="text-black dropdown-content z-50 px-0 menu shadow-lg bg-base-100 rounded-b-box border border-gray-300 border-t-transparent w-max min-w-full">
+                            <ul tabindex="0" class="client-menu-level-2 py-1 text-black dropdown-content z-50 px-0 menu shadow-lg bg-base-100 rounded-b-box border border-gray-300 border-t-transparent w-max min-w-full">
                                 @foreach($item['children'] as $child)
                                     <li class="w-full">
                                         @if(!empty($child['children']))
@@ -303,7 +310,7 @@
                                                     label="{{ $child['name'] }}"
                                                     x-on:click.prevent="$event.currentTarget.blur()"
                                                 />
-                                                <ul class="px-0! m-0! py-2 menu dropdown-content z-50 rounded-b-box bg-base-100 shadow-lg border border-gray-300 w-max min-w-full">
+                                                <ul class="client-menu-level-3 px-0! m-0! py-1 menu dropdown-content z-50 rounded-b-box bg-base-100 shadow-lg border border-gray-300 w-max min-w-full">
                                                     @foreach($child['children'] as $grand)
                                                         <li>
                                                             <x-button
@@ -331,6 +338,9 @@
                             link="{{ $item['url'] }}"
                             class="btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow"
                             responsive
+                            x-data="{ isScrolled: false }"
+                            @scroll.window="isScrolled = (window.pageYOffset > 50)"
+                            x-bind:class="isScrolled ? 'text-[18px]/[60px]' : 'text-[18px]/[79px]'"
                         >
                             {{ $item['name'] }}
                         </x-button>
