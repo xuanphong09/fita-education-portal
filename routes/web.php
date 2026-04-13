@@ -12,11 +12,6 @@ Route::livewire('/chuong-trinh-dao-tao', 'pages::client.training-programs.major'
 
 // Posts
 Route::livewire('/bai-viet', 'pages::client.posts.index')->name('client.posts.index');
-Route::livewire('/{categorySlug}/{slug}', 'pages::client.posts.show')
-    ->where('categorySlug', '^(?!admin$|gioi-thieu$|lien-he$|search$|dao-tao$|giang-vien$|login$|forgot-password$|logout$|auth$|setup-password$|tai-khoan$|doi-mat-khau$|test-email$)[a-z0-9-]+$')
-    ->where('slug', '[a-z0-9-]+')
-    ->middleware('throttle:60,1') // Giới hạn 60 requests/phút để chống bot spam
-    ->name('client.posts.show');
 
 Route::livewire('/giang-vien', 'pages::client.lecturers.index')->name('client.lecturers.index');
 Route::livewire('/giang-vien/{slug}', 'pages::client.lecturers.profile')->name('client.lecturers.profile');
@@ -35,6 +30,12 @@ Route::middleware('auth')->group(function () {
     Route::livewire('/tai-khoan', 'pages::client.account')->middleware('auth')->name('client.account');
     Route::livewire('/doi-mat-khau', 'pages::client.account-password')->middleware('auth')->name('client.account.password');
 });
+
+Route::livewire('/{categorySlug}/{slug}', 'pages::client.posts.show')
+    ->where('categorySlug', '^(?!admin$|gioi-thieu$|lien-he$|search$|dao-tao$|giang-vien$|login$|forgot-password$|logout$|auth$|setup-password$|tai-khoan$|doi-mat-khau$|test-email$)[a-z0-9-]+$')
+    ->where('slug', '[a-z0-9-]+')
+    ->middleware('throttle:60,1') // Giới hạn 60 requests/phút để chống bot spam
+    ->name('client.posts.show');
 
 // ============================================================
 // ADMIN — middleware chung: auth + locale

@@ -74,6 +74,14 @@ class extends Component {
                 })->orWhereHas('category', function ($categoryQuery) use ($categorySlug) {
                     $categoryQuery->where('slug', $categorySlug);
                 });
+
+                // /bai-viet/{slug} supports posts without any assigned category.
+                if ($categorySlug === 'bai-viet') {
+                    $postQuery->orWhere(function ($uncategorizedQuery) {
+                        $uncategorizedQuery->whereNull('category_id')
+                            ->whereDoesntHave('categories');
+                    });
+                }
             })
             ->firstOrFail();
 
