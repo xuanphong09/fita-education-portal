@@ -15,7 +15,7 @@ return [
     'plugins' => 'autosave accordion advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table help wordcount emoticons codesample directionality pagebreak nonbreaking save visualchars',
 //    'plugins' => 'lists link image table code preview',
 // 1. ÉP PHÔNG MẶC ĐỊNH CHO VÙNG SOẠN THẢO (Cỡ chữ 16px cho hiện đại, chuẩn web)
-    'content_style' => 'body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; font-size: 16px; line-height: 1.6; color: #1e293b; }',
+    'content_style' => 'body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; font-size: 16px; line-height: 1.6; color: #1e293b; overflow-wrap: anywhere; } p, ul, ol, blockquote, pre, table, figure { margin: 0 0 1rem; } h1, h2, h3, h4, h5, h6 { margin: 1.25rem 0 0.75rem; line-height: 1.3; font-weight: 700; } h1 { font-size: 2rem; } h2 { font-size: 1.75rem; } h3 { font-size: 1.5rem; } h4 { font-size: 1.25rem; } ul, ol { padding-left: 1.5rem; } img, video, iframe { max-width: 100%; } img, video { height: auto; } table { width: 100%; border-collapse: collapse; } th, td { border: 1px solid #e5e7eb; padding: 0.5rem 0.625rem; } figure.image { display: table; margin-left: auto; margin-right: auto; }',
 
     // 2. KHAI BÁO VÀO MENU ĐỂ NẾU XÓA ĐỊNH DẠNG CŨNG QUAY VỀ ĐÂY ĐƯỢC
     'font_family_formats' => 'Phông hệ thống=system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; Arial=arial,helvetica,sans-serif; Times New Roman=times new roman,times; Tahoma=tahoma,arial,helvetica,sans-serif;',
@@ -23,7 +23,7 @@ return [
     'toolbar' =>
         'restoredraft undo redo | ' .
         'blocks fontfamily fontsize | ' .
-        'preview bold italic underline forecolor| ' .
+        'bold italic underline forecolor removeformat| ' .
         'align lineheight | ' .
         'numlist bullist indent outdent| ' .
         'link image media table codesample | ' . // Nhóm chèn nội dung
@@ -31,9 +31,9 @@ return [
         'forecolor backcolor strikethrough| ' . // Nhóm màu sắc (Rất quan trọng)
         'emoticons charmap | ' . // Nhóm icon
         'pagebreak nonbreaking anchor | ' .
-        'searchreplace visualblocks code fullscreen| ' .
+        'searchreplace visualblocks code fullscreen preview| ' .
         'help',
-    'quickbars_selection_toolbar' => 'bold italic underline | forecolor backcolor |align link',
+    'quickbars_selection_toolbar' => 'bold italic underline | forecolor backcolor |align link| removeformat',
     // 5. Cấu hình phụ trợ (Để các nút hoạt động đúng)
 //    'image_title' => true,
 //    'automatic_uploads' => true,
