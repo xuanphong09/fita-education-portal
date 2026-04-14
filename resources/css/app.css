@@ -332,6 +332,42 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     border-bottom: 1px solid rgba(148,163,184,0.38);
 }
 
+/* Keep select/menu active state aligned with brand color instead of default dark highlight. */
+select.select,
+.select {
+    @apply bg-white text-gray-900;
+}
+
+select.select:focus,
+.select:focus,
+.select:focus-within {
+    border-color: var(--color-fita2) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 1px var(--color-fita2) inset;
+}
+
+.menu li > *:focus,
+.menu li > *:active,
+.menu li > details > summary:focus,
+.menu li > details > summary:active,
+.menu li > *[aria-current="page"],
+.menu li > *.active {
+    background-color: var(--color-fita2) !important;
+    color: #ffffff !important;
+}
+.select {
+    &, & select {
+        & option {
+            &:not(:disabled) {
+                &:active{
+                    background-color: var(--color-fita2);
+                    box-shadow: 0 2px calc(var(--depth) * 3px) -2px var(--color-neutral-content);
+                }
+            }
+        }
+    }
+}
+
 .modalAddSubject div.modal-box{
     @apply lg:w-250 max-w-[90%] lg:max-h-169 py-4
 }
@@ -351,6 +387,33 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
 }
 .modalContactMessage div.modal-box{
     @apply lg:w-250 max-w-[90%] lg:max-h-169 py-4 bg-slate-100
+}
+
+.modalDisplaySemesterTimeline div.modal-box{
+    @apply lg:w-300 max-w-[90%] lg:max-h-169 py-4
+}
+
+@keyframes modal-enter {
+    0% {
+        opacity: 0;
+        transform: translateY(14px) scale(0.98);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal.modal-open .modal-box,
+.modal[open] .modal-box {
+    animation: modal-enter 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .modal.modal-open .modal-box,
+    .modal[open] .modal-box {
+        animation: none;
+    }
 }
 
 .mary-table-pagination span[aria-current="page"] > span {

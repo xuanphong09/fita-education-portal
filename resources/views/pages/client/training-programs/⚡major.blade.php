@@ -36,6 +36,8 @@ class extends Component {
     public string $typeFilter = '';
 
     public array $expanded = [];
+    public bool $showSemesterTimelineModal = true;
+    public bool $pendingOpenSemesterTimelineModal = true;
 
     public function mount(): void
     {
@@ -93,6 +95,8 @@ class extends Component {
         $this->version = null;
         $this->semesterNo = null;
         $this->expanded = [];
+        $this->showSemesterTimelineModal = false;
+        $this->pendingOpenSemesterTimelineModal = true;
     }
 
     public function updatedSelectedMajorSlug(): void
@@ -115,6 +119,8 @@ class extends Component {
         $this->version = null;
         $this->semesterNo = null;
         $this->expanded = [];
+        $this->showSemesterTimelineModal = false;
+        $this->pendingOpenSemesterTimelineModal = true;
 
         $this->redirectToCanonicalMajorUrl($selectedMajor);
     }
@@ -142,6 +148,20 @@ class extends Component {
     {
         $this->semesterNo = null;
         $this->expanded = [];
+        $this->showSemesterTimelineModal = false;
+        $this->pendingOpenSemesterTimelineModal = true;
+    }
+
+    public function closeSemesterTimelineModal(): void
+    {
+        $this->showSemesterTimelineModal = false;
+        $this->pendingOpenSemesterTimelineModal = false;
+    }
+
+    public function openSemesterTimelineModal(): void
+    {
+        $this->showSemesterTimelineModal = true;
+        $this->pendingOpenSemesterTimelineModal = false;
     }
 
     public function updatedSemesterNo(): void
@@ -323,6 +343,20 @@ class extends Component {
         return [$chars, $normalizedText, $normalizedToOriginal];
     }
 
+    protected function formatSemesterTimeline(mixed $semester): ?string
+    {
+        $startDate = data_get($semester, 'start_date');
+        $endDate = data_get($semester, 'end_date');
+
+        if ($startDate && $endDate) {
+            return \Illuminate\Support\Carbon::parse($startDate)->format('m/Y')
+                . ' - '
+                . \Illuminate\Support\Carbon::parse($endDate)->format('m/Y');
+        }
+
+        return null;
+    }
+
     public function semesterHeaders(): array
     {
         return [
@@ -405,6 +439,8 @@ class extends Component {
                 'activeProgram' => null,
                 'semesterBlocks' => collect(),
                 'groupBlocks' => collect(),
+                'currentSemesterTimeline' => null,
+                'nextSemesterTimeline' => null,
                 'programMajorOptions' => $programMajorOptions,
                 'majorOptions' => $majorOptions,
             ];
@@ -449,6 +485,8 @@ class extends Component {
         $activeProgram = null;
         $semesterBlocks = collect();
         $groupBlocks = collect();
+        $currentSemesterTimeline = null;
+        $nextSemesterTimeline = null;
 
         if ($this->version) {
             $activeProgram = TrainingProgram::query()
@@ -474,6 +512,40 @@ class extends Component {
         }
 
         if ($activeProgram) {
+            $today = now()->startOfDay();
+
+            $timelineSemesters = $activeProgram->semesters
+                ->filter(function ($semester) {
+                    if (!$this->formatSemesterTimeline($semester)) {
+                        return false;
+                    }
+
+                    $startDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'start_date'))->startOfDay();
+                    $endDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'end_date'))->startOfDay();
+
+                    return $endDate->greaterThanOrEqualTo($startDate);
+                })
+                ->values();
+
+            $currentSemesterTimeline = $timelineSemesters
+                ->first(function ($semester) use ($today) {
+                    $startDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'start_date'))->startOfDay();
+                    $endDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'end_date'))->startOfDay();
+
+                    return $today->between($startDate, $endDate, true);
+                });
+
+            if ($currentSemesterTimeline) {
+                $nextSemesterTimeline = $timelineSemesters
+                    ->first(fn ($semester) => (int) $semester->semester_no > (int) $currentSemesterTimeline->semester_no);
+            }
+
+            // Open modal only after the newly selected data has been fully recalculated.
+            if ($this->pendingOpenSemesterTimelineModal) {
+                $this->showSemesterTimelineModal = (bool) $currentSemesterTimeline;
+                $this->pendingOpenSemesterTimelineModal = false;
+            }
+
             $semesterCollection = $activeProgram->semesters;
 
             if ($this->semesterNo) {
@@ -580,6 +652,7 @@ class extends Component {
 
                     return [
                         'semester_no' => (int) $semester->semester_no,
+                        'timeline' => $this->formatSemesterTimeline($semester),
                         'total_credits' => (float) $subjects->sum('credits'),
                         'subjects' => $subjects,
                     ];
@@ -614,6 +687,9 @@ class extends Component {
                 })
                 ->sortBy('group_sort_order')
                 ->values();
+        } else {
+            $this->showSemesterTimelineModal = false;
+            $this->pendingOpenSemesterTimelineModal = false;
         }
 
         return [
@@ -622,6 +698,8 @@ class extends Component {
             'activeProgram' => $activeProgram,
             'semesterBlocks' => $semesterBlocks,
             'groupBlocks' => $groupBlocks,
+            'currentSemesterTimeline' => $currentSemesterTimeline,
+            'nextSemesterTimeline' => $nextSemesterTimeline,
             'programMajorOptions' => $programMajorOptions,
             'majorOptions' => $majorOptions,
         ];
@@ -683,7 +761,14 @@ class extends Component {
                 <div class="w-full sm:w-50">
                     @php
                         $semesterOptions = $activeProgram
-                            ? $activeProgram->semesters->map(fn ($semester) => ['value' => $semester->semester_no, 'label' => __('Semester') . ' ' . $semester->semester_no])->toArray()
+                            ? $activeProgram->semesters->map(function ($semester) {
+                                $timeline = $this->formatSemesterTimeline($semester);
+
+                                return [
+                                    'value' => $semester->semester_no,
+                                    'label' => __('Semester') . ' ' . $semester->semester_no . ($timeline ? ' (' . $timeline . ')' : ''),
+                                ];
+                            })->toArray()
                             : [];
                     @endphp
                     <x-select
@@ -759,7 +844,7 @@ class extends Component {
                 <div class="flex flex-wrap items-start justify-between gap-3">
                     <div>
                         <h2 class="text-2xl font-bold">{{ $programTitle }}</h2>
-                        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-[16px] text-gray-800">
+                        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 md:text-[16px] text-gray-800">
                             <div><span class="font-medium">{{__('Level of Education')}}:</span> {{ $programLevel }}</div>
                             <div><span class="font-medium">{{__('Code')}}:</span> {{ $majorCode }}</div>
                             <div><span class="font-medium">{{__('Type of Education')}}:</span> {{ $programType }}</div>
@@ -768,12 +853,356 @@ class extends Component {
                         </div>
                     </div>
 
-                    <div class="flex flex-wrap gap-2 text-[16px]">
+                    <div class="flex flex-wrap gap-2 md:text-[16px]">
                         <x-badge value="{{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
                         <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits ')}}" class="badge-outline badge-md" />
+                        @if($currentSemesterTimeline)
+                            <x-button
+                                label="{{ __('Current semester') }}"
+                                icon="o-calendar-days"
+                                class="btn-outline btn-sm"
+                                wire:click="openSemesterTimelineModal"
+                                spinner="openSemesterTimelineModal"
+                            />
+                        @endif
                     </div>
                 </div>
             </x-card>
+
+            @if($currentSemesterTimeline)
+                <x-modal wire:model="showSemesterTimelineModal" title="{{ __('Semester timeline') }}" separator class="modalDisplaySemesterTimeline">
+                    @php
+                        $buildSemesterRows = function ($semester) use ($activeProgram) {
+                            if (!$semester) {
+                                return collect();
+                            }
+
+                            return collect($semester->subjects ?? [])
+                                ->sortBy(fn ($subject) => (int) ($subject->pivot->order ?? 0))
+                                ->values()
+                                ->map(function ($subject, $index) use ($activeProgram) {
+                                    $prerequisites = collect($subject->prerequisites ?? [])
+                                        ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                                        ->values();
+
+                                    $prerequisiteNames = $prerequisites
+                                        ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
+                                        ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
+                                        ->implode(', ');
+
+                                    $prerequisiteCodes = $prerequisites
+                                        ->map(fn ($prerequisite) => (string) $prerequisite->code)
+                                        ->filter(fn ($code) => trim($code) !== '')
+                                        ->implode(', ');
+
+                                    $equivalents = collect($subject->equivalents ?? [])
+                                        ->filter(fn ($equivalent) => (int) ($equivalent->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                                        ->values();
+
+                                    $equivalentItems = $equivalents
+                                        ->map(fn ($equivalent) => [
+                                            'id' => (int) $equivalent->id,
+                                            'code' => (string) $equivalent->code,
+                                            'name' => $this->localizedName($equivalent),
+                                            'credits' => (float) ($equivalent->credits ?? 0),
+                                            'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
+                                            'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
+                                        ])
+                                        ->values();
+
+                                    return [
+                                        'id' => (int) $subject->id,
+                                        'row_index' => $index + 1,
+                                        'code' => (string) $subject->code,
+                                        'name' => $this->localizedName($subject),
+                                        'credits' => (float) ($subject->credits ?? 0),
+                                        'theory' => (float) ($subject->credits_theory ?? 0),
+                                        'practice' => (float) ($subject->credits_practice ?? 0),
+                                        'prerequisite_subjects' => $prerequisiteNames,
+                                        'prerequisite_subjects_codes' => $prerequisiteCodes,
+                                        'type' => (string) ($subject->pivot->type ?? 'required'),
+                                        'note' => (string) ($subject->pivot->notes ?? ''),
+                                        'can_expand' => (int) $equivalentItems->count() > 0,
+                                        'equivalents_count' => (int) $equivalentItems->count(),
+                                        'equivalents' => $equivalentItems,
+                                    ];
+                                });
+                        };
+
+                        $currentRows = $buildSemesterRows($currentSemesterTimeline);
+                        $nextRows = $buildSemesterRows($nextSemesterTimeline);
+                    @endphp
+
+                    <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[70vh] overflow-y-auto pr-1">
+                        <div class="rounded-md bg-fita2">
+                            <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 pt-2 text-white">
+                                <div>
+                                    <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }}</h3>
+                                    <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($currentSemesterTimeline) ?: __('') }}</div>
+                                </div>
+                                <span
+                                    class="text-md">{{ count(data_get($currentSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
+                            </div>
+
+                            <div class="mt-3 overflow-x-auto rounded border border-primary/20 bg-white">
+                                <x-table
+                                    :headers="$this->semesterHeaders()"
+                                    :rows="$currentRows"
+                                    wire:model="expanded"
+                                    expandable
+                                    expandable-condition="can_expand"
+                                    striped
+                                    class="bg-white
+                                        md:text-[16px]!
+                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                        [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                        [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                        [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                        [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                    "
+                                >
+                                    @scope('cell_no', $subject)
+                                    <span class="select-none">{{ $subject['row_index'] }}</span>
+                                    @endscope
+
+                                    @scope('cell_code', $subject)
+                                    <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                    @endscope
+
+                                    @scope('cell_name', $subject)
+                                    {!! $this->highlightMatch($subject['name']) !!}
+                                    @endscope
+
+                                    @scope('cell_credits', $subject)
+                                    {{ Subject::formatCredit($subject['credits']) }}
+                                    @endscope
+
+                                    @scope('cell_theory', $subject)
+                                    {{ Subject::formatCredit($subject['theory']) }}
+                                    @endscope
+
+                                    @scope('cell_practice', $subject)
+                                    {{ Subject::formatCredit($subject['practice']) }}
+                                    @endscope
+
+                                    @scope('cell_prerequisite_subjects', $subject)
+                                    {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                    @endscope
+
+                                    @scope('cell_prerequisite_subjects_codes', $subject)
+                                    {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                    @endscope
+
+                                    @scope('cell_type', $subject)
+                                    @php
+                                        $typeLabel = match ($subject['type']) {
+                                            'required' => __('Required'),
+                                            'elective' => __('Elective'),
+                                            'pcbb' => __('Hardware Required'),
+                                            default => strtoupper((string) $subject['type']),
+                                        };
+
+                                        $typeClass = match ($subject['type']) {
+                                            'required' => 'badge-error',
+                                            'elective' => 'badge-success',
+                                            'pcbb' => 'badge-warning',
+                                            default => 'badge-neutral',
+                                        };
+                                    @endphp
+                                    <x-badge
+                                        :value="$typeLabel"
+                                        class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
+                                    />
+                                    @endscope
+
+                                    @scope('cell_note', $subject)
+                                    {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                    @endscope
+
+                                    @scope('expansion', $subject)
+                                    @if(($subject['equivalents_count'] ?? 0) > 0)
+                                        <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                            <div class="font-semibold mb-3">
+                                                {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
+                                            </div>
+                                            <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                <table class="table md:text-[16px]">
+                                                    <thead>
+                                                    <tr>
+                                                        <th class="w-14">{{ __('No.') }}</th>
+                                                        <th>{{ __('Subject code') }}</th>
+                                                        <th>{{ __('Subject name') }}</th>
+                                                        <th class="w-24">{{ __('Credits') }}</th>
+                                                        <th class="w-20">{{ __('Theory') }}</th>
+                                                        <th class="w-20">{{ __('Practice') }}</th>
+                                                    </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                    @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                        <tr>
+                                                            <td>{{ $index + 1 }}</td>
+                                                            <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                            <td>{{ $equivalent['name'] }}</td>
+                                                            <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                            <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
+                                                            <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    @else
+                                        <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                    @endif
+                                    @endscope
+
+                                    <x-slot:empty>
+                                        <div class="py-3 text-center text-gray-500">{{ __('No subjects.') }}</div>
+                                    </x-slot:empty>
+                                </x-table>
+                            </div>
+                        </div>
+
+                        <div class="rounded-md border border-gray-200 bg-white p-3">
+                            @if($nextSemesterTimeline)
+                                <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                    <div>
+                                        <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }}</h3>
+                                        <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>
+                                    </div>
+                                    <span
+                                        class="text-md">{{ count(data_get($nextSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
+                                </div>
+                            @endif
+                            @if($nextSemesterTimeline)
+                                <div class="mt-3 overflow-x-auto rounded border border-base-300 bg-white">
+                                    <x-table
+                                        :headers="$this->semesterHeaders()"
+                                        :rows="$nextRows"
+                                        wire:model="expanded"
+                                        expandable
+                                        expandable-condition="can_expand"
+                                        striped
+                                        class="bg-white
+                                            md:text-[16px]!
+                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                            [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                        "
+                                    >
+                                        @scope('cell_no', $subject)
+                                        <span class="select-none">{{ $subject['row_index'] }}</span>
+                                        @endscope
+
+                                        @scope('cell_code', $subject)
+                                        <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                        @endscope
+
+                                        @scope('cell_name', $subject)
+                                        {!! $this->highlightMatch($subject['name']) !!}
+                                        @endscope
+
+                                        @scope('cell_credits', $subject)
+                                        {{ Subject::formatCredit($subject['credits']) }}
+                                        @endscope
+
+                                        @scope('cell_theory', $subject)
+                                        {{ Subject::formatCredit($subject['theory']) }}
+                                        @endscope
+
+                                        @scope('cell_practice', $subject)
+                                        {{ Subject::formatCredit($subject['practice']) }}
+                                        @endscope
+
+                                        @scope('cell_prerequisite_subjects', $subject)
+                                        {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                        @endscope
+
+                                        @scope('cell_prerequisite_subjects_codes', $subject)
+                                        {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                        @endscope
+
+                                        @scope('cell_type', $subject)
+                                        @php
+                                            $typeLabel = match ($subject['type']) {
+                                                'required' => __('Required'),
+                                                'elective' => __('Elective'),
+                                                'pcbb' => __('Hardware Required'),
+                                                default => strtoupper((string) $subject['type']),
+                                            };
+
+                                            $typeClass = match ($subject['type']) {
+                                                'required' => 'badge-error',
+                                                'elective' => 'badge-success',
+                                                'pcbb' => 'badge-warning',
+                                                default => 'badge-neutral',
+                                            };
+                                        @endphp
+                                        <x-badge
+                                            :value="$typeLabel"
+                                            class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
+                                        />
+                                        @endscope
+
+                                        @scope('cell_note', $subject)
+                                        {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                        @endscope
+
+                                        @scope('expansion', $subject)
+                                        @if(($subject['equivalents_count'] ?? 0) > 0)
+                                            <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                                <div class="font-semibold mb-3">
+                                                    {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
+                                                </div>
+                                                <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                    <table class="table md:text-[16px]">
+                                                        <thead>
+                                                        <tr>
+                                                            <th class="w-14">{{ __('No.') }}</th>
+                                                            <th>{{ __('Subject code') }}</th>
+                                                            <th>{{ __('Subject name') }}</th>
+                                                            <th class="w-24">{{ __('Credits') }}</th>
+                                                            <th class="w-20">{{ __('Theory') }}</th>
+                                                            <th class="w-20">{{ __('Practice') }}</th>
+                                                        </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                        @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                            <tr>
+                                                                <td>{{ $index + 1 }}</td>
+                                                                <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                                <td>{{ $equivalent['name'] }}</td>
+                                                                <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
+                                                                <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                            </tr>
+                                                        @endforeach
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        @else
+                                            <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                        @endif
+                                        @endscope
+
+                                        <x-slot:empty>
+                                            <div class="py-3 text-center text-gray-500">{{ __('No subjects.') }}</div>
+                                        </x-slot:empty>
+                                    </x-table>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <x-slot:actions>
+                        <x-button label="{{ __('Close') }}" class="btn-primary text-white" wire:click="$wire.showSemesterTimelineModal = false" />
+                    </x-slot:actions>
+                </x-modal>
+            @endif
 
             <div class="relative min-h-60">
                 <div
@@ -798,7 +1227,12 @@ class extends Component {
                             @forelse($semesterBlocks as $semesterBlock)
                                 <x-card shadow class="p-0!">
                                     <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
-                                        <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }}</h3>
+                                        <div>
+                                            <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }}</h3>
+                                            @if(!empty($semesterBlock['timeline']))
+                                                <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>
+                                            @endif
+                                        </div>
                                         <span
                                             class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{ Subject::formatCredit($semesterBlock['total_credits']) }} {{__('Credits ')}}</span>
                                     </div>
@@ -815,8 +1249,8 @@ class extends Component {
                                                 expandable-condition="can_expand"
                                                 striped
                                                 class="bg-white
-                                                    text-[16px]!
-                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:text-[16px]!
+                                                    md:text-[16px]!
+                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
                                                     [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
                                                     [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
                                                     [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
@@ -884,7 +1318,7 @@ class extends Component {
                                                             {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
                                                         </div>
                                                         <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                            <table class="table text-[16px]">
+                                                            <table class="table md:text-[16px]">
                                                                 <thead>
                                                                 <tr>
                                                                     <th class="w-14">{{ __('No.') }}</th>
@@ -946,8 +1380,8 @@ class extends Component {
                                             striped
                                             @click.stop="if ($event.target.closest('a, button, input, select')) return; const row = $event.target.closest('tr'); if (row && row.dataset.rowId) { toggleExpand(parseInt(row.dataset.rowId)); }"
                                             class="
-                                        bg-white text-[16px]!
-                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:text-[16px]!
+                                        bg-white md:text-[16px]!
+                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
                                         [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
                                         [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
                                         [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
@@ -1023,7 +1457,7 @@ class extends Component {
                                                         {{ __('Equivalent subjects for') }} {{ $subject['code'] }} - {{ $subject['name'] }}
                                                     </div>
                                                     <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                        <table class="table text-[16px]">
+                                                        <table class="table md:text-[16px]">
                                                             <thead>
                                                             <tr>
                                                                 <th class="w-14">{{ __('No.') }}</th>

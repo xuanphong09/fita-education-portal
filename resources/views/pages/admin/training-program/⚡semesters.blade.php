@@ -9,6 +9,7 @@ use App\Models\TrainingProgram;
 use App\Models\SubjectPrerequisite;
 use App\Models\SubjectEquivalent;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -25,6 +26,8 @@ new class extends Component {
 
     public int $semester_no = 1;
     public int $semester_total_credits = 0;
+    public ?string $semester_start_date = null;
+    public ?string $semester_end_date = null;
 
     public ?int $attach_subject_id = null;
     public ?int $pendingRemoveSubjectId = null;
@@ -54,7 +57,12 @@ new class extends Component {
 
     public function updated($property): void
     {
-        if (in_array($property, ['semester_no', 'semester_total_credits'], true)) {
+        if (in_array($property, [
+            'semester_no',
+            'semester_total_credits',
+            'semester_start_date',
+            'semester_end_date',
+        ], true)) {
             $this->validateOnly($property);
         }
     }
@@ -304,7 +312,14 @@ new class extends Component {
             ->where('training_program_id', $this->programId)
             ->max('semester_no') + 1);
         $this->semester_total_credits = 0;
-        $this->resetValidation(['semester_no', 'semester_total_credits']);
+        $this->semester_start_date = null;
+        $this->semester_end_date = null;
+        $this->resetValidation([
+            'semester_no',
+            'semester_total_credits',
+            'semester_start_date',
+            'semester_end_date',
+        ]);
     }
 
     public function editSemester(int $id): void
@@ -316,7 +331,18 @@ new class extends Component {
         $this->editingSemesterId = $semester->id;
         $this->semester_no = $semester->semester_no;
         $this->semester_total_credits = $semester->total_credits;
-        $this->resetValidation(['semester_no', 'semester_total_credits']);
+        $this->semester_start_date = $semester->start_date
+            ? Carbon::parse($semester->start_date)->format('Y-m-d')
+            : null;
+        $this->semester_end_date = $semester->end_date
+            ? Carbon::parse($semester->end_date)->format('Y-m-d')
+            : null;
+        $this->resetValidation([
+            'semester_no',
+            'semester_total_credits',
+            'semester_start_date',
+            'semester_end_date',
+        ]);
     }
 
     protected function semesterRules(): array
@@ -329,6 +355,8 @@ new class extends Component {
                     ->where(fn($q) => $q->where('training_program_id', $this->programId)),
             ],
             'semester_total_credits' => ['required', 'integer', 'min:0', 'max:200'],
+            'semester_start_date' => ['nullable', 'date', 'required_with:semester_end_date'],
+            'semester_end_date' => ['nullable', 'date', 'required_with:semester_start_date'],
         ];
     }
 
@@ -372,6 +400,10 @@ new class extends Component {
         'semester_total_credits.integer' => 'Tổng tín chỉ phải là một số nguyên.',
         'semester_total_credits.min' => 'Tổng tín chỉ phải lớn hơn hoặc bằng 0.',
         'semester_total_credits.max' => 'Tổng tín chỉ không được lớn hơn 200.',
+        'semester_start_date.date' => 'Ngày bắt đầu không hợp lệ.',
+        'semester_start_date.required_with' => 'Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.',
+        'semester_end_date.date' => 'Ngày kết thúc không hợp lệ.',
+        'semester_end_date.required_with' => 'Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.',
         'attach_subject_id.required' => 'Vui lòng chọn môn học.',
         'attach_subject_id.exists' => 'Môn học không tồn tại.',
         'attach_type.required' => 'Vui lòng chọn loại môn học.',
@@ -396,10 +428,22 @@ new class extends Component {
     {
         $this->validate($this->semesterRules());
 
+        if ($this->semester_start_date && $this->semester_end_date) {
+            $startDate = Carbon::parse($this->semester_start_date)->startOfDay();
+            $endDate = Carbon::parse($this->semester_end_date)->startOfDay();
+
+            if ($endDate->lt($startDate)) {
+                $this->addError('semester_end_date', 'Thời gian kết thúc học kỳ phải lớn hơn hoặc bằng thời gian bắt đầu.');
+                return;
+            }
+        }
+
         $payload = [
             'training_program_id' => $this->programId,
             'semester_no' => $this->semester_no,
             'total_credits' => $this->semester_total_credits,
+            'start_date' => $this->semester_start_date,
+            'end_date' => $this->semester_end_date,
         ];
 
         if ($this->editingSemesterId) {
@@ -792,7 +836,7 @@ new class extends Component {
     </x-slot:breadcrumb>
 
     <x-header title="Quản lý học kỳ và môn học"
-              subtitle="{{ $this->program->version }} - {{ $this->program->getTranslation('name', 'vi', false) }}"
+              subtitle="{{ $this->program->version }} - {{ $this->program->major->programMajor->name }} - {{ $this->program->major->name }}"
               class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
         <x-slot:actions>
             <x-button label="Danh sách môn học" icon="o-rectangle-stack" class="btn-ghost" link="{{ route('admin.subject.index') }}" />
@@ -805,11 +849,10 @@ new class extends Component {
             <x-card title="Môn học trong học kỳ" shadow class="p-3!">
                 <div wire:loading.remove wire:target="selectSemester">
                     @if($this->selectedSemester)
-                        <div class="mb-3 text-md text-gray-600">
-                            Đang quản lý: <span class="font-semibold">Học kỳ {{ $this->selectedSemester->semester_no }}</span>
-                        </div>
-
-                        <div class="flex flex-wrap gap-2 mb-3">
+                        <div class="flex flex-wrap justify-between gap-2 mb-3">
+                            <div class="text-md text-gray-600">
+                                Đang quản lý: <span class="font-semibold">Học kỳ {{ $this->selectedSemester->semester_no }}</span>
+                            </div>
                             <x-button label="Thêm môn" icon="o-plus" class="btn-sm btn-primary text-white" wire:click="openCreateSubjectPivot" spinner/>
                         </div>
 
@@ -943,6 +986,11 @@ new class extends Component {
                                 <button class="text-left flex-1" wire:click="selectSemester({{ $semester->id }})">
                                     <div class="font-semibold">Học kỳ {{ $semester->semester_no }}</div>
                                     <div class="text-xs text-gray-500 mt-1">{{ $semester->total_credits }} TC • {{ $semester->subjects_count }} môn</div>
+                                    @if($semester->start_date && $semester->end_date)
+                                        <div class="text-xs text-gray-500 mt-1">
+                                            {{ \Illuminate\Support\Carbon::parse($semester->start_date)->format('d/m/Y') }} - {{ \Illuminate\Support\Carbon::parse($semester->end_date)->format('d/m/Y') }}
+                                        </div>
+                                    @endif
                                 </button>
                                 <div class="flex gap-1">
                                     <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" @click="$wire.modalSemester = true" wire:click="editSemester({{ $semester->id }})" tooltip="Chỉnh sửa"/>
@@ -966,6 +1014,10 @@ new class extends Component {
         <div class="space-y-3" wire:loading.remove wire:target="openCreateSemester,editSemester">
             <div class="grid grid-cols-1 gap-3">
                 <x-input label="Số học kỳ" type="number" min="1" wire:model.live.debounce.300ms="semester_no" />
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <x-input label="Ngày bắt đầu" type="date" wire:model.live.debounce.300ms="semester_start_date" />
+                <x-input label="Ngày kết thúc" type="date" wire:model.live.debounce.300ms="semester_end_date" />
             </div>
 {{--                    <x-input label="Tong tin chi" type="number" min="0" wire:model="semester_total_credits" />--}}
         </div>
