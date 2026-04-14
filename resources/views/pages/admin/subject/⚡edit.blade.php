@@ -49,7 +49,7 @@ new class extends Component {
     protected function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9\-]+$/', Rule::unique('subjects', 'code')->ignore($this->id)],
+            'code' => ['required', 'string', 'max:255', 'regex:/^([A-Za-z0-9]+\/\s*)*[A-Za-z0-9]+\/?$/', Rule::unique('subjects', 'code')->ignore($this->id)],
             'name_vi' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'group_subject_id' => ['nullable', 'integer', 'exists:group_subjects,id'],
