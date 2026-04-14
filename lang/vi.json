@@ -245,5 +245,9 @@
     "Enter your email address to receive a password reset link.": "Nhập email của bạn để nhận liên kết đặt lại mật khẩu.",
     "Approved": "Đã duyệt",
     "Submitted": "Đã gửi duyệt bài viết",
-    "Rejected": "Đã từ chối"
+    "Rejected": "Đã từ chối",
+    "Current semester": "Học kỳ hiện tại",
+    "Next semester": "Học kỳ tiếp theo",
+    "Close": "Đóng",
+    "Semester timeline": "Lich trình học kỳ"
 }

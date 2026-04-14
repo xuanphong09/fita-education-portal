@@ -13,11 +13,15 @@ class ProgramSemester extends Model
         'training_program_id',
         'semester_no',
         'total_credits',
+        'start_date',
+        'end_date',
     ];
 
     protected $casts = [
         'semester_no' => 'integer',
         'total_credits' => 'integer',
+        'start_date' => 'date',
+        'end_date' => 'date',
     ];
 
     public function trainingProgram(): BelongsTo
