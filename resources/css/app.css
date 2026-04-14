@@ -225,7 +225,7 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
 .prose :where(thead th):not(:where([class~="not-prose"] *)) {
     color: #111827;
     font-weight: 600;
-    vertical-align: bottom;
+    /*vertical-align: bottom;*/
     padding-right: 0.5714286em;
     padding-bottom: 0.5714286em;
     padding-left: 0.5714286em;
@@ -237,7 +237,7 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
 }
 
 .prose :where(tbody td):not(:where([class~="not-prose"] *)) {
-    vertical-align: baseline;
+    /*vertical-align: baseline;*/
     padding: 0.5714286em;
 }
 
