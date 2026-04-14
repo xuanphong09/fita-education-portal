@@ -344,7 +344,6 @@ select.select:focus,
     border-color: var(--color-fita2) !important;
     outline: none !important;
     box-shadow: 0 0 0 1px var(--color-fita2) inset;
-    color: #ffffff !important;
 }
 
 .menu li > *:focus,
