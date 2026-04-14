@@ -23,7 +23,7 @@ new class extends Component {
     protected function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z0-9\-]+$/', Rule::unique('subjects', 'code')],
+            'code' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9\-]+$/', Rule::unique('subjects', 'code')],
             'name_vi' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'group_subject_id' => ['nullable', 'integer', 'exists:group_subjects,id'],
