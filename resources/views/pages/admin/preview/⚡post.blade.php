@@ -238,7 +238,7 @@ class extends Component {
                             </div>
                         @endif
 
-                        <div class="max-w-none">
+                        <div class="tinymce-content max-w-none">
                             {!! $content !!}
                         </div>
                     </div>

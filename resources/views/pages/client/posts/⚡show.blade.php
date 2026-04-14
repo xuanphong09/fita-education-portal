@@ -257,7 +257,7 @@ class extends Component {
                     @endif
 
                     {{-- Content --}}
-                    <div class="tinymce-content prose max-w-none!">
+                    <div class="tinymce-content max-w-none">
                     {!! $post->getTranslation('content', app()->getLocale()) !!}
                     </div>
 
