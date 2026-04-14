@@ -344,6 +344,7 @@ select.select:focus,
     border-color: var(--color-fita2) !important;
     outline: none !important;
     box-shadow: 0 0 0 1px var(--color-fita2) inset;
+    color: #ffffff !important;
 }
 
 .menu li > *:focus,
@@ -366,6 +367,37 @@ select.select:focus,
             }
         }
     }
+}
+
+.admin-menu .select {
+    &, & select {
+        & option {
+            &:not(:disabled) {
+                &:active{
+                    background-color: var(--color-neutral);
+                    color: var(--color-neutral-content);
+                    box-shadow: 0 2px calc(var(--depth) * 3px) -2px var(--color-neutral);
+                }
+            }
+        }
+    }
+}
+
+.admin-menu .select:focus,
+.admin-menu .select:focus-within {
+    border-color: transparent !important;
+    outline: none !important;
+    box-shadow: 0 0 0 1px var(--color-neutral) inset;
+}
+
+.admin-menu .menu li > *:focus,
+.admin-menu .menu li > *:active,
+.admin-menu .menu li > details > summary:focus,
+.admin-menu .menu li > details > summary:active,
+.admin-menu .menu li > *[aria-current="page"],
+.admin-menu .menu li > *.active {
+    background-color: transparent !important;
+    color: #ffffff !important;
 }
 
 .modalAddSubject div.modal-box{
