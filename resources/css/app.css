@@ -400,28 +400,28 @@ select.select:focus,
 }
 
 .modalAddSubject div.modal-box{
-    @apply lg:w-250 max-w-[90%] lg:max-h-169 py-4
+    @apply lg:w-250 max-w-[90%] py-4
 }
 .modalAddBanner div.modal-box{
-    @apply lg:w-200 max-w-[90%] lg:max-h-169 py-4
+    @apply lg:w-200 max-w-[90%] py-4
 }
 .modalDuplicateTrainingProgram div.modal-box{
-    @apply lg:w-250 max-w-[90%] lg:max-h-169 py-4
+    @apply lg:w-250 max-w-[90%] py-4
 }
 
 .modalMajor div.modal-box{
-    @apply lg:w-200 max-w-[90%] lg:max-h-169 py-4
+    @apply lg:w-200 max-w-[90%] py-4
 }
 
 .modalAddImage div.modal-box{
-    @apply lg:w-300 max-w-[90%] lg:max-h-169 py-4
+    @apply lg:w-300 max-w-[90%] py-4
 }
 .modalContactMessage div.modal-box{
-    @apply lg:w-250 max-w-[90%] lg:max-h-169 py-4 bg-slate-100
+    @apply lg:w-250 max-w-[90%] py-4 bg-slate-100
 }
 
 .modalDisplaySemesterTimeline div.modal-box{
-    @apply lg:w-300 max-w-[90%] lg:max-h-169 py-4
+    @apply lg:w-300 max-w-[90%] py-4
 }
 
 @keyframes modal-enter {

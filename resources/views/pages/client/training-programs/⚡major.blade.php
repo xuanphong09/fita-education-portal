@@ -1064,11 +1064,11 @@ class extends Component {
                             </div>
                         </div>
 
-                        <div class="rounded-md border border-gray-200 bg-white p-3">
+                        <div class="rounded-md border border-gray-200 bg-white">
                             @if($nextSemesterTimeline)
                                 <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
                                     <div>
-                                        <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }}</h3>
+                                        <h3 class="text-lg font-semibold">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }}</h3>
                                         <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>
                                     </div>
                                     <span
