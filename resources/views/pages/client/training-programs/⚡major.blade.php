@@ -699,7 +699,7 @@ class extends Component {
                 />
             </div>
             <div class="relative z-20">
-                <h2 class="text-center text-[35px]/[44px] font-semibold uppercase">
+                <h2 class="text-center text-[35px]/[44px] font-semibold uppercase line-clamp-2">
                     {{ $this->specializationLabel ? __('Specialized training program ') . ' ' . $this->specializationLabel : __('Training Programs') }}
                 </h2>
                 <div class="flex items-center gap-1 text-gray-500 justify-center w-full">
@@ -723,7 +723,7 @@ class extends Component {
                         <x-select
                             label="{{__('Major')}}"
                             wire:model.live="programMajorSlug"
-                            placeholder="{{ __('Select major') }}"
+                            placeholder="{{ __('No major selected') }}"
                             :options="$programMajorOptions->map(fn ($item) => [
                             'value' => $item->slug,
                             'label' => $this->localizedName($item),
@@ -737,7 +737,7 @@ class extends Component {
                         <x-select
                             label="{{__('Specialization/Area of specialization')}}"
                             wire:model.live="selectedMajorSlug"
-                            placeholder="{{ $this->programMajorSlug ? __('Select specialization') : __('Select major first') }}"
+                            placeholder="{{ $this->programMajorSlug ? __('No specialization selected') : __('Select major first') }}"
                             :options="$majorOptions->map(fn ($item) => [
                             'value' => $item->slug,
                             'label' => $this->localizedName($item),
@@ -755,7 +755,7 @@ class extends Component {
                             :options="$versionOptions"
                             option-value="code"
                             option-label="code"
-                            placeholder="{{ $this->selectedMajorSlug ? __('Select intake') : __('Select specialization first') }}"
+                            placeholder="{{ $this->selectedMajorSlug ? __('No intake selected') : __('Select specialization first') }}"
                             :disabled="!$this->selectedMajorSlug || empty($versionOptions)"
                         />
                     </div>
@@ -944,7 +944,7 @@ class extends Component {
                             <div class="rounded-md bg-fita2">
                                 <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 pt-2 text-white">
                                     <div>
-                                        <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} ({{ data_get($currentSemesterTimeline, 'semester_name') }})</h3>
+                                        <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} {{ data_get($currentSemesterTimeline, 'semester_name')?'('.data_get($currentSemesterTimeline, 'semester_name').')':'' }}</h3>
 {{--                                        <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($currentSemesterTimeline) ?: __('') }}</div>--}}
                                     </div>
                                     <span
@@ -1075,7 +1075,7 @@ class extends Component {
                                 @if($nextSemesterTimeline)
                                     <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
                                         <div>
-                                            <h3 class="text-lg font-semibold">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} ({{ data_get($nextSemesterTimeline, 'semester_name') }})</h3>
+                                            <h3 class="text-lg font-semibold">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} {{ data_get($nextSemesterTimeline, 'semester_name')?'('.data_get($nextSemesterTimeline, 'semester_name').')':'' }}</h3>
 {{--                                            <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>--}}
                                         </div>
                                         <span
