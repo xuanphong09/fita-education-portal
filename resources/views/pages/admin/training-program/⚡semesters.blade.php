@@ -25,6 +25,7 @@ new class extends Component {
     public ?int $editingSemesterId = null;
 
     public int $semester_no = 1;
+    public ?string $semester_name = null;
     public int $semester_total_credits = 0;
     public ?string $semester_start_date = null;
     public ?string $semester_end_date = null;
@@ -61,6 +62,7 @@ new class extends Component {
     {
         if (in_array($property, [
             'semester_no',
+            'semester_name',
             'semester_total_credits',
             'semester_start_date',
             'semester_end_date',
@@ -350,11 +352,13 @@ new class extends Component {
         $this->semester_no = max(1, (int) ProgramSemester::query()
             ->where('training_program_id', $this->programId)
             ->max('semester_no') + 1);
+        $this->semester_name = null;
         $this->semester_total_credits = 0;
         $this->semester_start_date = null;
         $this->semester_end_date = null;
         $this->resetValidation([
             'semester_no',
+            'semester_name',
             'semester_total_credits',
             'semester_start_date',
             'semester_end_date',
@@ -369,6 +373,7 @@ new class extends Component {
 
         $this->editingSemesterId = $semester->id;
         $this->semester_no = $semester->semester_no;
+        $this->semester_name = $semester->semester_name;
         $this->semester_total_credits = $semester->total_credits;
         $this->semester_start_date = $semester->start_date
             ? Carbon::parse($semester->start_date)->format('Y-m-d')
@@ -378,6 +383,7 @@ new class extends Component {
             : null;
         $this->resetValidation([
             'semester_no',
+            'semester_name',
             'semester_total_credits',
             'semester_start_date',
             'semester_end_date',
@@ -393,6 +399,7 @@ new class extends Component {
                     ->ignore($this->editingSemesterId)
                     ->where(fn($q) => $q->where('training_program_id', $this->programId)),
             ],
+            'semester_name' => ['nullable', 'string', 'max:50'],
             'semester_total_credits' => ['required', 'integer', 'min:0', 'max:200'],
             'semester_start_date' => ['nullable', 'date', 'required_with:semester_end_date'],
             'semester_end_date' => ['nullable', 'date', 'required_with:semester_start_date'],
@@ -435,6 +442,8 @@ new class extends Component {
         'semester_no.min' => 'Số học kỳ phải lớn hơn hoặc bằng 1.',
         'semester_no.max' => 'Số học kỳ không được lớn hơn 20.',
         'semester_no.unique' => 'Số học kỳ đã tồn tại trong chương trình đào tạo này.',
+        'semester_name.string' => 'Tên học kỳ không hợp lệ.',
+        'semester_name.max' => 'Tên học kỳ không được vượt quá 50 ký tự.',
         'semester_total_credits.required' => 'Vui lòng nhập tổng tín chỉ.',
         'semester_total_credits.integer' => 'Tổng tín chỉ phải là một số nguyên.',
         'semester_total_credits.min' => 'Tổng tín chỉ phải lớn hơn hoặc bằng 0.',
@@ -480,6 +489,7 @@ new class extends Component {
         $payload = [
             'training_program_id' => $this->programId,
             'semester_no' => $this->semester_no,
+            'semester_name' => trim((string) $this->semester_name) !== '' ? trim((string) $this->semester_name) : null,
             'total_credits' => $this->semester_total_credits,
             'start_date' => $this->semester_start_date,
             'end_date' => $this->semester_end_date,
@@ -994,6 +1004,9 @@ new class extends Component {
                         <div class="flex flex-wrap justify-between gap-2 mb-3">
                             <div class="text-md text-gray-600">
                                 Đang quản lý: <span class="font-semibold">Học kỳ {{ $this->selectedSemester->semester_no }}</span>
+                                @if($this->selectedSemester->semester_name)
+                                    <span class="text-primary font-medium">({{ $this->selectedSemester->semester_name }})</span>
+                                @endif
                             </div>
                             <div class="flex gap-3 align-center items-center">
                                 <x-input
@@ -1153,15 +1166,22 @@ new class extends Component {
                         <div class="p-3 rounded border hover:bg-gray-200/50 {{ $selectedSemesterId === $semester->id ? 'border-primary bg-primary/5' : 'border-gray-200 bg-white' }}">
                             <div class="flex items-start justify-between gap-2">
                                 <button class="text-left flex-1" wire:click="selectSemester({{ $semester->id }})">
-                                    <div class="font-semibold">Học kỳ {{ $semester->semester_no }}</div>
-                                    <div class="text-xs text-gray-500 mt-1">{{ $semester->total_credits }} TC • {{ $semester->subjects_count }} môn</div>
+                                    <div class="font-semibold">Học kỳ {{ $semester->semester_no }}
+                                        @if($semester->semester_name)
+                                            <span class="text-sm ">({{ $semester->semester_name }})</span>
+                                        @endif
+                                    </div>
+{{--                                    @if($semester->semester_name)--}}
+{{--                                        <div class="text-xs text-primary mt-1">{{ $semester->semester_name }}</div>--}}
+{{--                                    @endif--}}
                                     @if($semester->start_date && $semester->end_date)
-                                        <div class="text-xs text-gray-500 mt-1">
+                                        <div class="text-sm text-gray-500 mt-1">
                                             {{ \Illuminate\Support\Carbon::parse($semester->start_date)->format('d/m/Y') }} - {{ \Illuminate\Support\Carbon::parse($semester->end_date)->format('d/m/Y') }}
                                         </div>
                                     @endif
+                                    <div class="text-sm text-gray-500 mt-1">{{ $semester->total_credits }} TC • {{ $semester->subjects_count }} môn</div>
                                 </button>
-                                <div class="flex gap-1">
+                                <div class="flex gap-1 flex-col">
                                     <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" @click="$wire.modalSemester = true" wire:click="editSemester({{ $semester->id }})" tooltip="Chỉnh sửa"/>
                                     <x-button icon="o-trash" class="btn-xs btn-ghost text-error" wire:click="deleteSemester({{ $semester->id }})" tooltip="Xóa"/>
                                 </div>
@@ -1182,11 +1202,12 @@ new class extends Component {
         </div>
         <div class="space-y-3" wire:loading.remove wire:target="openCreateSemester,editSemester">
             <div class="grid grid-cols-1 gap-3">
-                <x-input label="Số học kỳ" type="number" min="1" wire:model.live.debounce.300ms="semester_no" />
+                <x-input label="Số học kỳ" type="number" min="1" wire:model="semester_no" />
+                <x-input label="Tên học kỳ" wire:model="semester_name" placeholder="HK2-2025-2026" />
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <x-input label="Ngày bắt đầu" type="date" wire:model.live.debounce.300ms="semester_start_date" />
-                <x-input label="Ngày kết thúc" type="date" wire:model.live.debounce.300ms="semester_end_date" />
+                <x-input label="Ngày bắt đầu" type="date" wire:model="semester_start_date" />
+                <x-input label="Ngày kết thúc" type="date" wire:model="semester_end_date" />
             </div>
 {{--                    <x-input label="Tong tin chi" type="number" min="0" wire:model="semester_total_credits" />--}}
         </div>
@@ -1252,18 +1273,15 @@ new class extends Component {
                         clearable
                     />
                     <div class="relative mt-2">
-                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-35 overflow-auto">
+                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-50 overflow-auto">
                         @forelse($this->filteredSubjectUsedOptions as $subject)
                             <div class="select-none" wire:key="subject-used-{{ $subject['id'] }}">
                                 <x-checkbox
-                                    label="{{ ($subject['code'] ?? '') . ' - ' . ($subject['name_vi'] ?? '') }}"
+                                    label="{{ ($subject['code'] ?? '') . ' - ' . ($subject['name_vi'] ?? '')  }} ({{ $subject['credits'] ?? '0' }} TC - HK {{ $subject['semester_no'] ?? '—' }})"
                                     wire:model="attach_subject_prerequisite_id"
                                     value="{{ $subject['id'] }}"
                                     class="checkbox-primary checkbox-sm"
                                 />
-                                <div class="ml-6 text-xs text-gray-500">
-                                    {{ $subject['credits'] ?? '0' }} TC • HK {{ $subject['semester_no'] ?? '—' }}
-                                </div>
                             </div>
                         @empty
                             <div class="col-span-full text-center py-4 text-red-500">
@@ -1288,7 +1306,7 @@ new class extends Component {
                         clearable
                     />
                     <div class="relative mt-2">
-                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-35 overflow-auto">
+                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-50 overflow-auto">
                         @forelse($this->filteredEquivalentSubjectOptions as $subject)
                             <div class="select-none" wire:key="subject-equivalent-{{ $subject['id'] }}">
                                 <x-checkbox

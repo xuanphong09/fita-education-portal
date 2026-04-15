@@ -12,6 +12,7 @@ class ProgramSemester extends Model
     protected $fillable = [
         'training_program_id',
         'semester_no',
+        'semester_name',
         'total_credits',
         'start_date',
         'end_date',
@@ -19,6 +20,7 @@ class ProgramSemester extends Model
 
     protected $casts = [
         'semester_no' => 'integer',
+        'semester_name' => 'string',
         'total_credits' => 'integer',
         'start_date' => 'date',
         'end_date' => 'date',

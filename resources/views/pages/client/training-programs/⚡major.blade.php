@@ -5,6 +5,7 @@ use App\Models\ProgramMajor;
 use App\Models\Subject;
 use App\Models\TrainingProgram;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -39,6 +40,26 @@ class extends Component {
     public bool $showSemesterTimelineModal = true;
     public bool $pendingOpenSemesterTimelineModal = true;
 
+    #[Computed]
+    public function majorLabel(): string
+    {
+        return $this->localizedName($this->major);
+    }
+
+    #[Computed]
+    public function specializationLabel(): string
+    {
+        if ($this->selectedMajorSlug) {
+            $selectedMajor = Major::query()->where('slug', $this->selectedMajorSlug)->first();
+
+            if ($selectedMajor) {
+                return $this->localizedName($selectedMajor);
+            }
+        }
+
+        return $this->majorLabel;
+    }
+
     public function mount(): void
     {
         if ($this->selectedMajorSlug) {
@@ -48,49 +69,12 @@ class extends Component {
                 $this->programMajorSlug = $selectedMajor->programMajor?->slug;
             }
         }
-
-        if (!$this->major) {
-            $fallbackMajor = Major::query()
-                ->where('is_active', true)
-                ->whereHas('trainingPrograms', function ($query) {
-                    $query->where('status', 'published')
-                        ->whereNotNull('published_at')
-                        ->where('published_at', '<=', now());
-                })
-                ->ordered()
-                ->first();
-
-            if ($fallbackMajor) {
-                $this->major = $fallbackMajor;
-                $this->selectedMajorSlug = $fallbackMajor->slug;
-                $this->programMajorSlug = $fallbackMajor->programMajor?->slug;
-            }
-        }
     }
 
     public function updatedProgramMajorSlug(): void
     {
-        $programMajorId = ProgramMajor::query()
-            ->where('slug', $this->programMajorSlug)
-            ->value('id');
-
-        $firstMajor = Major::query()
-            ->where('is_active', true)
-            ->when($programMajorId, fn ($query) => $query->where('program_major_id', (int) $programMajorId))
-            ->whereHas('trainingPrograms', function ($query) {
-                $query->where('status', 'published')
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now());
-            })
-            ->ordered()
-            ->first();
-
-        $this->selectedMajorSlug = $firstMajor?->slug;
-
-        if ($firstMajor) {
-            $this->major = $firstMajor;
-            $this->redirectToCanonicalMajorUrl($firstMajor);
-        }
+        $this->selectedMajorSlug = null;
+        $this->major = null;
 
         $this->version = null;
         $this->semesterNo = null;
@@ -196,7 +180,7 @@ class extends Component {
     protected function localizedName(mixed $model, string $field = 'name'): string
     {
         if (!$model) {
-            return 'N/A';
+            return '';
         }
 
         if (method_exists($model, 'getTranslation')) {
@@ -205,10 +189,10 @@ class extends Component {
             return trim((string) ($model->getTranslation($field, $locale, false)
                 ?: $model->getTranslation($field, 'vi', false)
                 ?: $model->getTranslation($field, 'en', false)
-                ?: 'N/A'));
+                ?: ''));
         }
 
-        return trim((string) data_get($model, $field, 'N/A')) ?: 'N/A';
+        return trim((string) data_get($model, $field, '')) ?: '';
     }
 
     protected function normalizeSearchText(?string $value): string
@@ -402,14 +386,6 @@ class extends Component {
             ->ordered()
             ->get();
 
-        if (!$this->programMajorSlug && $this->major?->programMajor) {
-            $this->programMajorSlug = $this->major->programMajor->slug;
-        }
-
-        if (!$this->programMajorSlug) {
-            $this->programMajorSlug = $programMajorOptions->first()?->slug;
-        }
-
         $majorOptions = Major::query()
             ->where('is_active', true)
             ->when($this->programMajorSlug, function ($query) {
@@ -423,12 +399,9 @@ class extends Component {
             ->ordered()
             ->get(['id', 'name', 'slug', 'program_major_id']);
 
-        $selectedMajor = $majorOptions->firstWhere('slug', $this->selectedMajorSlug);
-
-        if (!$selectedMajor && $majorOptions->isNotEmpty()) {
-            $selectedMajor = $majorOptions->first();
-            $this->selectedMajorSlug = $selectedMajor?->slug;
-        }
+        $selectedMajor = $this->selectedMajorSlug
+            ? $majorOptions->firstWhere('slug', $this->selectedMajorSlug)
+            : null;
 
         $this->major = $selectedMajor;
 
@@ -473,12 +446,8 @@ class extends Component {
             ->unique()
             ->values();
 
-        if (!$this->version && $version_tmp->isNotEmpty()) {
-            $this->version = (string) $version_tmp->first();
-        }
-
         if ($this->version && !$version_tmp->contains($this->version)) {
-            $this->version = $version_tmp->isNotEmpty() ? (string) $version_tmp->first() : null;
+            $this->version = null;
             $this->semesterNo = null;
         }
 
@@ -707,252 +676,290 @@ class extends Component {
 };
 ?>
 
-<div class="container mx-auto px-4 py-8">
-    @php
-        $majorLabel = $this->localizedName($this->major);
-    @endphp
+<div>
+    <x-slot:title>{{ __('Training Programs') }} - {{ $this->majorLabel }}</x-slot:title>
 
-    <x-slot:title>{{ __('Training Programs') }} - {{ $majorLabel }}</x-slot:title>
-
-    <x-slot:breadcrumb>
+{{--    <x-slot:breadcrumb>--}}
 {{--        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>--}}
 {{--        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>--}}
-        <span class="whitespace-nowrap line-clamp-1">{{ $majorLabel }}</span>
-    </x-slot:breadcrumb>
+{{--        <span class="whitespace-nowrap line-clamp-1">{{ $this->majorLabel }}</span>--}}
+{{--    </x-slot:breadcrumb>--}}
 
-    <x-slot:titleBreadcrumb>
-        {{ $majorLabel }}
-    </x-slot:titleBreadcrumb>
-
-    <div class="space-y-4">
-        <x-card shadow>
-            <div class="grid grid-cols-5 gap-4">
-                <div class="w-full md:col-span-2 col-span-5">
-                    <x-select
-                        label="{{__('Major')}}"
-                        wire:model.live="programMajorSlug"
-                        :options="$programMajorOptions->map(fn ($item) => [
-                            'value' => $item->slug,
-                            'label' => $this->localizedName($item),
-                        ])->values()->toArray()"
-                        option-value="value"
-                        option-label="label"
-                    />
-                </div>
-
-                <div class="w-full md:col-span-2 col-span-5">
-                    <x-select
-                        label="{{__('Specialization/Area of specialization')}}"
-                        wire:model.live="selectedMajorSlug"
-                        :options="$majorOptions->map(fn ($item) => [
-                            'value' => $item->slug,
-                            'label' => $this->localizedName($item),
-                        ])->values()->toArray()"
-                        option-value="value"
-                        option-label="label"
-                    />
-                </div>
-
-                <div class="w-full md:col-span-1 col-span-5">
-                    <x-select label="{{__('Version')}}" wire:model.live.debounce.300ms="version" :options="$versionOptions" option-value="code" option-label="code" />
+{{--    <x-slot:titleBreadcrumb>--}}
+{{--        <span class="text-[35px]/[44px]">CTĐT chuyên ngành {{ $this->majorLabel }}</span>--}}
+{{--    </x-slot:titleBreadcrumb>--}}
+    <div class="w-full">
+        <div class="bg-white px-6 py-6 relative overflow-hidden min-h-20">
+            <div class="absolute inset-0 z-0">
+                <div class="absolute inset-0 bg-slate-200 opacity-65"></div>
+                <img
+                    src="{{asset('assets/images/backgrounds/pager-bg.png')}}"
+                    alt="Background"
+                    class="w-full h-full object-cover object-center"
+                />
+            </div>
+            <div class="relative z-20">
+                <h2 class="text-center text-[35px]/[44px] font-semibold uppercase">
+                    {{ $this->specializationLabel ? __('Specialized training program ') . ' ' . $this->specializationLabel : __('Training Programs') }}
+                </h2>
+                <div class="flex items-center gap-1 text-gray-500 justify-center w-full">
+                    <a href="{{route('client.home')}}" wire:navigate class="whitespace-nowrap hover:text-fita font-semibold text-slate-700">{{__('Home page')}}</a>
+                    <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
+                    <span class="whitespace-nowrap line-clamp-1">{{ $this->specializationLabel ?: __('Training Programs') }}</span>
                 </div>
             </div>
-            <div class="flex flex-wrap items-end gap-4 mt-2">
-                <div class="w-full sm:w-50">
-                    @php
-                        $semesterOptions = $activeProgram
-                            ? $activeProgram->semesters->map(function ($semester) {
-                                $timeline = $this->formatSemesterTimeline($semester);
 
-                                return [
-                                    'value' => $semester->semester_no,
-                                    'label' => __('Semester') . ' ' . $semester->semester_no . ($timeline ? ' (' . $timeline . ')' : ''),
-                                ];
-                            })->toArray()
-                            : [];
-                    @endphp
-                    <x-select
-                        label="{{__('Filter by semester')}}"
-                        wire:model.live="semesterNo"
-                        :options="$semesterOptions"
-                        option-value="value"
-                        option-label="label"
-                        placeholder="{{__('All semesters')}}"
-                        :disabled="!$activeProgram"
-                    />
+            <h2 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[12vw]/[12vw] md:text-[8vw]/[8vw] tracking-[0.15em] lg:tracking-[0.3em] text-fita opacity-[0.07] font-extrabold pointer-events-none whitespace-nowrap z-10 w-full text-center">
+                FITA - VNUA
+            </h2>
+
+        </div>
+    </div>
+    <div class="container mx-auto px-4 py-8">
+        <div class="space-y-4">
+            <x-card shadow>
+                <div class="grid grid-cols-5 gap-4">
+                    <div class="w-full md:col-span-2 col-span-5">
+                        <x-select
+                            label="{{__('Major')}}"
+                            wire:model.live="programMajorSlug"
+                            placeholder="{{ __('Select major') }}"
+                            :options="$programMajorOptions->map(fn ($item) => [
+                            'value' => $item->slug,
+                            'label' => $this->localizedName($item),
+                        ])->values()->toArray()"
+                            option-value="value"
+                            option-label="label"
+                        />
+                    </div>
+
+                    <div class="w-full md:col-span-2 col-span-5">
+                        <x-select
+                            label="{{__('Specialization/Area of specialization')}}"
+                            wire:model.live="selectedMajorSlug"
+                            placeholder="{{ $this->programMajorSlug ? __('Select specialization') : __('Select major first') }}"
+                            :options="$majorOptions->map(fn ($item) => [
+                            'value' => $item->slug,
+                            'label' => $this->localizedName($item),
+                        ])->values()->toArray()"
+                            option-value="value"
+                            option-label="label"
+                            :disabled="!$this->programMajorSlug || $majorOptions->isEmpty()"
+                        />
+                    </div>
+
+                    <div class="w-full md:col-span-1 col-span-5">
+                        <x-select
+                            label="{{__('Intake')}}"
+                            wire:model.live.debounce.300ms="version"
+                            :options="$versionOptions"
+                            option-value="code"
+                            option-label="code"
+                            placeholder="{{ $this->selectedMajorSlug ? __('Select intake') : __('Select specialization first') }}"
+                            :disabled="!$this->selectedMajorSlug || empty($versionOptions)"
+                        />
+                    </div>
                 </div>
+                <div class="flex flex-wrap items-end gap-4 mt-2">
+                    <div class="w-full sm:w-50">
+                        @php
+                            $semesterOptions = $activeProgram
+                                ? $activeProgram->semesters->map(function ($semester) {
+                                    return [
+                                        'value' => $semester->semester_no,
+                                        'label' => __('Semester') . ' ' . $semester->semester_no . ($semester->semester_name? ' ('.$semester->semester_name.')':''),
+                                    ];
+                                })->toArray()
+                                : [];
+                        @endphp
+                        <x-select
+                            label="{{__('Filter by semester')}}"
+                            wire:model.live="semesterNo"
+                            :options="$semesterOptions"
+                            option-value="value"
+                            option-label="label"
+                            placeholder="{{__('All semesters')}}"
+                            :disabled="!$activeProgram"
+                        />
+                    </div>
 
-                <div class="w-full sm:w-50">
-                    <x-select label="{{__('Group by')}}" :options="[
+                    <div class="w-full sm:w-50">
+                        <x-select label="{{__('Group by')}}" :options="[
                             ['value' => 'semester', 'label' => __('Semester')],
                             ['value' => 'group', 'label' => __('Subject Group')],
                         ]"
-                        option-value="value"
-                        option-label="label"
-                        wire:model.live="viewMode"
-                    />
-                </div>
+                                  option-value="value"
+                                  option-label="label"
+                                  wire:model.live="viewMode"
+                                  :disabled="!$activeProgram"
+                        />
+                    </div>
 
-                <div class="w-full sm:w-50">
-                    <x-select
-                        label="{{__('Filter by type')}}"
-                        wire:model.live="typeFilter"
-                        :options="[
+                    <div class="w-full sm:w-50">
+                        <x-select
+                            label="{{__('Filter by type')}}"
+                            wire:model.live="typeFilter"
+                            :options="[
                             ['value' => '', 'label' => __('All types')],
                             ['value' => 'required', 'label' => __('Required')],
                             ['value' => 'elective', 'label' => __('Elective')],
                             ['value' => 'pcbb', 'label' => __('Hardware Required')],
                         ]"
-                        option-value="value"
-                        option-label="label"
-                    />
-                </div>
-
-                <div class="w-full sm:flex-1 sm:min-w-60">
-                    <x-input
-                        label="{{ __('Search by subject name/code') }}"
-                        wire:model.live.debounce.350ms="search"
-                        placeholder="{{ __('Enter subject code or name...') }}"
-                        clearable
-                    />
-                </div>
-            </div>
-        </x-card>
-
-        @if(!$activeProgram)
-            <x-card shadow>
-                <div class="text-center py-10 text-gray-500">
-                    {{ __('This major has no published training programs.') }}
-                </div>
-            </x-card>
-        @else
-            @php
-                $programTitle = $activeProgram->getTranslation('name', app()->getLocale(), false)
-                    ?: $activeProgram->getTranslation('name', 'vi', false)
-                    ?: $activeProgram->getTranslation('name', 'en', false)
-                    ?: 'N/A';
-                $programLevel = $this->localizedName($activeProgram, 'level');
-                $programType = $this->localizedName($activeProgram, 'type');
-                $programLanguage = $this->localizedName($activeProgram, 'language');
-                $programDuration = $activeProgram->duration_time
-                    ? ($activeProgram->duration_time . ' ' . (app()->getLocale() === 'en' ? 'years' : 'năm'))
-                    : 'N/A';
-                $majorCode = $activeProgram->major?->programMajor?->code ?: 'N/A';
-            @endphp
-
-            <x-card shadow>
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                        <h2 class="text-2xl font-bold">{{ $programTitle }}</h2>
-                        <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 md:text-[16px] text-gray-800">
-                            <div><span class="font-medium">{{__('Level of Education')}}:</span> {{ $programLevel }}</div>
-                            <div><span class="font-medium">{{__('Code')}}:</span> {{ $majorCode }}</div>
-                            <div><span class="font-medium">{{__('Type of Education')}}:</span> {{ $programType }}</div>
-                            <div><span class="font-medium">{{__('Duration time')}}:</span> {{ $programDuration }}</div>
-                            <div class="sm:col-span-2"><span class="font-medium">{{__('Language')}}:</span> {{ $programLanguage }}</div>
-                        </div>
+                            option-value="value"
+                            option-label="label"
+                            :disabled="!$activeProgram"
+                        />
                     </div>
 
-                    <div class="flex flex-wrap gap-2 md:text-[16px]">
-                        <x-badge value="{{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
-                        <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits ')}}" class="badge-outline badge-md" />
-                        @if($currentSemesterTimeline)
-                            <x-button
-                                label="{{ __('Current semester') }}"
-                                icon="o-calendar-days"
-                                class="btn-outline btn-sm"
-                                wire:click="openSemesterTimelineModal"
-                                spinner="openSemesterTimelineModal"
-                            />
+                    <div class="w-full sm:flex-1 sm:min-w-60">
+                        <x-input
+                            label="{{ __('Search by subject name/code') }}"
+                            wire:model.live.debounce.350ms="search"
+                            placeholder="{{ __('Enter subject code or name...') }}"
+                            clearable
+                        />
+                    </div>
+                </div>
+            </x-card>
+
+            @if(!$activeProgram)
+                <x-card shadow>
+                    <div class="text-center text-[18px] py-10 text-gray-500">
+                        @if(!$this->programMajorSlug || !$this->selectedMajorSlug || !$this->version)
+                            {{ __('Please select major, specialization, and intake to view the training program.') }}
+                        @else
+                            {{ __('This major has no published training programs.') }}
                         @endif
                     </div>
-                </div>
-            </x-card>
+                </x-card>
+            @else
+                @php
+                    $programTitle = $activeProgram->getTranslation('name', app()->getLocale(), false)
+                        ?: $activeProgram->getTranslation('name', 'vi', false)
+                        ?: $activeProgram->getTranslation('name', 'en', false)
+                        ?: 'N/A';
+                    $programLevel = $this->localizedName($activeProgram, 'level');
+                    $programType = $this->localizedName($activeProgram, 'type');
+                    $programLanguage = $this->localizedName($activeProgram, 'language');
+                    $programDuration = $activeProgram->duration_time
+                        ? ($activeProgram->duration_time . ' ' . (app()->getLocale() === 'en' ? 'years' : 'năm'))
+                        : 'N/A';
+                    $majorCode = $activeProgram->major?->programMajor?->code ?: 'N/A';
+                @endphp
 
-            @if($currentSemesterTimeline)
-                <x-modal wire:model="showSemesterTimelineModal" title="{{ __('Semester timeline') }}" separator class="modalDisplaySemesterTimeline">
-                    @php
-                        $buildSemesterRows = function ($semester) use ($activeProgram) {
-                            if (!$semester) {
-                                return collect();
-                            }
-
-                            return collect($semester->subjects ?? [])
-                                ->sortBy(fn ($subject) => (int) ($subject->pivot->order ?? 0))
-                                ->values()
-                                ->map(function ($subject, $index) use ($activeProgram) {
-                                    $prerequisites = collect($subject->prerequisites ?? [])
-                                        ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
-                                        ->values();
-
-                                    $prerequisiteNames = $prerequisites
-                                        ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
-                                        ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
-                                        ->implode(', ');
-
-                                    $prerequisiteCodes = $prerequisites
-                                        ->map(fn ($prerequisite) => (string) $prerequisite->code)
-                                        ->filter(fn ($code) => trim($code) !== '')
-                                        ->implode(', ');
-
-                                    $equivalents = collect($subject->equivalents ?? [])
-                                        ->filter(fn ($equivalent) => (int) ($equivalent->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
-                                        ->values();
-
-                                    $equivalentItems = $equivalents
-                                        ->map(fn ($equivalent) => [
-                                            'id' => (int) $equivalent->id,
-                                            'code' => (string) $equivalent->code,
-                                            'name' => $this->localizedName($equivalent),
-                                            'credits' => (float) ($equivalent->credits ?? 0),
-                                            'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
-                                            'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
-                                        ])
-                                        ->values();
-
-                                    return [
-                                        'id' => (int) $subject->id,
-                                        'row_index' => $index + 1,
-                                        'code' => (string) $subject->code,
-                                        'name' => $this->localizedName($subject),
-                                        'credits' => (float) ($subject->credits ?? 0),
-                                        'theory' => (float) ($subject->credits_theory ?? 0),
-                                        'practice' => (float) ($subject->credits_practice ?? 0),
-                                        'prerequisite_subjects' => $prerequisiteNames,
-                                        'prerequisite_subjects_codes' => $prerequisiteCodes,
-                                        'type' => (string) ($subject->pivot->type ?? 'required'),
-                                        'note' => (string) ($subject->pivot->notes ?? ''),
-                                        'can_expand' => (int) $equivalentItems->count() > 0,
-                                        'equivalents_count' => (int) $equivalentItems->count(),
-                                        'equivalents' => $equivalentItems,
-                                    ];
-                                });
-                        };
-
-                        $currentRows = $buildSemesterRows($currentSemesterTimeline);
-                        $nextRows = $buildSemesterRows($nextSemesterTimeline);
-                    @endphp
-
-                    <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[70vh] overflow-y-auto pr-1">
-                        <div class="rounded-md bg-fita2">
-                            <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 pt-2 text-white">
-                                <div>
-                                    <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }}</h3>
-                                    <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($currentSemesterTimeline) ?: __('') }}</div>
-                                </div>
-                                <span
-                                    class="text-md">{{ count(data_get($currentSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
+                <x-card shadow>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-2xl font-bold">{{ $programTitle }}</h2>
+                            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 md:text-[16px] text-gray-800">
+                                <div><span class="font-medium">{{__('Level of Education')}}:</span> {{ $programLevel }}</div>
+                                <div><span class="font-medium">{{__('Code')}}:</span> {{ $majorCode }}</div>
+                                <div><span class="font-medium">{{__('Type of Education')}}:</span> {{ $programType }}</div>
+                                <div><span class="font-medium">{{__('Duration time')}}:</span> {{ $programDuration }}</div>
+                                <div class="sm:col-span-2"><span class="font-medium">{{__('Language')}}:</span> {{ $programLanguage }}</div>
                             </div>
+                        </div>
 
-                            <div class="mt-3 overflow-x-auto rounded border border-primary/20 bg-white">
-                                <x-table
-                                    :headers="$this->semesterHeaders()"
-                                    :rows="$currentRows"
-                                    wire:model="expanded"
-                                    expandable
-                                    expandable-condition="can_expand"
-                                    striped
-                                    class="bg-white
+                        <div class="flex flex-wrap gap-2 md:text-[16px]">
+                            <x-badge value="{{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
+                            <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits ')}}" class="badge-outline badge-md" />
+                            @if($currentSemesterTimeline)
+                                <x-button
+                                    label="{{ __('Current semester') }}"
+                                    icon="o-calendar-days"
+                                    class="btn-outline btn-xs"
+                                    wire:click="openSemesterTimelineModal"
+                                    spinner="openSemesterTimelineModal"
+                                />
+                            @endif
+                        </div>
+                    </div>
+                </x-card>
+
+                @if($currentSemesterTimeline)
+                    <x-modal wire:model="showSemesterTimelineModal" title="{{ __('Semester timeline') }}{{ $this->specializationLabel ? ' - ' .__('Specialized') .' '. $this->specializationLabel : '' }}" separator class="modalDisplaySemesterTimeline">
+                        @php
+                            $buildSemesterRows = function ($semester) use ($activeProgram) {
+                                if (!$semester) {
+                                    return collect();
+                                }
+
+                                return collect($semester->subjects ?? [])
+                                    ->sortBy(fn ($subject) => (int) ($subject->pivot->order ?? 0))
+                                    ->values()
+                                    ->map(function ($subject, $index) use ($activeProgram) {
+                                        $prerequisites = collect($subject->prerequisites ?? [])
+                                            ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                                            ->values();
+
+                                        $prerequisiteNames = $prerequisites
+                                            ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
+                                            ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
+                                            ->implode(', ');
+
+                                        $prerequisiteCodes = $prerequisites
+                                            ->map(fn ($prerequisite) => (string) $prerequisite->code)
+                                            ->filter(fn ($code) => trim($code) !== '')
+                                            ->implode(', ');
+
+                                        $equivalents = collect($subject->equivalents ?? [])
+                                            ->filter(fn ($equivalent) => (int) ($equivalent->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                                            ->values();
+
+                                        $equivalentItems = $equivalents
+                                            ->map(fn ($equivalent) => [
+                                                'id' => (int) $equivalent->id,
+                                                'code' => (string) $equivalent->code,
+                                                'name' => $this->localizedName($equivalent),
+                                                'credits' => (float) ($equivalent->credits ?? 0),
+                                                'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
+                                                'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
+                                            ])
+                                            ->values();
+
+                                        return [
+                                            'id' => (int) $subject->id,
+                                            'row_index' => $index + 1,
+                                            'code' => (string) $subject->code,
+                                            'name' => $this->localizedName($subject),
+                                            'credits' => (float) ($subject->credits ?? 0),
+                                            'theory' => (float) ($subject->credits_theory ?? 0),
+                                            'practice' => (float) ($subject->credits_practice ?? 0),
+                                            'prerequisite_subjects' => $prerequisiteNames,
+                                            'prerequisite_subjects_codes' => $prerequisiteCodes,
+                                            'type' => (string) ($subject->pivot->type ?? 'required'),
+                                            'note' => (string) ($subject->pivot->notes ?? ''),
+                                            'can_expand' => (int) $equivalentItems->count() > 0,
+                                            'equivalents_count' => (int) $equivalentItems->count(),
+                                            'equivalents' => $equivalentItems,
+                                        ];
+                                    });
+                            };
+
+                            $currentRows = $buildSemesterRows($currentSemesterTimeline);
+                            $nextRows = $buildSemesterRows($nextSemesterTimeline);
+                        @endphp
+
+                        <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[70vh] overflow-y-auto pr-1">
+                            <div class="rounded-md bg-fita2">
+                                <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 pt-2 text-white">
+                                    <div>
+                                        <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} ({{ data_get($currentSemesterTimeline, 'semester_name') }})</h3>
+{{--                                        <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($currentSemesterTimeline) ?: __('') }}</div>--}}
+                                    </div>
+                                    <span
+                                        class="text-md">{{ count(data_get($currentSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
+                                </div>
+
+                                <div class="mt-3 overflow-x-auto rounded border border-primary/20 bg-white">
+                                    <x-table
+                                        :headers="$this->semesterHeaders()"
+                                        :rows="$currentRows"
+                                        wire:model="expanded"
+                                        expandable
+                                        expandable-condition="can_expand"
+                                        striped
+                                        class="bg-white
                                         md:text-[16px]!
                                         [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
                                         [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
@@ -960,138 +967,6 @@ class extends Component {
                                         [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
                                         [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
                                     "
-                                >
-                                    @scope('cell_no', $subject)
-                                    <span class="select-none">{{ $subject['row_index'] }}</span>
-                                    @endscope
-
-                                    @scope('cell_code', $subject)
-                                    <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
-                                    @endscope
-
-                                    @scope('cell_name', $subject)
-                                    {!! $this->highlightMatch($subject['name']) !!}
-                                    @endscope
-
-                                    @scope('cell_credits', $subject)
-                                    {{ Subject::formatCredit($subject['credits']) }}
-                                    @endscope
-
-                                    @scope('cell_theory', $subject)
-                                    {{ Subject::formatCredit($subject['theory']) }}
-                                    @endscope
-
-                                    @scope('cell_practice', $subject)
-                                    {{ Subject::formatCredit($subject['practice']) }}
-                                    @endscope
-
-                                    @scope('cell_prerequisite_subjects', $subject)
-                                    {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
-                                    @endscope
-
-                                    @scope('cell_prerequisite_subjects_codes', $subject)
-                                    {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
-                                    @endscope
-
-                                    @scope('cell_type', $subject)
-                                    @php
-                                        $typeLabel = match ($subject['type']) {
-                                            'required' => __('Required'),
-                                            'elective' => __('Elective'),
-                                            'pcbb' => __('Hardware Required'),
-                                            default => strtoupper((string) $subject['type']),
-                                        };
-
-                                        $typeClass = match ($subject['type']) {
-                                            'required' => 'badge-error',
-                                            'elective' => 'badge-success',
-                                            'pcbb' => 'badge-warning',
-                                            default => 'badge-neutral',
-                                        };
-                                    @endphp
-                                    <x-badge
-                                        :value="$typeLabel"
-                                        class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
-                                    />
-                                    @endscope
-
-                                    @scope('cell_note', $subject)
-                                    {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
-                                    @endscope
-
-                                    @scope('expansion', $subject)
-                                    @if(($subject['equivalents_count'] ?? 0) > 0)
-                                        <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
-                                            <div class="font-semibold mb-3">
-                                                {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
-                                            </div>
-                                            <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                <table class="table md:text-[16px]">
-                                                    <thead>
-                                                    <tr>
-                                                        <th class="w-14">{{ __('No.') }}</th>
-                                                        <th>{{ __('Subject code') }}</th>
-                                                        <th>{{ __('Subject name') }}</th>
-                                                        <th class="w-24">{{ __('Credits') }}</th>
-                                                        <th class="w-20">{{ __('Theory') }}</th>
-                                                        <th class="w-20">{{ __('Practice') }}</th>
-                                                    </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                    @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
-                                                        <tr>
-                                                            <td>{{ $index + 1 }}</td>
-                                                            <td class="font-semibold">{{ $equivalent['code'] }}</td>
-                                                            <td>{{ $equivalent['name'] }}</td>
-                                                            <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
-                                                            <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
-                                                            <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
-                                                        </tr>
-                                                    @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    @else
-                                        <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
-                                    @endif
-                                    @endscope
-
-                                    <x-slot:empty>
-                                        <div class="py-3 text-center text-gray-500">{{ __('No subjects.') }}</div>
-                                    </x-slot:empty>
-                                </x-table>
-                            </div>
-                        </div>
-
-                        <div class="rounded-md border border-gray-200 bg-white">
-                            @if($nextSemesterTimeline)
-                                <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
-                                    <div>
-                                        <h3 class="text-lg font-semibold">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }}</h3>
-                                        <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>
-                                    </div>
-                                    <span
-                                        class="text-md">{{ count(data_get($nextSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
-                                </div>
-                            @endif
-                            @if($nextSemesterTimeline)
-                                <div class="mt-3 overflow-x-auto rounded border border-base-300 bg-white">
-                                    <x-table
-                                        :headers="$this->semesterHeaders()"
-                                        :rows="$nextRows"
-                                        wire:model="expanded"
-                                        expandable
-                                        expandable-condition="can_expand"
-                                        striped
-                                        class="bg-white
-                                            md:text-[16px]!
-                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
-                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
-                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                            [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
-                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                        "
                                     >
                                         @scope('cell_no', $subject)
                                         <span class="select-none">{{ $subject['row_index'] }}</span>
@@ -1194,206 +1069,39 @@ class extends Component {
                                         </x-slot:empty>
                                     </x-table>
                                 </div>
-                            @endif
-                        </div>
-                    </div>
+                            </div>
 
-                    <x-slot:actions>
-                        <x-button label="{{ __('Close') }}" class="btn-primary text-white" wire:click="$wire.showSemesterTimelineModal = false" />
-                    </x-slot:actions>
-                </x-modal>
-            @endif
-
-            <div class="relative min-h-60">
-                <div
-                    wire:loading.delay.short
-                    wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
-                    class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
-                >
-                    <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
-                        <x-loading class="text-primary loading-lg" />
-                        <span class="text-sm text-gray-600">{{ __('Loading data...') }}</span>
-                    </div>
-                </div>
-
-                <div
-                    wire:loading.class="opacity-60 pointer-events-none"
-                    wire:loading.class.remove="opacity-100"
-                    wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
-                    class="transition-opacity duration-150"
-                >
-                    @if($viewMode === 'semester')
-                        <div class="space-y-4">
-                            @forelse($semesterBlocks as $semesterBlock)
-                                <x-card shadow class="p-0!">
-                                    <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
+                            <div class="rounded-md border border-gray-200 bg-white">
+                                @if($nextSemesterTimeline)
+                                    <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
                                         <div>
-                                            <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }}</h3>
-                                            @if(!empty($semesterBlock['timeline']))
-                                                <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>
-                                            @endif
+                                            <h3 class="text-lg font-semibold">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} ({{ data_get($nextSemesterTimeline, 'semester_name') }})</h3>
+{{--                                            <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>--}}
                                         </div>
                                         <span
-                                            class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{ Subject::formatCredit($semesterBlock['total_credits']) }} {{__('Credits ')}}</span>
+                                            class="text-md">{{ count(data_get($nextSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
                                     </div>
-
-                                    @if($semesterBlock['subjects']->isEmpty())
-                                        <div class="text-sm text-gray-500">Không có môn học trong học kỳ này.</div>
-                                    @else
-                                        <div class="overflow-x-auto">
-                                            <x-table
-                                                :headers="$this->semesterHeaders()"
-                                                :rows="$semesterBlock['subjects']"
-                                                wire:model="expanded"
-                                                expandable
-                                                expandable-condition="can_expand"
-                                                striped
-                                                class="bg-white
-                                                    md:text-[16px]!
-                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
-                                                    [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
-                                                    [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                                    [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
-                                                    [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                                "
-                                            >
-                                                @scope('cell_no', $subject)
-                                                    <span class="select-none">{{ $subject['row_index'] }}</span>
-                                                @endscope
-
-                                                @scope('cell_code', $subject)
-                                                <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
-                                                @endscope
-
-                                                @scope('cell_name', $subject)
-                                                {!! $this->highlightMatch($subject['name']) !!}
-                                                @endscope
-
-                                                @scope('cell_credits', $subject)
-                                                {{ Subject::formatCredit($subject['credits']) }}
-                                                @endscope
-
-                                                @scope('cell_theory', $subject)
-                                                {{ Subject::formatCredit($subject['theory']) }}
-                                                @endscope
-
-                                                @scope('cell_practice', $subject)
-                                                {{ Subject::formatCredit($subject['practice']) }}
-                                                @endscope
-
-                                                @scope('cell_prerequisite_subjects', $subject)
-                                                {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
-                                                @endscope
-
-                                                @scope('cell_prerequisite_subjects_codes', $subject)
-                                                {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
-                                                @endscope
-
-                                                @scope('cell_type', $subject)
-                                                @php
-                                                    $typeLabel = match ($subject['type']) {
-                                                        'required' => __('Required'),
-                                                        'elective' => __('Elective'),
-                                                        'pcbb' => __('Hardware Required'),
-                                                        default => strtoupper((string) $subject['type']),
-                                                    };
-
-                                                    $typeClass = match ($subject['type']) {
-                                                        'required' => 'badge-error',
-                                                        'elective' => 'badge-success',
-                                                        'pcbb' => 'badge-warning',
-                                                        default => 'badge-neutral',
-                                                    };
-                                                @endphp
-                                                <x-badge
-                                                    :value="$typeLabel"
-                                                    class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
-                                                />
-                                                @endscope
-
-                                                @scope('expansion', $subject)
-                                                @if(($subject['equivalents_count'] ?? 0) > 0)
-                                                    <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
-                                                        <div class="font-semibold mb-3">
-                                                            {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
-                                                        </div>
-                                                        <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                            <table class="table md:text-[16px]">
-                                                                <thead>
-                                                                <tr>
-                                                                    <th class="w-14">{{ __('No.') }}</th>
-                                                                    <th>{{ __('Subject code') }}</th>
-                                                                    <th>{{ __('Subject name') }}</th>
-                                                                    <th class="w-24">{{ __('Credits') }}</th>
-                                                                    <th class="w-20">{{ __('Theory') }}</th>
-                                                                    <th class="w-20">{{ __('Practice') }}</th>
-                                                                </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
-                                                                    <tr>
-                                                                        <td>{{ $index + 1 }}</td>
-                                                                        <td class="font-semibold">{{ $equivalent['code'] }}</td>
-                                                                        <td>{{ $equivalent['name'] }}</td>
-                                                                        <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
-                                                                        <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
-                                                                        <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
-                                                                    </tr>
-                                                                @endforeach
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    </div>
-                                                @else
-                                                    <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
-                                                @endif
-                                                @endscope
-                                            </x-table>
-                                        </div>
-                                    @endif
-                                </x-card>
-                            @empty
-                                <x-card shadow>
-                                    <div class="text-sm text-gray-500">Không có dữ liệu môn học theo học kỳ.</div>
-                                </x-card>
-                            @endforelse
-                        </div>
-                    @else
-                        <div class="space-y-4">
-                            @forelse($groupBlocks as $groupBlock)
-                                <x-card shadow class="p-0!">
-                                    <div class="flex flex-wrap items-center justify-between mb-3 gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white">
-                                        <h3 class="text-lg font-semibold">{{ $groupBlock['group_name'] }}</h3>
-                                        <div class="text-md">
-                                            {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ Subject::formatCredit($groupBlock['total_credits']) }}
-                                            {{__('Credits ')}}
-                                        </div>
-                                    </div>
-
-                                    <div class="overflow-x-auto">
+                                @endif
+                                @if($nextSemesterTimeline)
+                                    <div class="mt-3 overflow-x-auto rounded border border-base-300 bg-white">
                                         <x-table
-                                            :headers="$this->groupHeaders()"
-                                            :rows="$groupBlock['subjects']"
+                                            :headers="$this->semesterHeaders()"
+                                            :rows="$nextRows"
                                             wire:model="expanded"
                                             expandable
                                             expandable-condition="can_expand"
                                             striped
-                                            @click.stop="if ($event.target.closest('a, button, input, select')) return; const row = $event.target.closest('tr'); if (row && row.dataset.rowId) { toggleExpand(parseInt(row.dataset.rowId)); }"
-                                            class="
-                                        bg-white md:text-[16px]!
-                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
-                                        [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
-                                        [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                        [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
-                                        [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                    "
+                                            class="bg-white
+                                            md:text-[16px]!
+                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                            [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                        "
                                         >
                                             @scope('cell_no', $subject)
-                                            {{ $subject['row_index'] }}
-                                            @endscope
-
-                                            @scope('cell_semester_no', $subject)
-                                            HK {{ $subject['semester_no'] }}
+                                            <span class="select-none">{{ $subject['row_index'] }}</span>
                                             @endscope
 
                                             @scope('cell_code', $subject)
@@ -1453,8 +1161,8 @@ class extends Component {
                                             @scope('expansion', $subject)
                                             @if(($subject['equivalents_count'] ?? 0) > 0)
                                                 <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
-                                                    <div class="font-semibold text-primary mb-3">
-                                                        {{ __('Equivalent subjects for') }} {{ $subject['code'] }} - {{ $subject['name'] }}
+                                                    <div class="font-semibold mb-3">
+                                                        {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
                                                     </div>
                                                     <div class="overflow-x-auto rounded border border-base-300 bg-white">
                                                         <table class="table md:text-[16px]">
@@ -1487,19 +1195,319 @@ class extends Component {
                                                 <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
                                             @endif
                                             @endscope
+
+                                            <x-slot:empty>
+                                                <div class="py-3 text-center text-gray-500">{{ __('No subjects.') }}</div>
+                                            </x-slot:empty>
                                         </x-table>
                                     </div>
-                                </x-card>
-                            @empty
-                                <x-card shadow>
-                                    <div class="text-sm text-gray-500">Không có dữ liệu môn học theo nhóm môn.</div>
-                                </x-card>
-                            @endforelse
+                                @endif
+                            </div>
                         </div>
-                    @endif
+
+                        <x-slot:actions>
+                            <x-button label="{{ __('Close') }}" class="btn-primary text-white" wire:click="$wire.showSemesterTimelineModal = false" />
+                        </x-slot:actions>
+                    </x-modal>
+                @endif
+
+                <div class="relative min-h-60">
+                    <div
+                        wire:loading.delay.short
+                        wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
+                        class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
+                    >
+                        <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
+                            <x-loading class="text-primary loading-lg" />
+                            <span class="text-sm text-gray-600">{{ __('Loading data...') }}</span>
+                        </div>
+                    </div>
+
+                    <div
+                        wire:loading.class="opacity-60 pointer-events-none"
+                        wire:loading.class.remove="opacity-100"
+                        wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
+                        class="transition-opacity duration-150"
+                    >
+                        @if($viewMode === 'semester')
+                            <div class="space-y-4">
+                                @forelse($semesterBlocks as $semesterBlock)
+                                    <x-card shadow class="p-0!">
+                                        <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                            <div>
+                                                <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }}</h3>
+                                                @if(!empty($semesterBlock['timeline']))
+                                                    <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>
+                                                @endif
+                                            </div>
+                                            <span
+                                                class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{ Subject::formatCredit($semesterBlock['total_credits']) }} {{__('Credits ')}}</span>
+                                        </div>
+
+                                        @if($semesterBlock['subjects']->isEmpty())
+                                            <div class="text-sm text-gray-500">Không có môn học trong học kỳ này.</div>
+                                        @else
+                                            <div class="overflow-x-auto">
+                                                <x-table
+                                                    :headers="$this->semesterHeaders()"
+                                                    :rows="$semesterBlock['subjects']"
+                                                    wire:model="expanded"
+                                                    expandable
+                                                    expandable-condition="can_expand"
+                                                    striped
+                                                    class="bg-white
+                                                    md:text-[16px]!
+                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                                    [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                                    [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                                    [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                                    [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                                "
+                                                >
+                                                    @scope('cell_no', $subject)
+                                                    <span class="select-none">{{ $subject['row_index'] }}</span>
+                                                    @endscope
+
+                                                    @scope('cell_code', $subject)
+                                                    <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                                    @endscope
+
+                                                    @scope('cell_name', $subject)
+                                                    {!! $this->highlightMatch($subject['name']) !!}
+                                                    @endscope
+
+                                                    @scope('cell_credits', $subject)
+                                                    {{ Subject::formatCredit($subject['credits']) }}
+                                                    @endscope
+
+                                                    @scope('cell_theory', $subject)
+                                                    {{ Subject::formatCredit($subject['theory']) }}
+                                                    @endscope
+
+                                                    @scope('cell_practice', $subject)
+                                                    {{ Subject::formatCredit($subject['practice']) }}
+                                                    @endscope
+
+                                                    @scope('cell_prerequisite_subjects', $subject)
+                                                    {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                                    @endscope
+
+                                                    @scope('cell_prerequisite_subjects_codes', $subject)
+                                                    {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                                    @endscope
+
+                                                    @scope('cell_type', $subject)
+                                                    @php
+                                                        $typeLabel = match ($subject['type']) {
+                                                            'required' => __('Required'),
+                                                            'elective' => __('Elective'),
+                                                            'pcbb' => __('Hardware Required'),
+                                                            default => strtoupper((string) $subject['type']),
+                                                        };
+
+                                                        $typeClass = match ($subject['type']) {
+                                                            'required' => 'badge-error',
+                                                            'elective' => 'badge-success',
+                                                            'pcbb' => 'badge-warning',
+                                                            default => 'badge-neutral',
+                                                        };
+                                                    @endphp
+                                                    <x-badge
+                                                        :value="$typeLabel"
+                                                        class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
+                                                    />
+                                                    @endscope
+
+                                                    @scope('expansion', $subject)
+                                                    @if(($subject['equivalents_count'] ?? 0) > 0)
+                                                        <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                                            <div class="font-semibold mb-3">
+                                                                {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
+                                                            </div>
+                                                            <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                                <table class="table md:text-[16px]">
+                                                                    <thead>
+                                                                    <tr>
+                                                                        <th class="w-14">{{ __('No.') }}</th>
+                                                                        <th>{{ __('Subject code') }}</th>
+                                                                        <th>{{ __('Subject name') }}</th>
+                                                                        <th class="w-24">{{ __('Credits') }}</th>
+                                                                        <th class="w-20">{{ __('Theory') }}</th>
+                                                                        <th class="w-20">{{ __('Practice') }}</th>
+                                                                    </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                                        <tr>
+                                                                            <td>{{ $index + 1 }}</td>
+                                                                            <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                                            <td>{{ $equivalent['name'] }}</td>
+                                                                            <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                            <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
+                                                                            <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                                        </tr>
+                                                                    @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                                    @endif
+                                                    @endscope
+                                                </x-table>
+                                            </div>
+                                        @endif
+                                    </x-card>
+                                @empty
+                                    <x-card shadow>
+                                        <div class="text-sm text-gray-500">Không có dữ liệu môn học theo học kỳ.</div>
+                                    </x-card>
+                                @endforelse
+                            </div>
+                        @else
+                            <div class="space-y-4">
+                                @forelse($groupBlocks as $groupBlock)
+                                    <x-card shadow class="p-0!">
+                                        <div class="flex flex-wrap items-center justify-between mb-3 gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                            <h3 class="text-lg font-semibold">{{ $groupBlock['group_name'] }}</h3>
+                                            <div class="text-md">
+                                                {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ Subject::formatCredit($groupBlock['total_credits']) }}
+                                                {{__('Credits ')}}
+                                            </div>
+                                        </div>
+
+                                        <div class="overflow-x-auto">
+                                            <x-table
+                                                :headers="$this->groupHeaders()"
+                                                :rows="$groupBlock['subjects']"
+                                                wire:model="expanded"
+                                                expandable
+                                                expandable-condition="can_expand"
+                                                striped
+                                                @click.stop="if ($event.target.closest('a, button, input, select')) return; const row = $event.target.closest('tr'); if (row && row.dataset.rowId) { toggleExpand(parseInt(row.dataset.rowId)); }"
+                                                class="
+                                        bg-white md:text-[16px]!
+                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                        [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
+                                        [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                        [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                        [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                    "
+                                            >
+                                                @scope('cell_no', $subject)
+                                                {{ $subject['row_index'] }}
+                                                @endscope
+
+                                                @scope('cell_semester_no', $subject)
+                                                HK {{ $subject['semester_no'] }}
+                                                @endscope
+
+                                                @scope('cell_code', $subject)
+                                                <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                                @endscope
+
+                                                @scope('cell_name', $subject)
+                                                {!! $this->highlightMatch($subject['name']) !!}
+                                                @endscope
+
+                                                @scope('cell_credits', $subject)
+                                                {{ Subject::formatCredit($subject['credits']) }}
+                                                @endscope
+
+                                                @scope('cell_theory', $subject)
+                                                {{ Subject::formatCredit($subject['theory']) }}
+                                                @endscope
+
+                                                @scope('cell_practice', $subject)
+                                                {{ Subject::formatCredit($subject['practice']) }}
+                                                @endscope
+
+                                                @scope('cell_prerequisite_subjects', $subject)
+                                                {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                                @endscope
+
+                                                @scope('cell_prerequisite_subjects_codes', $subject)
+                                                {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                                @endscope
+
+                                                @scope('cell_type', $subject)
+                                                @php
+                                                    $typeLabel = match ($subject['type']) {
+                                                        'required' => __('Required'),
+                                                        'elective' => __('Elective'),
+                                                        'pcbb' => __('Hardware Required'),
+                                                        default => strtoupper((string) $subject['type']),
+                                                    };
+
+                                                    $typeClass = match ($subject['type']) {
+                                                        'required' => 'badge-error',
+                                                        'elective' => 'badge-success',
+                                                        'pcbb' => 'badge-warning',
+                                                        default => 'badge-neutral',
+                                                    };
+                                                @endphp
+                                                <x-badge
+                                                    :value="$typeLabel"
+                                                    class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
+                                                />
+                                                @endscope
+
+                                                @scope('cell_note', $subject)
+                                                {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                                @endscope
+
+                                                @scope('expansion', $subject)
+                                                @if(($subject['equivalents_count'] ?? 0) > 0)
+                                                    <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                                        <div class="font-semibold text-primary mb-3">
+                                                            {{ __('Equivalent subjects for') }} {{ $subject['code'] }} - {{ $subject['name'] }}
+                                                        </div>
+                                                        <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                            <table class="table md:text-[16px]">
+                                                                <thead>
+                                                                <tr>
+                                                                    <th class="w-14">{{ __('No.') }}</th>
+                                                                    <th>{{ __('Subject code') }}</th>
+                                                                    <th>{{ __('Subject name') }}</th>
+                                                                    <th class="w-24">{{ __('Credits') }}</th>
+                                                                    <th class="w-20">{{ __('Theory') }}</th>
+                                                                    <th class="w-20">{{ __('Practice') }}</th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                                    <tr>
+                                                                        <td>{{ $index + 1 }}</td>
+                                                                        <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                                        <td>{{ $equivalent['name'] }}</td>
+                                                                        <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                        <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
+                                                                        <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                @else
+                                                    <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                                @endif
+                                                @endscope
+                                            </x-table>
+                                        </div>
+                                    </x-card>
+                                @empty
+                                    <x-card shadow>
+                                        <div class="text-sm text-gray-500">Không có dữ liệu môn học theo nhóm môn.</div>
+                                    </x-card>
+                                @endforelse
+                            </div>
+                        @endif
+                    </div>
                 </div>
-            </div>
-        @endif
+            @endif
+        </div>
     </div>
 </div>
 

@@ -212,6 +212,7 @@ new class extends Component {
             foreach ($sourceProgram->semesters as $semester) {
                 $newSemester = $newProgram->semesters()->create([
                     'semester_no' => $semester->semester_no,
+                    'semester_name' => $semester->semester_name,
                     'total_credits' => $semester->total_credits,
                     'start_date' => $semester->start_date,
                     'end_date' => $semester->end_date,
