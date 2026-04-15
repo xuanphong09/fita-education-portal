@@ -18,7 +18,7 @@ new class extends Component
         <h1 class="font-bold tracking-wider uppercase text-white font-barlow @if($this->layout == "client") text-fita! @endif @if($this->layout == "admin") md:text-[20px]/[26px]! text-[18px]/[24px]! @endif"
             x-data="{ isScrolled: false }"
             @scroll.window="isScrolled = (window.pageYOffset > 50)"
-            :class="isScrolled ? 'md:text-[20px]/[26px] text-[18px]/[22px]' : 'md:text-[26px]/[32px] text-[18px]/[22px]'"
+            :class="isScrolled ? 'md:text-[20px]/[26px] text-[19px]/[24px]' : 'md:text-[26px]/[32px] text-[19px]/[24px]'"
         >{{__('Faculty of Information Technology')}}</h1>
         <h1 class="font-semibold tracking-wider uppercase md:text-[16px]/[20px] text-[13px]/[16px] text-white font-barlow @if(app()->getLocale() == 'en') text-[15px]/[17px] @endif @if($this->layout == "client") text-black! @endif @if($this->layout == "admin") md:text-[16px]/[20px]! text-[13px]/[16px]! @endif"
             x-data="{ isScrolled: false }"
