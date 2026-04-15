@@ -507,7 +507,7 @@ new class extends Component {
 
         $this->selectedSemesterId = $semester->id;
         $this->editingSemesterId = null;
-        $this->recalculateProgramCredits();
+//        $this->recalculateProgramCredits();
         $this->modalSemester=false;
         $this->success('Đã lưu học kỳ thành công.');
     }
@@ -581,7 +581,7 @@ new class extends Component {
                 ->value('id');
         }
 
-        $this->recalculateProgramCredits();
+//        $this->recalculateProgramCredits();
         $this->success('Đã xóa học kỳ thành công.');
     }
 
