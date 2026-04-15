@@ -949,7 +949,18 @@ new class extends Component {
                 $nameEn = (string) ($subject->getTranslation('name', 'en', false) ?: '');
                 $semesterNo = (string) ($subject->semester_no_in_program ?? '');
 
-                $haystack = trim($code . ' ' . $nameVi . ' ' . $nameEn . ' hk ' . $semesterNo);
+                $prerequisiteSearchText = collect($subject->prerequisites ?? [])
+                    ->flatMap(function ($prerequisite) {
+                        return [
+                            (string) ($prerequisite->code ?? ''),
+                            (string) ($prerequisite->getTranslation('name', 'vi', false) ?: ''),
+                            (string) ($prerequisite->getTranslation('name', 'en', false) ?: ''),
+                        ];
+                    })
+                    ->filter(fn ($item) => trim((string) $item) !== '')
+                    ->implode(' ');
+
+                $haystack = trim($code . ' ' . $nameVi . ' ' . $nameEn . ' hk ' . $semesterNo . ' ' . $prerequisiteSearchText);
 
                 if (mb_stripos($haystack, $keyword) !== false) {
                     return true;
@@ -1011,7 +1022,7 @@ new class extends Component {
                             <div class="flex gap-3 align-center items-center">
                                 <x-input
                                     icon="o-magnifying-glass"
-                                    placeholder="Tìm kiếm môn học (mã, tên)..."
+                                    placeholder="Tìm kiếm môn học (mã, tên, môn tiên quyết)..."
                                     wire:model.live.debounce.300ms="semesterSubjectSearch"
                                     clearable
                                     class="lg:w-80"
