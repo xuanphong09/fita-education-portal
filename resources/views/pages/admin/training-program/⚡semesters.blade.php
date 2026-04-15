@@ -31,12 +31,14 @@ new class extends Component {
 
     public ?int $attach_subject_id = null;
     public ?int $pendingRemoveSubjectId = null;
+    public ?int $pendingRemoveSemesterId = null;
     public ?int $pivot_original_subject_id = null;
     public string $attach_type = 'required';
     public string $attach_notes = '';
     public int $attach_order = 0;
     public string $attach_credits = '';
     public string $subjectSearch = '';
+    public string $semesterSubjectSearch = '';
     public string $prerequisiteSearch = '';
     public string $equivalentSearch = '';
     public int $subjectSearchMinLength = 2;
@@ -103,11 +105,31 @@ new class extends Component {
                     ])
                     ->with(['prerequisites' => function ($prereqQuery) {
                         $prereqQuery
+                            ->select('subjects.*')
+                            ->addSelect([
+                                'semester_no_in_program' => ProgramSemester::query()
+                                    ->join('program_semester_subjects', 'program_semesters.id', '=', 'program_semester_subjects.program_semester_id')
+                                    ->whereColumn('program_semester_subjects.subject_id', 'subjects.id')
+                                    ->where('program_semesters.training_program_id', $this->programId)
+                                    ->orderBy('program_semesters.semester_no')
+                                    ->limit(1)
+                                    ->select('program_semesters.semester_no'),
+                            ])
                             ->where('subject_prerequisites.training_program_id', $this->programId)
                             ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
                             ->orderBy('group_subjects.sort_order');
                     }, 'equivalents' => function ($equivalentQuery) {
                         $equivalentQuery
+                            ->select('subjects.*')
+                            ->addSelect([
+                                'semester_no_in_program' => ProgramSemester::query()
+                                    ->join('program_semester_subjects', 'program_semesters.id', '=', 'program_semester_subjects.program_semester_id')
+                                    ->whereColumn('program_semester_subjects.subject_id', 'subjects.id')
+                                    ->where('program_semesters.training_program_id', $this->programId)
+                                    ->orderBy('program_semesters.semester_no')
+                                    ->limit(1)
+                                    ->select('program_semesters.semester_no'),
+                            ])
                             ->where('subject_equivalents.training_program_id', $this->programId)
                             ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
                             ->orderBy('group_subjects.sort_order');
@@ -195,23 +217,39 @@ new class extends Component {
 
     public function getSubjectUsedOptionsProperty(): array
     {
-        $usedSubjectIds = $this->usedSubjectIds;
-
-        if ($usedSubjectIds->isEmpty()) {
-            return [];
-        }
-
         return Subject::query()
-            ->whereIn('id', $usedSubjectIds->all())
-            ->when($this->attach_subject_id, fn ($q) => $q->where('id', '!=', $this->attach_subject_id))
-            ->orderBy('code')
-            ->get()
-            ->map(fn ($subject) => [
-                'id' => $subject->id,
-                'name' => $subject->code
-                    . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A')
-                    . ' (' . Subject::formatCredit($subject->credits) . ' TC)'
+            ->join('program_semester_subjects', 'subjects.id', '=', 'program_semester_subjects.subject_id')
+            ->join('program_semesters', 'program_semesters.id', '=', 'program_semester_subjects.program_semester_id')
+            ->where('program_semesters.training_program_id', $this->programId)
+            ->when($this->attach_subject_id, fn ($q) => $q->where('subjects.id', '!=', $this->attach_subject_id))
+            ->orderBy('subjects.code')
+            ->orderBy('program_semesters.semester_no')
+            ->get([
+                'subjects.id',
+                'subjects.code',
+                'subjects.name',
+                'subjects.credits',
+                'program_semesters.semester_no as semester_no_in_program',
             ])
+            ->unique('id')
+            ->values()
+            ->map(function ($subject) {
+                $nameVi = $subject->getTranslation('name', 'vi', false) ?: 'N/A';
+                $credits = Subject::formatCredit($subject->credits);
+                $semesterNo = (int) ($subject->semester_no_in_program ?? 0);
+
+                return [
+                    'id' => (int) $subject->id,
+                    'code' => (string) $subject->code,
+                    'name_vi' => (string) $nameVi,
+                    'credits' => (string) $credits,
+                    'semester_no' => $semesterNo,
+                    'name' => $subject->code
+                        . ' - ' . $nameVi
+                        . ' (' . $credits . ' TC - HK ' . $semesterNo . ')',
+                    'search_text' => trim($subject->code . ' ' . $nameVi . ' ' . $credits . ' tc hk ' . $semesterNo),
+                ];
+            })
             ->toArray();
     }
 
@@ -248,13 +286,13 @@ new class extends Component {
 
         return collect($this->subjectUsedOptions)
             ->filter(function (array $subject) use ($keyword, $normalizedKeyword) {
-                $name = (string) ($subject['name'] ?? '');
+                $searchText = (string) ($subject['search_text'] ?? $subject['name'] ?? '');
 
-                if (mb_stripos($name, $keyword) !== false) {
+                if (mb_stripos($searchText, $keyword) !== false) {
                     return true;
                 }
 
-                return str_contains($this->normalizeSearchText($name), $normalizedKeyword);
+                return str_contains($this->normalizeSearchText($searchText), $normalizedKeyword);
             })
             ->values()
             ->all();
@@ -302,6 +340,7 @@ new class extends Component {
         }
 
         $this->selectedSemesterId = $id;
+        $this->semesterSubjectSearch = '';
         $this->resetSubjectForm();
     }
 
@@ -598,18 +637,28 @@ new class extends Component {
         $this->modalAddSubject = true;
     }
 
-    public function editSubjectPivot(int $subjectId): void
+    public function editSubjectPivot(int $subjectId, ?int $semesterId = null): void
     {
-        $semester = $this->selectedSemester;
-        if (!$semester) {
+        $targetSemesterId = $semesterId ?: $this->selectedSemesterId;
+
+        if (!$targetSemesterId) {
             return;
         }
 
-        $subject = $semester->subjects->firstWhere('id', $subjectId);
+        $semester = ProgramSemester::query()
+            ->where('training_program_id', $this->programId)
+            ->findOrFail($targetSemesterId);
+
+        $subject = $semester->subjects()
+            ->where('subjects.id', $subjectId)
+            ->first();
+
         if (!$subject) {
             $this->error('Không tìm thấy môn học trong học kỳ này.');
             return;
         }
+
+        $this->selectedSemesterId = $semester->id;
 
         $this->attach_subject_id = $subject->id;
         $this->pivot_original_subject_id = $subject->id;
@@ -703,9 +752,10 @@ new class extends Component {
         $this->success('Đã lưu môn học vào học kỳ thành công.');
     }
 
-    public function removeSubjectFromSemester(int $subjectId): void
+    public function removeSubjectFromSemester(int $subjectId, ?int $semesterId = null): void
     {
         $this->pendingRemoveSubjectId = $subjectId;
+        $this->pendingRemoveSemesterId = $semesterId ?: $this->selectedSemesterId;
 
         $this->dispatch('modal:confirm', [
             'title' => 'Bạn có chắc chắn muốn xóa môn học này không?',
@@ -733,7 +783,7 @@ new class extends Component {
             return;
         }
 
-        if (!$this->selectedSemesterId) {
+        if (!$this->pendingRemoveSemesterId) {
             return;
         }
 
@@ -754,7 +804,9 @@ new class extends Component {
 
             $semester = ProgramSemester::query()
                 ->where('training_program_id', $this->programId)
-                ->findOrFail($this->selectedSemesterId);
+                ->findOrFail($this->pendingRemoveSemesterId);
+
+            $this->selectedSemesterId = $semester->id;
 
             $semester->subjects()->detach($subjectId);
 
@@ -780,6 +832,7 @@ new class extends Component {
             $this->error('Đã xảy ra lỗi: ' . $e->getMessage());
         } finally {
             $this->pendingRemoveSubjectId = null;
+            $this->pendingRemoveSemesterId = null;
         }
     }
 
@@ -806,6 +859,95 @@ new class extends Component {
             ->sum('total_credits');
 
         TrainingProgram::query()->where('id', $this->programId)->update(['total_credits' => $total]);
+    }
+
+    public function getFilteredSelectedSemesterSubjectsProperty()
+    {
+        $keyword = trim($this->semesterSubjectSearch);
+
+        if ($keyword === '') {
+            $semester = $this->selectedSemester;
+
+            if (!$semester) {
+                return collect();
+            }
+
+            return $semester->subjects;
+        }
+
+        $subjects = ProgramSemester::query()
+            ->where('training_program_id', $this->programId)
+            ->orderBy('semester_no')
+            ->with(['subjects' => function ($q) {
+                $q->orderBy('program_semester_subjects.order')
+                    ->withCount([
+                        'prerequisites as prerequisites_count' => function ($prereqQuery) {
+                            $prereqQuery->where('subject_prerequisites.training_program_id', $this->programId);
+                        },
+                        'equivalents as equivalents_count' => function ($equivalentQuery) {
+                            $equivalentQuery->where('subject_equivalents.training_program_id', $this->programId);
+                        },
+                    ])
+                    ->with(['prerequisites' => function ($prereqQuery) {
+                        $prereqQuery
+                            ->select('subjects.*')
+                            ->addSelect([
+                                'semester_no_in_program' => ProgramSemester::query()
+                                    ->join('program_semester_subjects', 'program_semesters.id', '=', 'program_semester_subjects.program_semester_id')
+                                    ->whereColumn('program_semester_subjects.subject_id', 'subjects.id')
+                                    ->where('program_semesters.training_program_id', $this->programId)
+                                    ->orderBy('program_semesters.semester_no')
+                                    ->limit(1)
+                                    ->select('program_semesters.semester_no'),
+                            ])
+                            ->where('subject_prerequisites.training_program_id', $this->programId)
+                            ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
+                            ->orderBy('group_subjects.sort_order');
+                    }, 'equivalents' => function ($equivalentQuery) {
+                        $equivalentQuery
+                            ->select('subjects.*')
+                            ->addSelect([
+                                'semester_no_in_program' => ProgramSemester::query()
+                                    ->join('program_semester_subjects', 'program_semesters.id', '=', 'program_semester_subjects.program_semester_id')
+                                    ->whereColumn('program_semester_subjects.subject_id', 'subjects.id')
+                                    ->where('program_semesters.training_program_id', $this->programId)
+                                    ->orderBy('program_semesters.semester_no')
+                                    ->limit(1)
+                                    ->select('program_semesters.semester_no'),
+                            ])
+                            ->where('subject_equivalents.training_program_id', $this->programId)
+                            ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
+                            ->orderBy('group_subjects.sort_order');
+                    }]);
+            }])
+            ->get()
+            ->flatMap(function ($semester) {
+                return $semester->subjects->map(function ($subject) use ($semester) {
+                    $subject->setAttribute('semester_no_in_program', (int) $semester->semester_no);
+                    $subject->setAttribute('semester_id_in_program', (int) $semester->id);
+
+                    return $subject;
+                });
+            });
+
+        $normalizedKeyword = $this->normalizeSearchText($keyword);
+
+        return $subjects
+            ->filter(function ($subject) use ($keyword, $normalizedKeyword) {
+                $code = (string) ($subject->code ?? '');
+                $nameVi = (string) ($subject->getTranslation('name', 'vi', false) ?: '');
+                $nameEn = (string) ($subject->getTranslation('name', 'en', false) ?: '');
+                $semesterNo = (string) ($subject->semester_no_in_program ?? '');
+
+                $haystack = trim($code . ' ' . $nameVi . ' ' . $nameEn . ' hk ' . $semesterNo);
+
+                if (mb_stripos($haystack, $keyword) !== false) {
+                    return true;
+                }
+
+                return str_contains($this->normalizeSearchText($haystack), $normalizedKeyword);
+            })
+            ->values();
     }
 
     public function headers(): array
@@ -853,13 +995,31 @@ new class extends Component {
                             <div class="text-md text-gray-600">
                                 Đang quản lý: <span class="font-semibold">Học kỳ {{ $this->selectedSemester->semester_no }}</span>
                             </div>
-                            <x-button label="Thêm môn" icon="o-plus" class="btn-sm btn-primary text-white" wire:click="openCreateSubjectPivot" spinner/>
+                            <div class="flex gap-3 align-center items-center">
+                                <x-input
+                                    icon="o-magnifying-glass"
+                                    placeholder="Tìm kiếm môn học (mã, tên)..."
+                                    wire:model.live.debounce.300ms="semesterSubjectSearch"
+                                    clearable
+                                    class="lg:w-80"
+                                />
+                                <x-button label="Thêm môn" icon="o-plus" class="btn-sm btn-primary text-white" wire:click="openCreateSubjectPivot" spinner/>
+                            </div>
                         </div>
+
+{{--                        <div class="mb-3 max-w-md">--}}
+{{--                            <x-input--}}
+{{--                                icon="o-magnifying-glass"--}}
+{{--                                placeholder="Tìm kiếm môn học (mã, tên)..."--}}
+{{--                                wire:model.live.debounce.300ms="semesterSubjectSearch"--}}
+{{--                                clearable--}}
+{{--                            />--}}
+{{--                        </div>--}}
 
                         <div class="mt-5 overflow-x-auto">
                             <x-table
                                 :headers="$this->headers()"
-                                :rows="$this->selectedSemester->subjects"
+                                :rows="$this->filteredSelectedSemesterSubjects"
                                 wire:model="expanded" expandable
                                 striped
                                 wire:loading.class="opacity-50 pointer-events-none select-none"
@@ -876,7 +1036,10 @@ new class extends Component {
                                 @endscope
 
                                 @scope('cell_code', $subject)
-                                {{ $subject->code }}
+                                <div>{{ $subject->code }}</div>
+                                @if($this->semesterSubjectSearch !== '')
+                                    <div class="text-xs text-gray-500">HK {{ $subject->semester_no_in_program ?? '—' }}</div>
+                                @endif
                                 @endscope
 
                                 @scope('cell_name', $subject)
@@ -914,8 +1077,8 @@ new class extends Component {
 
                                 @scope('cell_actions', $subject)
                                 <div class="flex gap-1 justify-end">
-                                    <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" wire:click="editSubjectPivot({{ $subject->id }})" tooltip="Chỉnh sửa"/>
-                                    <x-button icon="o-trash" class="btn-xs btn-ghost text-error" wire:click="removeSubjectFromSemester({{ $subject->id }})" tooltip="Xóa"/>
+                                    <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" wire:click="editSubjectPivot({{ $subject->id }}, {{ (int) ($subject->semester_id_in_program ?? $this->selectedSemesterId) }})" tooltip="Chỉnh sửa"/>
+                                    <x-button icon="o-trash" class="btn-xs btn-ghost text-error" wire:click="removeSubjectFromSemester({{ $subject->id }}, {{ (int) ($subject->semester_id_in_program ?? $this->selectedSemesterId) }})" tooltip="Xóa"/>
                                 </div>
                                 @endscope
 
@@ -929,8 +1092,11 @@ new class extends Component {
                                         <div class="grid md:grid-cols-2 gap-2">
                                             @foreach($subject->prerequisites as $prerequisite)
                                                 <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
-                                                    <div class="font-semibold">{{ $prerequisite->code }}</div>
-                                                    <div class="text-gray-600">{{ $prerequisite->getTranslation('name', 'vi', false) ?: '—' }}</div>
+                                                    <div class="font-semibold">{{ $prerequisite->code }} - <span class="text-gray-600">{{ $prerequisite->getTranslation('name', 'vi', false) ?: '—' }}</span></div>
+                                                    <div class="text-md font-medium text-gray-600 mt-1">
+                                                        {{ ($prerequisite->credits_display ?? \App\Models\Subject::formatCredit($prerequisite->credits ?? 0)) }} TC
+                                                        • HK {{ $prerequisite->semester_no_in_program ?? '—' }}
+                                                    </div>
                                                 </div>
                                             @endforeach
                                         </div>
@@ -944,8 +1110,11 @@ new class extends Component {
                                         <div class="grid md:grid-cols-2 gap-2">
                                             @foreach($subject->equivalents as $equivalent)
                                                 <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
-                                                    <div class="font-semibold">{{ $equivalent->code }}</div>
-                                                    <div class="text-gray-600">{{ $equivalent->getTranslation('name', 'vi', false) ?: '—' }}</div>
+                                                    <div class="font-semibold">{{ $equivalent->code }} - <span class="text-gray-600">{{ $equivalent->getTranslation('name', 'vi', false) ?: '—' }}</span></div>
+
+                                                    <div class="text-md font-medium text-gray-600 mt-1">
+                                                        {{ ($equivalent->credits_display ?? \App\Models\Subject::formatCredit($equivalent->credits ?? 0)) }} TC
+                                                    </div>
                                                 </div>
                                             @endforeach
                                         </div>
@@ -1078,7 +1247,7 @@ new class extends Component {
                     <label class="font-semibold text-gray-700 mb-3 block">Danh sách môn học tiên quyết</label>
                     <x-input
                         icon="o-magnifying-glass"
-                        placeholder="Tìm theo mã hoặc tên môn..."
+                        placeholder="Tìm theo mã, tên, tín chỉ hoặc học kỳ..."
                         wire:model.live.debounce.300ms="prerequisiteSearch"
                         clearable
                     />
@@ -1087,11 +1256,14 @@ new class extends Component {
                         @forelse($this->filteredSubjectUsedOptions as $subject)
                             <div class="select-none" wire:key="subject-used-{{ $subject['id'] }}">
                                 <x-checkbox
-                                    label="{{ $subject['name'] }}"
+                                    label="{{ ($subject['code'] ?? '') . ' - ' . ($subject['name_vi'] ?? '') }}"
                                     wire:model="attach_subject_prerequisite_id"
                                     value="{{ $subject['id'] }}"
                                     class="checkbox-primary checkbox-sm"
                                 />
+                                <div class="ml-6 text-xs text-gray-500">
+                                    {{ $subject['credits'] ?? '0' }} TC • HK {{ $subject['semester_no'] ?? '—' }}
+                                </div>
                             </div>
                         @empty
                             <div class="col-span-full text-center py-4 text-red-500">
