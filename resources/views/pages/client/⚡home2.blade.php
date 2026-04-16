@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Page;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use App\Models\Album;
@@ -12,9 +13,9 @@ new
 #[Layout('layouts.client')]
 class extends Component {
 
-    public $tabSelected='tab-feature-post';
+    public $tabSelected = 'tab-feature-post';
     public array $slides = [];
-    public  $slidePosts = [
+    public $slidePosts = [
 //        [
 //            'image' => '/assets/images/img1.jpg',
 //            'day' => '9',
@@ -112,6 +113,7 @@ class extends Component {
             ->toArray();
 
         $slides = count($dbSlides) > 0 ? $dbSlides : $fallbackSlides;
+        $configBanner = Page::where('slug', 'banner')->first();
 
         $baseQuery = Post::query()
             ->with([
@@ -127,15 +129,15 @@ class extends Component {
             ->where('is_featured', true)
             ->limit($locale === 'en' ? 20 : 4)
             ->get()
-            ->filter(fn (Post $post) => $this->isVisibleInLocale($post, $locale))
+            ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
             ->take(4)
             ->values();
 
         $latestPosts = (clone $baseQuery)
-            ->when($featuredPosts->isNotEmpty(), fn ($q) => $q->whereNotIn('id', $featuredPosts->pluck('id')))
+            ->when($featuredPosts->isNotEmpty(), fn($q) => $q->whereNotIn('id', $featuredPosts->pluck('id')))
             ->limit($locale === 'en' ? 24 : 4)
             ->get()
-            ->filter(fn (Post $post) => $this->isVisibleInLocale($post, $locale))
+            ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
             ->take(4)
             ->values();
 
@@ -149,7 +151,7 @@ class extends Component {
 
         if ($featuredAlbum) {
             $imagesQuery
-                ->whereHas('albums', fn ($query) => $query->where('albums.id', $featuredAlbum->id))
+                ->whereHas('albums', fn($query) => $query->where('albums.id', $featuredAlbum->id))
                 ->orderByDesc('album_images.created_at')
                 ->orderByDesc('album_images.id');
         } else {
@@ -161,8 +163,8 @@ class extends Component {
 
         $images = $imagesQuery
             ->get()
-            ->filter(fn (AlbumImage $image) => filled($image->image_path) && Storage::disk('public')->exists($image->image_path))
-            ->map(fn (AlbumImage $image) => [
+            ->filter(fn(AlbumImage $image) => filled($image->image_path) && Storage::disk('public')->exists($image->image_path))
+            ->map(fn(AlbumImage $image) => [
                 'url' => Storage::url($image->image_path),
                 'alt' => $image->caption,
                 'caption' => $image->caption,
@@ -177,8 +179,8 @@ class extends Component {
                 ->orderByDesc('album_images.id')
                 ->limit(20)
                 ->get()
-                ->filter(fn (AlbumImage $image) => filled($image->image_path) && Storage::disk('public')->exists($image->image_path))
-                ->map(fn (AlbumImage $image) => [
+                ->filter(fn(AlbumImage $image) => filled($image->image_path) && Storage::disk('public')->exists($image->image_path))
+                ->map(fn(AlbumImage $image) => [
                     'url' => Storage::url($image->image_path),
                     'alt' => $image->caption,
                     'caption' => $image->caption,
@@ -221,6 +223,7 @@ class extends Component {
             'latestPosts' => $latestPosts,
             'images' => $images,
             'counterStats' => $counterStats,
+            'configBanner' => $configBanner,
         ];
     }
 };
@@ -234,9 +237,11 @@ class extends Component {
     {{--  end - title  --}}
     {{--    <x-carousel :slides="$slides"  interval="5000" class="custom-carousel h-65 lg:h-100 2xl:h-150 w-full aspect-[16/9] md:aspect-[3/1] overflow-hidden--}}
     {{--            bg-cover bg-center bg-no-repeat">--}}
+{{--    @dd($configBanner->content_data['autoplay'])--}}
     <x-carousel
         :slides="$slides"
-        interval="5000"
+        :autoplay="$configBanner->content_data['autoplay']"
+        :interval="$configBanner->content_data['interval']"
         class="h-auto rounded-none w-full bg-cover bg-center bg-no-repeat overflow-hidden aspect-2/1 md:aspect-5/2 lg:aspect-7/2 custom-carousel"
     >
         @scope('content', $slide)
@@ -267,7 +272,8 @@ class extends Component {
 
             <!-- Button-->
             @if(data_get($slide, 'urlText'))
-                <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right" class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">{{ __(data_get($slide, 'urlText')) }}</x-button>
+                <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right"
+                          class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">{{ __(data_get($slide, 'urlText')) }}</x-button>
             @endif
         </div>
         @endscope
@@ -277,7 +283,7 @@ class extends Component {
     <section class="py-12 lg:py-16 bg-linear-to-b from-blue-50 to-blue-100">
         <div class="w-[90%] lg:w-330 mx-auto">
             <div class="text-center mb-12">
-{{--                <p class="text-fita font-semibold text-[14px] lg:text-[16px] uppercase tracking-wide mb-2">{{ __('Distinguishing features') }}</p>--}}
+                {{--                <p class="text-fita font-semibold text-[14px] lg:text-[16px] uppercase tracking-wide mb-2">{{ __('Distinguishing features') }}</p>--}}
                 <h2 class="text-[28px] lg:text-[36px] font-bold text-fita  font-barlow uppercase">{{ __('Why choose us?') }}</h2>
             </div>
 
@@ -296,13 +302,17 @@ class extends Component {
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div
+                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
                             <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-academic-cap" class="w-6 h-6 text-white" />
+                                <x-icon name="o-academic-cap" class="w-6 h-6 text-white"/>
                             </div>
                         </div>
                     </div>
-                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">01</div>
+                    <div
+                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                        01
+                    </div>
 
                     <div class="mt-6">
                         <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Faculty of lecturers') }}</h3>
@@ -325,13 +335,17 @@ class extends Component {
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div
+                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
                             <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-building-office" class="w-6 h-6 text-white" />
+                                <x-icon name="o-building-office" class="w-6 h-6 text-white"/>
                             </div>
                         </div>
                     </div>
-                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">02</div>
+                    <div
+                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                        02
+                    </div>
 
                     <div class="mt-6">
                         <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Quality facilities') }}</h3>
@@ -354,13 +368,17 @@ class extends Component {
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div
+                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
                             <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-book-open" class="w-6 h-6 text-white" />
+                                <x-icon name="o-book-open" class="w-6 h-6 text-white"/>
                             </div>
                         </div>
                     </div>
-                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">03</div>
+                    <div
+                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                        03
+                    </div>
 
                     <div class="mt-6">
                         <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Training Programs') }}</h3>
@@ -383,13 +401,17 @@ class extends Component {
                 >
                     <div class="absolute -top-8 left-6">
                         <div class="relative">
-                            <div class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
+                            <div
+                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
                             <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-light-bulb" class="w-6 h-6 text-white" />
+                                <x-icon name="o-light-bulb" class="w-6 h-6 text-white"/>
                             </div>
                         </div>
                     </div>
-                    <div class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">04</div>
+                    <div
+                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
+                        04
+                    </div>
 
                     <div class="mt-6">
                         <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Teaching method') }}</h3>
@@ -449,7 +471,8 @@ class extends Component {
                             >
                         @endif
 
-                        <div class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
+                        <div
+                            class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
                             <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold">
                                 {{ $leftHighlightPost->published_at?->isoFormat('DD') }}
                             </div>
@@ -472,13 +495,15 @@ class extends Component {
                         </div>
                     </a>
                 @else
-                    <div class="flex h-140 items-center justify-center rounded-xl border border-dashed border-base-300 bg-base-100 text-base-content/60">
+                    <div
+                        class="flex h-140 items-center justify-center rounded-xl border border-dashed border-base-300 bg-base-100 text-base-content/60">
                         {{ __('No posts available') }}
                     </div>
                 @endif
 
-                <div wire:loading.flex wire:target="tabSelected" class="absolute inset-0 z-30 items-center justify-center bg-white/60 backdrop-blur-[1px]">
-                    <x-loading class="text-primary loading-lg" />
+                <div wire:loading.flex wire:target="tabSelected"
+                     class="absolute inset-0 z-30 items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                    <x-loading class="text-primary loading-lg"/>
                 </div>
             </div>
 
@@ -492,16 +517,23 @@ class extends Component {
                     <x-tab name="tab-feature-post" label="{{__('Featured News')}}" icon="">
                         <div class="flex flex-col gap-4">
                             @forelse($featuredPosts->skip(1)->take(3) as $post)
-                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
+                                <div
+                                    class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
                                         @if($post->thumbnail)
-                                            <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                            <img src="{{ Storage::url($post->thumbnail) }}"
+                                                 class="w-full h-full object-cover"
+                                                 alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
+                                                 loading="lazy" decoding="async">
                                         @else
-                                            <img src="{{ asset('assets/images/noti-news.png') }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
+                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                                 class="w-full h-full object-cover" alt="No image" loading="lazy"
+                                                 decoding="async">
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
-                                        <a href="{{ $post->client_url }}" wire:navigate class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                        <a href="{{ $post->client_url }}" wire:navigate
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
                                             {{ $post->getTranslation('title', app()->getLocale()) }}
                                         </a>
                                         <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
@@ -520,16 +552,23 @@ class extends Component {
                     <x-tab name="tab-new-post" label="{{__('Latest News')}}">
                         <div class="flex flex-col gap-4">
                             @forelse($latestPosts->skip(1)->take(3) as $post)
-                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
+                                <div
+                                    class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
                                         @if($post->thumbnail)
-                                            <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                            <img src="{{ Storage::url($post->thumbnail) }}"
+                                                 class="w-full h-full object-cover"
+                                                 alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
+                                                 loading="lazy" decoding="async">
                                         @else
-                                            <img src="{{ asset('assets/images/noti-news.png') }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
+                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                                 class="w-full h-full object-cover" alt="No image" loading="lazy"
+                                                 decoding="async">
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
-                                        <a href="{{ $post->client_url }}" wire:navigate class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                        <a href="{{ $post->client_url }}" wire:navigate
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
                                             {{ $post->getTranslation('title', app()->getLocale()) }}
                                         </a>
                                         <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
@@ -546,7 +585,9 @@ class extends Component {
                         </div>
                     </x-tab>
                 </x-tabs>
-                <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-105"> </x-button>
+                <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
+                          icon-right="o-arrow-right"
+                          class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-105"></x-button>
             </div>
         </div>
     </div>
@@ -587,8 +628,9 @@ class extends Component {
                         observer.observe($el);
                     "
                     >
-                        <div class="absolute -top-10 left-1/2 -translate-x-1/2 h-20 w-20 rounded-full bg-[#DDE8F1] flex items-center justify-center">
-                            <x-icon name="{{ $stat['icon'] }}" class="w-10 h-10 text-fita" />
+                        <div
+                            class="absolute -top-10 left-1/2 -translate-x-1/2 h-20 w-20 rounded-full bg-[#DDE8F1] flex items-center justify-center">
+                            <x-icon name="{{ $stat['icon'] }}" class="w-10 h-10 text-fita"/>
                         </div>
 
                         <p class="text-[30px] lg:text-[38px] leading-none font-bold text-fita mt-2">
@@ -602,10 +644,10 @@ class extends Component {
     </section>
     <div>
         <h1 class="mt-10 uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center lg:mt-15 mb-4">
-{{--            <svg fill="#0071BD" width="38px" height="38px" viewBox="0 -32 576 576" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M480 416v16c0 26.51-21.49 48-48 48H48c-26.51 0-48-21.49-48-48V176c0-26.51 21.49-48 48-48h16v48H54a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6v-10h48zm42-336H150a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6V86a6 6 0 0 0-6-6zm6-48c26.51 0 48 21.49 48 48v256c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V80c0-26.51 21.49-48 48-48h384zM264 144c0 22.091-17.909 40-40 40s-40-17.909-40-40 17.909-40 40-40 40 17.909 40 40zm-72 96l39.515-39.515c4.686-4.686 12.284-4.686 16.971 0L288 240l103.515-103.515c4.686-4.686 12.284-4.686 16.971 0L480 208v80H192v-48z"></path></g></svg>--}}
+            {{--            <svg fill="#0071BD" width="38px" height="38px" viewBox="0 -32 576 576" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M480 416v16c0 26.51-21.49 48-48 48H48c-26.51 0-48-21.49-48-48V176c0-26.51 21.49-48 48-48h16v48H54a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6v-10h48zm42-336H150a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6V86a6 6 0 0 0-6-6zm6-48c26.51 0 48 21.49 48 48v256c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V80c0-26.51 21.49-48 48-48h384zM264 144c0 22.091-17.909 40-40 40s-40-17.909-40-40 17.909-40 40-40 40 17.909 40 40zm-72 96l39.515-39.515c4.686-4.686 12.284-4.686 16.971 0L288 240l103.515-103.515c4.686-4.686 12.284-4.686 16.971 0L480 208v80H192v-48z"></path></g></svg>--}}
             {{__('Photo library')}}
         </h1>
-        <livewire:client.image-gallery :images="$images" class="h-40 rounded-box" />
+        <livewire:client.image-gallery :images="$images" class="h-40 rounded-box"/>
     </div>
     <div>
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">

@@ -43,6 +43,13 @@ class extends Component {
     #[Computed]
     public function majorLabel(): string
     {
+        if ($this->programMajorSlug) {
+            $selectedMajor = ProgramMajor::query()->where('slug', $this->programMajorSlug)->first();
+
+            if ($selectedMajor) {
+                return $this->localizedName($selectedMajor);
+            }
+        }
         return $this->localizedName($this->major);
     }
 
@@ -677,7 +684,7 @@ class extends Component {
 ?>
 
 <div>
-    <x-slot:title>{{ __('Training Programs') }} - {{ $this->majorLabel }}</x-slot:title>
+    <x-slot:title>{{ __('Training Programs') }} - {{ __('Specialized') }} {{ $this->specializationLabel }}</x-slot:title>
 
 {{--    <x-slot:breadcrumb>--}}
 {{--        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>--}}
@@ -877,7 +884,7 @@ class extends Component {
                 </x-card>
 
                 @if($currentSemesterTimeline)
-                    <x-modal wire:model="showSemesterTimelineModal" title="{{ __('Semester timeline') }}{{ $this->specializationLabel ? ' - ' .__('Specialized') .' '. $this->specializationLabel : '' }}" separator class="modalDisplaySemesterTimeline">
+                    <x-modal wire:model="showSemesterTimelineModal" title="{{ __('Semester timeline') }}{{ $this->majorLabel ? ' - ' .__('Major') .' '. $this->majorLabel : '' }}{{ $this->specializationLabel ? ' - ' .__('Specialized') .' '. $this->specializationLabel : '' }}" separator class="modalDisplaySemesterTimeline">
                         @php
                             $buildSemesterRows = function ($semester) use ($activeProgram) {
                                 if (!$semester) {
