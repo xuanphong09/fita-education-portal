@@ -884,7 +884,21 @@ class extends Component {
                 </x-card>
 
                 @if($currentSemesterTimeline)
-                    <x-modal wire:model="showSemesterTimelineModal" title="{{ __('Semester timeline') }}{{ $this->majorLabel ? ' - ' .__('Major') .' '. $this->majorLabel : '' }}{{ $this->specializationLabel ? ' - ' .__('Specialized') .' '. $this->specializationLabel : '' }}" separator class="modalDisplaySemesterTimeline">
+                    @php
+                        $title = __('Semester timeline');
+
+                        if ($this->majorLabel && $this->specializationLabel) {
+                            if ($this->majorLabel === $this->specializationLabel) {
+                                $title .= ' - ' . __('Major/Specialized') . ' ' . $this->majorLabel;
+                            } else {
+                                $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
+                                $title .= ' - ' . __('Specialized') . ' ' . $this->specializationLabel;
+                            }
+                        }
+                    @endphp
+                    <x-modal wire:model="showSemesterTimelineModal" :title="$title"
+                         separator class="modalDisplaySemesterTimeline"
+                    >
                         @php
                             $buildSemesterRows = function ($semester) use ($activeProgram) {
                                 if (!$semester) {
