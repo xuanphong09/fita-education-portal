@@ -1227,7 +1227,7 @@ class extends Component {
                         </div>
 
                         <x-slot:actions>
-                            <x-button label="{{ __('Close') }}" class="btn-primary text-white" wire:click="$wire.showSemesterTimelineModal = false" />
+                            <x-button label="{{ __('Close') }}" class="bg-fita2 text-white" wire:click="$wire.showSemesterTimelineModal = false" />
                         </x-slot:actions>
                     </x-modal>
                 @endif
