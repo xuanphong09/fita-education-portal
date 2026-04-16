@@ -240,8 +240,8 @@ class extends Component {
 {{--    @dd($configBanner->content_data['autoplay'])--}}
     <x-carousel
         :slides="$slides"
-        :autoplay="$configBanner->content_data['autoplay']"
-        :interval="$configBanner->content_data['interval']"
+        :autoplay="$configBanner->content_data['autoplay'] ?? false"
+        :interval="$configBanner->content_data['interval'] ?? 5000"
         class="h-auto rounded-none w-full bg-cover bg-center bg-no-repeat overflow-hidden aspect-2/1 md:aspect-5/2 lg:aspect-7/2 custom-carousel"
     >
         @scope('content', $slide)

@@ -321,8 +321,10 @@ class extends Component {
     public function mount()
     {
         $configBanner = Page::where('slug', 'banner')->first();
-        $this->autoplay = $configBanner->getTranslation('content_data', 'vi')['autoplay'] ?? false;
-        $this->interval = $configBanner->getTranslation('content_data', 'vi')['interval'] ?? 5000;
+        if ($configBanner){
+            $this->autoplay = $configBanner->getTranslation('content_data', 'vi')['autoplay'] ?? false;
+            $this->interval = $configBanner->getTranslation('content_data', 'vi')['interval'] ?? 5000;
+        }
      }
 };
 ?>
