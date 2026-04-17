@@ -379,10 +379,10 @@
             const code = String(event.code || '');
             const isCtrlOrMeta = event.ctrlKey || event.metaKey;
 
-            if (key === 'f12' || key === 'printscreen' || code === 'PrintScreen') {
-                stopEvent(event);
-                return;
-            }
+            // if (key === 'f12' || key === 'printscreen' || code === 'PrintScreen') {
+            //     stopEvent(event);
+            //     return;
+            // }
 
             if (isCtrlOrMeta && blockedComboKeys.has(key)) {
                 stopEvent(event);
