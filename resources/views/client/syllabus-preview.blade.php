@@ -22,9 +22,9 @@
 
         <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
             @if($previewType === 'pdf')
-                <iframe src="{{ $downloadUrl }}" title="Syllabus Preview" class="h-[82vh] w-full rounded-lg" loading="lazy"></iframe>
+                <iframe src="{{ $downloadUrl }}" title="Syllabus Preview" class="h-[77vh] w-full rounded-lg" loading="lazy"></iframe>
             @elseif($previewType === 'office')
-                <iframe src="{{ $officeEmbedUrl }}" title="Syllabus Preview" class="h-[82vh] w-full rounded-lg" loading="lazy"></iframe>
+                <iframe src="{{ $officeEmbedUrl }}" title="Syllabus Preview" class="h-[77vh] w-full rounded-lg" loading="lazy"></iframe>
                 <div class="border-t px-4 py-3 text-sm text-gray-600">
                     {{ __('If preview does not load, please use the download button.') }}
                 </div>
@@ -36,6 +36,7 @@
             @endif
         </div>
     </div>
+    <livewire:footer-copyright/>
 </body>
 </html>
 
