@@ -113,6 +113,35 @@ new class extends Component {
         ];
     }
 
+    protected function syllabusPreviewType(?string $path): string
+    {
+        $extension = strtolower((string) pathinfo((string) $path, PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'pdf' => 'pdf',
+            'doc', 'docx' => 'office',
+            default => 'download',
+        };
+    }
+
+    protected function syllabusFileUrl(?string $path): ?string
+    {
+        if (!filled($path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $path);
+    }
+
+    protected function syllabusPreviewUrl(?string $path): ?string
+    {
+        if (!filled($path)) {
+            return null;
+        }
+
+        return route('client.subject-syllabus.preview', ['subject' => $this->id]);
+    }
+
     protected function validationAttributes(): array
     {
         return [
@@ -410,11 +439,15 @@ new class extends Component {
                 <div class="mt-3 text-xs text-gray-500">
                     Gợi ý: tổng LT + TH bằng tổng tín chỉ của môn học.
                 </div>
-
+                @if($this->current_syllabus_path && !$this->remove_syllabus)
+                    @php
+                        $previewUrl = $this->syllabusPreviewUrl($this->current_syllabus_path);
+                    @endphp
+                @endif
                 <div class="mt-4 space-y-2">
                     @if($this->current_syllabus_path && !$this->remove_syllabus)
                         <div class="rounded border border-primary/20 bg-primary/5 p-3 text-sm">
-                            <a href="{{ Storage::url($this->current_syllabus_path) }}" target="_blank" rel="noopener noreferrer"
+                            <a href="{{ $previewUrl }}" target="_blank" rel="noopener noreferrer"
                                class="text-primary hover:underline font-medium">
                                 {{ $this->current_syllabus_name ?: __('Xem đề cương hiện tại') }}
                             </a>
