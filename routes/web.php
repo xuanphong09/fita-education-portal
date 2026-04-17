@@ -1,9 +1,12 @@
 <?php
 
 use App\Http\Controllers\AuthenticateController;
+use App\Http\Controllers\SubjectSyllabusController;
 use App\Http\Middleware\SetAdminLocale;
 use App\Models\Subject;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 Route::livewire('/', 'pages::client.home2')->name('client.home');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
@@ -11,26 +14,10 @@ Route::livewire('/lien-he', 'pages::client.contact')->name('client.contact');
 Route::livewire('/search', 'pages::client.search')->name('client.search');
 Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');
 Route::livewire('/chuong-trinh-dao-tao', 'pages::client.training-programs.major')->name('client.training-programs.major');
-Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}', function (Subject $subject) {
-    if (!filled($subject->syllabus_path)) {
-        abort(404);
-    }
-
-    $relativeUrl = Storage::disk('public')->url((string) $subject->syllabus_path);
-    $absoluteUrl = url($relativeUrl);
-    $extension = strtolower((string) pathinfo((string) $subject->syllabus_path, PATHINFO_EXTENSION));
-    $previewType = in_array($extension, ['doc', 'docx'], true)
-        ? 'office'
-        : ($extension === 'pdf' ? 'pdf' : 'download');
-
-    return view('client.syllabus-preview', [
-        'subject' => $subject,
-        'downloadUrl' => $relativeUrl,
-        'downloadFilename' => $subject->syllabus_original_name ?: basename((string) $subject->syllabus_path),
-        'officeEmbedUrl' => 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($absoluteUrl),
-        'previewType' => $previewType,
-    ]);
-})->name('client.subject-syllabus.preview');
+Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}/stream', [SubjectSyllabusController::class, 'stream'])
+    ->name('client.subject-syllabus.stream');
+Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}', [SubjectSyllabusController::class, 'preview'])
+    ->name('client.subject-syllabus.preview');
 
 // Posts
 Route::livewire('/bai-viet', 'pages::client.posts.index')->name('client.posts.index');

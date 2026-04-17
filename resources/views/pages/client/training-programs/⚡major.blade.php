@@ -323,7 +323,7 @@ class extends Component {
             return $nameHtml;
         }
 
-        return '<a href="' . e($syllabusUrl) . '" target="_blank" rel="noopener noreferrer" class="hover:text-fita2 hover:underline">'
+        return '<a href="' . e($syllabusUrl) . '" target="_blank" rel="noopener noreferrer" class="text-fita2 hover:opacity-85">'
             . $nameHtml
             . '</a>';
     }

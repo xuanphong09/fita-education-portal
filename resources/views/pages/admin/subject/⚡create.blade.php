@@ -36,7 +36,7 @@ new class extends Component {
             'syllabus_file' => [
                 'nullable',
                 'file',
-                'mimes:pdf,doc,docx',
+                'mimes:pdf',
                 'mimetypes:' . implode(',', $this->allowedSyllabusMimeTypes()),
                 function ($attribute, $value, $fail) {
                     if (!$value) {
@@ -46,7 +46,7 @@ new class extends Component {
                     $detectedMime = strtolower((string) $value->getMimeType());
 
                     if (!in_array($detectedMime, $this->allowedSyllabusMimeTypes(), true)) {
-                        $fail('Định dạng nội dung file không hợp lệ. Chỉ chấp nhận PDF, DOC hoặc DOCX.');
+                        $fail('Định dạng nội dung file không hợp lệ. Chỉ chấp nhận PDF.');
                     }
                 },
                 'max:10240',
@@ -65,8 +65,8 @@ new class extends Component {
         'credits_theory.regex' => 'Tín chỉ lý thuyết chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'credits_practice.required' => 'Tín chỉ thực hành không được để trống.',
         'credits_practice.regex' => 'Tín chỉ thực hành chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
-        'syllabus_file.mimes' => 'Đề cương môn học chỉ hỗ trợ định dạng PDF, DOC hoặc DOCX.',
-        'syllabus_file.mimetypes' => 'Nội dung file không đúng định dạng PDF, DOC hoặc DOCX hợp lệ.',
+        'syllabus_file.mimes' => 'Đề cương môn học chỉ hỗ trợ định dạng PDF.',
+        'syllabus_file.mimetypes' => 'Nội dung file không đúng định dạng PDF hợp lệ.',
         'syllabus_file.max' => 'Đề cương môn học không được vượt quá 10MB.',
     ];
 
@@ -74,8 +74,6 @@ new class extends Component {
     {
         return [
             'application/pdf',
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ];
     }
 
@@ -209,7 +207,7 @@ new class extends Component {
         $syllabusOriginalName = null;
 
         if ($this->syllabus_file) {
-            $syllabusPath = $this->syllabus_file->store('uploads/subjects/syllabi', 'public');
+            $syllabusPath = $this->syllabus_file->store('uploads/subjects/syllabi', 'local');
             $syllabusOriginalName = (string) $this->syllabus_file->getClientOriginalName();
         }
 
@@ -305,9 +303,9 @@ new class extends Component {
 
                 <div class="mt-4">
                     <x-file
-                        label="Đề cương môn học (PDF, DOC, DOCX)"
+                        label="Đề cương môn học (PDF)"
                         wire:model.live="syllabus_file"
-                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        accept=".pdf,application/pdf"
                         hint="Tối đa 10MB"
                     />
                 </div>

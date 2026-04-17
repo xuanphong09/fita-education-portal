@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Spatie\Translatable\HasTranslations;
 
 class Subject extends Model
@@ -229,7 +229,11 @@ class Subject extends Model
             return null;
         }
 
-        return Storage::disk('public')->url((string) $this->syllabus_path);
+        return URL::temporarySignedRoute(
+            'client.subject-syllabus.stream',
+            now()->addMinutes(15),
+            ['subject' => $this->id]
+        );
     }
 
     public function getSyllabusPreviewUrlAttribute(): ?string
