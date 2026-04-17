@@ -598,9 +598,7 @@ class extends Component {
                                 'code' => (string) $subject->code,
                                 'name' => $this->localizedName($subject),
                                 'syllabus_url' => $subject->syllabus_url,
-                                'syllabus_preview_url' => $subject->syllabus_path
-                                    ? route('client.subject-syllabus.preview', ['subject' => $subject->id])
-                                    : null,
+                                'syllabus_preview_url' => $subject->syllabus_preview_url,
                                 'credits' => (float) ($subject->credits ?? 0),
                                 'theory' => (float) ($subject->credits_theory ?? 0),
                                 'practice' => (float) ($subject->credits_practice ?? 0),
@@ -964,9 +962,7 @@ class extends Component {
                                             'code' => (string) $subject->code,
                                             'name' => $this->localizedName($subject),
                                             'syllabus_url' => $subject->syllabus_url,
-                                            'syllabus_preview_url' => $subject->syllabus_path
-                                                ? route('client.subject-syllabus.preview', ['subject' => $subject->id])
-                                                : null,
+                                            'syllabus_preview_url' => $subject->syllabus_preview_url,
                                             'credits' => (float) ($subject->credits ?? 0),
                                             'theory' => (float) ($subject->credits_theory ?? 0),
                                             'practice' => (float) ($subject->credits_practice ?? 0),

@@ -232,6 +232,15 @@ class Subject extends Model
         return Storage::disk('public')->url((string) $this->syllabus_path);
     }
 
+    public function getSyllabusPreviewUrlAttribute(): ?string
+    {
+        if (!filled($this->syllabus_path)) {
+            return null;
+        }
+
+        return route('client.subject-syllabus.preview', ['subject' => $this->id]);
+    }
+
     public function getHasSyllabusAttribute(): bool
     {
         return filled($this->syllabus_path);
