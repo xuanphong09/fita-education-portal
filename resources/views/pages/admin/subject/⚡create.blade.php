@@ -5,10 +5,11 @@ use App\Models\Subject;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
 
 new class extends Component {
-    use Toast;
+    use Toast, WithFileUploads;
 
     public string $code = '';
     public string $name_vi = '';
@@ -19,6 +20,7 @@ new class extends Component {
     public string $credits_practice = '0';
     public bool $is_active = true;
     public array $prerequisite_subject_ids = [];
+    public $syllabus_file;
 
     protected function rules(): array
     {
@@ -31,6 +33,24 @@ new class extends Component {
             'credits_theory' => $this->decimalRules('Tín chỉ lý thuyết'),
             'credits_practice' => $this->decimalRules('Tín chỉ thực hành'),
             'is_active' => ['boolean'],
+            'syllabus_file' => [
+                'nullable',
+                'file',
+                'mimes:pdf,doc,docx',
+                'mimetypes:' . implode(',', $this->allowedSyllabusMimeTypes()),
+                function ($attribute, $value, $fail) {
+                    if (!$value) {
+                        return;
+                    }
+
+                    $detectedMime = strtolower((string) $value->getMimeType());
+
+                    if (!in_array($detectedMime, $this->allowedSyllabusMimeTypes(), true)) {
+                        $fail('Định dạng nội dung file không hợp lệ. Chỉ chấp nhận PDF, DOC hoặc DOCX.');
+                    }
+                },
+                'max:10240',
+            ],
         ];
     }
 
@@ -45,7 +65,19 @@ new class extends Component {
         'credits_theory.regex' => 'Tín chỉ lý thuyết chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'credits_practice.required' => 'Tín chỉ thực hành không được để trống.',
         'credits_practice.regex' => 'Tín chỉ thực hành chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
+        'syllabus_file.mimes' => 'Đề cương môn học chỉ hỗ trợ định dạng PDF, DOC hoặc DOCX.',
+        'syllabus_file.mimetypes' => 'Nội dung file không đúng định dạng PDF, DOC hoặc DOCX hợp lệ.',
+        'syllabus_file.max' => 'Đề cương môn học không được vượt quá 10MB.',
     ];
+
+    protected function allowedSyllabusMimeTypes(): array
+    {
+        return [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+    }
 
     protected function validationAttributes(): array
     {
@@ -173,7 +205,18 @@ new class extends Component {
             throw $e;
         }
 
-        $subject = Subject::query()->create($this->payload());
+        $syllabusPath = null;
+        $syllabusOriginalName = null;
+
+        if ($this->syllabus_file) {
+            $syllabusPath = $this->syllabus_file->store('uploads/subjects/syllabi', 'public');
+            $syllabusOriginalName = (string) $this->syllabus_file->getClientOriginalName();
+        }
+
+        Subject::query()->create(array_merge($this->payload(), [
+            'syllabus_path' => $syllabusPath,
+            'syllabus_original_name' => $syllabusOriginalName,
+        ]));
 
         $this->success('Tạo môn học thành công!', redirectTo: route('admin.subject.index'));
     }
@@ -258,6 +301,15 @@ new class extends Component {
                 @enderror
                 <div class="mt-3 text-xs text-gray-500">
                     Gợi ý: tổng LT + TH bằng tổng tín chỉ của môn học.
+                </div>
+
+                <div class="mt-4">
+                    <x-file
+                        label="Đề cương môn học (PDF, DOC, DOCX)"
+                        wire:model.live="syllabus_file"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        hint="Tối đa 10MB"
+                    />
                 </div>
             </x-card>
         </div>

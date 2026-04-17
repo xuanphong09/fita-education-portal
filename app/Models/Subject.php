@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 use Spatie\Translatable\HasTranslations;
 
 class Subject extends Model
@@ -22,6 +23,8 @@ class Subject extends Model
         'credits_practice',
         'group_subject_id',
         'is_active',
+        'syllabus_path',
+        'syllabus_original_name',
     ];
 
     public array $translatable = [
@@ -34,6 +37,8 @@ class Subject extends Model
         'credits_practice' => 'decimal:1',
         'group_subject_id' => 'integer',
         'is_active' => 'boolean',
+        'syllabus_path' => 'string',
+        'syllabus_original_name' => 'string',
     ];
 
     public function groupSubject(): BelongsTo
@@ -216,6 +221,20 @@ class Subject extends Model
     public function getCreditsPracticeDisplayAttribute(): string
     {
         return self::formatCredit($this->credits_practice);
+    }
+
+    public function getSyllabusUrlAttribute(): ?string
+    {
+        if (!filled($this->syllabus_path)) {
+            return null;
+        }
+
+        return Storage::disk('public')->url((string) $this->syllabus_path);
+    }
+
+    public function getHasSyllabusAttribute(): bool
+    {
+        return filled($this->syllabus_path);
     }
 }
 

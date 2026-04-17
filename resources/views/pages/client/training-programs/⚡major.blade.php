@@ -207,7 +207,6 @@ class extends Component {
         return Str::lower(Str::ascii(trim((string) $value)));
     }
 
-
     protected function highlightMatch(?string $value): string
     {
         $text = trim((string) $value);
@@ -310,6 +309,23 @@ class extends Component {
         }
 
         return $result;
+    }
+
+
+
+
+    protected function renderSubjectName(array $subject): string
+    {
+        $nameHtml = $this->highlightMatch((string) ($subject['name'] ?? ''));
+        $syllabusUrl = trim((string) ($subject['syllabus_preview_url'] ?? ($subject['syllabus_url'] ?? '')));
+
+        if ($syllabusUrl === '') {
+            return $nameHtml;
+        }
+
+        return '<a href="' . e($syllabusUrl) . '" target="_blank" rel="noopener noreferrer" class="hover:text-fita2 hover:underline">'
+            . $nameHtml
+            . '</a>';
     }
 
     protected function buildNormalizedIndexMap(string $text): array
@@ -581,6 +597,10 @@ class extends Component {
                                 'id' => (int) $subject->id,
                                 'code' => (string) $subject->code,
                                 'name' => $this->localizedName($subject),
+                                'syllabus_url' => $subject->syllabus_url,
+                                'syllabus_preview_url' => $subject->syllabus_path
+                                    ? route('client.subject-syllabus.preview', ['subject' => $subject->id])
+                                    : null,
                                 'credits' => (float) ($subject->credits ?? 0),
                                 'theory' => (float) ($subject->credits_theory ?? 0),
                                 'practice' => (float) ($subject->credits_practice ?? 0),
@@ -943,6 +963,10 @@ class extends Component {
                                             'row_index' => $index + 1,
                                             'code' => (string) $subject->code,
                                             'name' => $this->localizedName($subject),
+                                            'syllabus_url' => $subject->syllabus_url,
+                                            'syllabus_preview_url' => $subject->syllabus_path
+                                                ? route('client.subject-syllabus.preview', ['subject' => $subject->id])
+                                                : null,
                                             'credits' => (float) ($subject->credits ?? 0),
                                             'theory' => (float) ($subject->credits_theory ?? 0),
                                             'practice' => (float) ($subject->credits_practice ?? 0),
@@ -998,7 +1022,7 @@ class extends Component {
                                         @endscope
 
                                         @scope('cell_name', $subject)
-                                        {!! $this->highlightMatch($subject['name']) !!}
+                                        {!! $this->renderSubjectName($subject) !!}
                                         @endscope
 
                                         @scope('cell_credits', $subject)
@@ -1130,7 +1154,7 @@ class extends Component {
                                             @endscope
 
                                             @scope('cell_name', $subject)
-                                            {!! $this->highlightMatch($subject['name']) !!}
+                                            {!! $this->renderSubjectName($subject) !!}
                                             @endscope
 
                                             @scope('cell_credits', $subject)
@@ -1294,7 +1318,7 @@ class extends Component {
                                                     @endscope
 
                                                     @scope('cell_name', $subject)
-                                                    {!! $this->highlightMatch($subject['name']) !!}
+                                                    {!! $this->renderSubjectName($subject) !!}
                                                     @endscope
 
                                                     @scope('cell_credits', $subject)
@@ -1429,7 +1453,7 @@ class extends Component {
                                                 @endscope
 
                                                 @scope('cell_name', $subject)
-                                                {!! $this->highlightMatch($subject['name']) !!}
+                                                {!! $this->renderSubjectName($subject) !!}
                                                 @endscope
 
                                                 @scope('cell_credits', $subject)
