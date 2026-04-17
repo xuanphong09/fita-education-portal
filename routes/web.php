@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthenticateController;
+use App\Http\Controllers\SubjectSyllabusController;
 use App\Http\Middleware\SetAdminLocale;
 use App\Models\Subject;
 use Illuminate\Http\Request;
@@ -13,82 +14,10 @@ Route::livewire('/lien-he', 'pages::client.contact')->name('client.contact');
 Route::livewire('/search', 'pages::client.search')->name('client.search');
 Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');
 Route::livewire('/chuong-trinh-dao-tao', 'pages::client.training-programs.major')->name('client.training-programs.major');
-Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}/stream', function (Request $request, Subject $subject) {
-    if (!filled($subject->syllabus_path)) {
-        abort(404);
-    }
-
-    $isAuthorized = $request->hasValidSignature();
-
-    if (!$isAuthorized) {
-        $token = (string) $request->query('token', '');
-        $tokenSessionKey = 'syllabus_stream_token_' . $subject->id;
-        $tokenUsedSessionKey = 'syllabus_stream_token_used_' . $subject->id;
-        $sessionToken = (string) session($tokenSessionKey, '');
-        $tokenWasUsed = (bool) session($tokenUsedSessionKey, false);
-
-        if ($token !== '' && $sessionToken !== '' && !$tokenWasUsed && hash_equals($sessionToken, $token)) {
-            $isAuthorized = true;
-            session([$tokenUsedSessionKey => true]);
-            session()->forget($tokenSessionKey);
-        }
-    }
-
-    if (!$isAuthorized) {
-        abort(403);
-    }
-
-    $path = (string) $subject->syllabus_path;
-    $disk = Storage::disk('local')->exists($path)
-        ? 'local'
-        : (Storage::disk('public')->exists($path) ? 'public' : null);
-
-    if (!$disk) {
-        abort(404);
-    }
-
-    $fullPath = Storage::disk($disk)->path($path);
-    $mimeType = Storage::disk($disk)->mimeType($path) ?: 'application/octet-stream';
-
-    return response()->file($fullPath, [
-        'Content-Type' => $mimeType,
-        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
-        'Pragma' => 'no-cache',
-        'Expires' => '0',
-        'X-Content-Type-Options' => 'nosniff',
-    ]);
-})->name('client.subject-syllabus.stream');
-
-Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}', function (Subject $subject) {
-    if (!filled($subject->syllabus_path)) {
-        abort(404);
-    }
-
-    $streamToken = bin2hex(random_bytes(24));
-    $tokenSessionKey = 'syllabus_stream_token_' . $subject->id;
-    $tokenUsedSessionKey = 'syllabus_stream_token_used_' . $subject->id;
-
-    session([
-        $tokenSessionKey => $streamToken,
-        $tokenUsedSessionKey => false,
-    ]);
-
-    $streamUrl = route('client.subject-syllabus.stream', [
-        'subject' => $subject->id,
-        'token' => $streamToken,
-    ]);
-
-    $extension = strtolower((string) pathinfo((string) $subject->syllabus_path, PATHINFO_EXTENSION));
-    $previewType = $extension === 'pdf' ? 'pdf' : 'download';
-
-    return view('client.syllabus-preview', [
-        'subject' => $subject,
-        'downloadUrl' => $streamUrl,
-        'downloadFilename' => $subject->syllabus_original_name ?: basename((string) $subject->syllabus_path),
-        'officeEmbedUrl' => 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($streamUrl),
-        'previewType' => $previewType,
-    ]);
-})->name('client.subject-syllabus.preview');
+Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}/stream', [SubjectSyllabusController::class, 'stream'])
+    ->name('client.subject-syllabus.stream');
+Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}', [SubjectSyllabusController::class, 'preview'])
+    ->name('client.subject-syllabus.preview');
 
 // Posts
 Route::livewire('/bai-viet', 'pages::client.posts.index')->name('client.posts.index');
