@@ -260,5 +260,10 @@
     "Please select major, specialization, and intake to view the training program.": "Vui lòng chọn ngành, chuyên ngành và khóa để xem chương trình đào tạo.",
     "Specialized training program ": "CTĐT chuyên ngành ",
     "Specialized": "Chuyên ngành",
-    "Major/Specialized": "Ngành/Chuyên ngành"
+    "Major/Specialized": "Ngành/Chuyên ngành",
+    "Course Syllabus": "Đề cương môn học",
+    "Download file": "Tải file",
+    "If preview does not load, please use the download button.": "Nếu bản xem trước không xem được, vui lòng sử dụng nút tải xuống",
+    "This file type is not supported for inline preview in browser.": "Loại tệp này không được hỗ trợ xem trực tiếp trong trình duyệt.",
+    "Please use the download button above.": "Vui lòng sử dụng nút tải xuống ở trên."
 }

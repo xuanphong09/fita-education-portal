@@ -3,6 +3,7 @@
 use App\Models\GroupSubject;
 use App\Models\Subject;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -94,7 +95,13 @@ new class extends Component {
     public function confirmForceDelete(int $id): void
     {
         try {
-            Subject::onlyTrashed()->findOrFail($id)->forceDelete();
+            $subject = Subject::onlyTrashed()->findOrFail($id);
+
+            if ($subject->syllabus_path && Storage::disk('public')->exists($subject->syllabus_path)) {
+                Storage::disk('public')->delete($subject->syllabus_path);
+            }
+
+            $subject->forceDelete();
             $this->success('Đã xóa vĩnh viễn môn học.');
         } catch (QueryException) {
             $this->error('Không thể xóa vĩnh viễn vì môn học vẫn còn ràng buộc dữ liệu.');

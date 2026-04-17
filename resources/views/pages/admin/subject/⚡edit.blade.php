@@ -8,10 +8,12 @@ use App\Models\TrainingProgram;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
+use Illuminate\Support\Facades\Storage;
 
 new class extends Component {
-    use Toast;
+    use Toast, WithFileUploads;
 
     public int $id;
     public string $code = '';
@@ -23,6 +25,10 @@ new class extends Component {
     public string $credits_practice = '0';
     public bool $is_active = true;
     public array $prerequisite_subject_ids = [];
+    public $syllabus_file;
+    public ?string $current_syllabus_path = null;
+    public ?string $current_syllabus_name = null;
+    public bool $remove_syllabus = false;
 
     public function mount(int $id): void
     {
@@ -39,6 +45,8 @@ new class extends Component {
         $this->credits_theory = Subject::formatCredit($subject->credits_theory);
         $this->credits_practice = Subject::formatCredit($subject->credits_practice);
         $this->is_active = (bool)$subject->is_active;
+        $this->current_syllabus_path = $subject->syllabus_path;
+        $this->current_syllabus_name = $subject->syllabus_original_name;
         $programId = $this->programIdsUsingSubject()->first();
 
         $this->prerequisite_subject_ids = $programId
@@ -59,6 +67,24 @@ new class extends Component {
             'is_active' => ['boolean'],
             'prerequisite_subject_ids' => ['array'],
             'prerequisite_subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
+            'syllabus_file' => [
+                'nullable',
+                'file',
+                'mimes:pdf,doc,docx',
+                'mimetypes:' . implode(',', $this->allowedSyllabusMimeTypes()),
+                function ($attribute, $value, $fail) {
+                    if (!$value) {
+                        return;
+                    }
+
+                    $detectedMime = strtolower((string) $value->getMimeType());
+
+                    if (!in_array($detectedMime, $this->allowedSyllabusMimeTypes(), true)) {
+                        $fail('Định dạng nội dung file không hợp lệ. Chỉ chấp nhận PDF, DOC hoặc DOCX.');
+                    }
+                },
+                'max:10240',
+            ],
         ];
     }
 
@@ -73,7 +99,19 @@ new class extends Component {
         'credits_theory.regex' => 'Tín chỉ lý thuyết chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'credits_practice.required' => 'Tín chỉ thực hành không được để trống.',
         'credits_practice.regex' => 'Tín chỉ thực hành chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
+        'syllabus_file.mimes' => 'Đề cương môn học chỉ hỗ trợ định dạng PDF, DOC hoặc DOCX.',
+        'syllabus_file.mimetypes' => 'Nội dung file không đúng định dạng PDF, DOC hoặc DOCX hợp lệ.',
+        'syllabus_file.max' => 'Đề cương môn học không được vượt quá 10MB.',
     ];
+
+    protected function allowedSyllabusMimeTypes(): array
+    {
+        return [
+            'application/pdf',
+            'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ];
+    }
 
     protected function validationAttributes(): array
     {
@@ -239,6 +277,12 @@ new class extends Component {
         ];
     }
 
+    public function removeCurrentSyllabus(): void
+    {
+        $this->remove_syllabus = true;
+        $this->syllabus_file = null;
+    }
+
     public function save(): void
     {
         if ($this->group_subject_id === '') {
@@ -260,7 +304,37 @@ new class extends Component {
         }
 
         $subject = Subject::query()->findOrFail($this->id);
-        $subject->update($this->payload());
+
+        $syllabusPath = $subject->syllabus_path;
+        $syllabusOriginalName = $subject->syllabus_original_name;
+
+        if ($this->remove_syllabus && $syllabusPath) {
+            if (Storage::disk('public')->exists($syllabusPath)) {
+                Storage::disk('public')->delete($syllabusPath);
+            }
+
+            $syllabusPath = null;
+            $syllabusOriginalName = null;
+        }
+
+        if ($this->syllabus_file) {
+            if ($syllabusPath && Storage::disk('public')->exists($syllabusPath)) {
+                Storage::disk('public')->delete($syllabusPath);
+            }
+
+            $syllabusPath = $this->syllabus_file->store('uploads/subjects/syllabi', 'public');
+            $syllabusOriginalName = (string) $this->syllabus_file->getClientOriginalName();
+        }
+
+        $subject->update(array_merge($this->payload(), [
+            'syllabus_path' => $syllabusPath,
+            'syllabus_original_name' => $syllabusOriginalName,
+        ]));
+
+        $this->current_syllabus_path = $subject->syllabus_path;
+        $this->current_syllabus_name = $subject->syllabus_original_name;
+        $this->remove_syllabus = false;
+        $this->syllabus_file = null;
 
         $prerequisiteIds = $this->normalizePrerequisiteIds();
 
@@ -335,6 +409,32 @@ new class extends Component {
                 @enderror
                 <div class="mt-3 text-xs text-gray-500">
                     Gợi ý: tổng LT + TH bằng tổng tín chỉ của môn học.
+                </div>
+
+                <div class="mt-4 space-y-2">
+                    @if($this->current_syllabus_path && !$this->remove_syllabus)
+                        <div class="rounded border border-primary/20 bg-primary/5 p-3 text-sm">
+                            <a href="{{ Storage::url($this->current_syllabus_path) }}" target="_blank" rel="noopener noreferrer"
+                               class="text-primary hover:underline font-medium">
+                                {{ $this->current_syllabus_name ?: __('Xem đề cương hiện tại') }}
+                            </a>
+
+                            <div class="mt-2">
+                                <x-button
+                                    label="Gỡ đề cương hiện tại"
+                                    class="btn-xs btn-outline btn-error"
+                                    wire:click="removeCurrentSyllabus"
+                                />
+                            </div>
+                        </div>
+                    @endif
+
+                    <x-file
+                        label="Đề cương môn học (PDF, DOC, DOCX)"
+                        wire:model.live="syllabus_file"
+                        accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        hint="Tối đa 10MB"
+                    />
                 </div>
             </x-card>
 
