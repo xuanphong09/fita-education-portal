@@ -81,9 +81,9 @@
 
 @if($previewType === 'pdf')
     <script type="module">
-        import * as pdfjsLib from "{{ asset('assets/js/pdfjs/pdf.mjs') }}";
+        import * as pdfjsLib from "{{ asset('assets/js/pdfjs/pdf.js') }}";
         document.addEventListener('DOMContentLoaded', function () {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = "{{ asset('assets/js/pdfjs/pdf.worker.mjs') }}";
+            pdfjsLib.GlobalWorkerOptions.workerSrc = "{{ asset('assets/js/pdfjs/pdf.worker.js') }}";
 
             const url = '{{ $downloadUrl }}';
             const viewer = document.getElementById('pdf-viewer');
