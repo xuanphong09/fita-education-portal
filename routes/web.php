@@ -3,7 +3,9 @@
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Middleware\SetAdminLocale;
 use App\Models\Subject;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 Route::livewire('/', 'pages::client.home2')->name('client.home');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
@@ -11,23 +13,79 @@ Route::livewire('/lien-he', 'pages::client.contact')->name('client.contact');
 Route::livewire('/search', 'pages::client.search')->name('client.search');
 Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');
 Route::livewire('/chuong-trinh-dao-tao', 'pages::client.training-programs.major')->name('client.training-programs.major');
+Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}/stream', function (Request $request, Subject $subject) {
+    if (!filled($subject->syllabus_path)) {
+        abort(404);
+    }
+
+    $isAuthorized = $request->hasValidSignature();
+
+    if (!$isAuthorized) {
+        $token = (string) $request->query('token', '');
+        $tokenSessionKey = 'syllabus_stream_token_' . $subject->id;
+        $tokenUsedSessionKey = 'syllabus_stream_token_used_' . $subject->id;
+        $sessionToken = (string) session($tokenSessionKey, '');
+        $tokenWasUsed = (bool) session($tokenUsedSessionKey, false);
+
+        if ($token !== '' && $sessionToken !== '' && !$tokenWasUsed && hash_equals($sessionToken, $token)) {
+            $isAuthorized = true;
+            session([$tokenUsedSessionKey => true]);
+            session()->forget($tokenSessionKey);
+        }
+    }
+
+    if (!$isAuthorized) {
+        abort(403);
+    }
+
+    $path = (string) $subject->syllabus_path;
+    $disk = Storage::disk('local')->exists($path)
+        ? 'local'
+        : (Storage::disk('public')->exists($path) ? 'public' : null);
+
+    if (!$disk) {
+        abort(404);
+    }
+
+    $fullPath = Storage::disk($disk)->path($path);
+    $mimeType = Storage::disk($disk)->mimeType($path) ?: 'application/octet-stream';
+
+    return response()->file($fullPath, [
+        'Content-Type' => $mimeType,
+        'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma' => 'no-cache',
+        'Expires' => '0',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->name('client.subject-syllabus.stream');
+
 Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}', function (Subject $subject) {
     if (!filled($subject->syllabus_path)) {
         abort(404);
     }
 
-    $relativeUrl = Storage::disk('public')->url((string) $subject->syllabus_path);
-    $absoluteUrl = url($relativeUrl);
+    $streamToken = bin2hex(random_bytes(24));
+    $tokenSessionKey = 'syllabus_stream_token_' . $subject->id;
+    $tokenUsedSessionKey = 'syllabus_stream_token_used_' . $subject->id;
+
+    session([
+        $tokenSessionKey => $streamToken,
+        $tokenUsedSessionKey => false,
+    ]);
+
+    $streamUrl = route('client.subject-syllabus.stream', [
+        'subject' => $subject->id,
+        'token' => $streamToken,
+    ]);
+
     $extension = strtolower((string) pathinfo((string) $subject->syllabus_path, PATHINFO_EXTENSION));
-    $previewType = in_array($extension, ['doc', 'docx'], true)
-        ? 'office'
-        : ($extension === 'pdf' ? 'pdf' : 'download');
+    $previewType = $extension === 'pdf' ? 'pdf' : 'download';
 
     return view('client.syllabus-preview', [
         'subject' => $subject,
-        'downloadUrl' => $relativeUrl,
+        'downloadUrl' => $streamUrl,
         'downloadFilename' => $subject->syllabus_original_name ?: basename((string) $subject->syllabus_path),
-        'officeEmbedUrl' => 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($absoluteUrl),
+        'officeEmbedUrl' => 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($streamUrl),
         'previewType' => $previewType,
     ]);
 })->name('client.subject-syllabus.preview');

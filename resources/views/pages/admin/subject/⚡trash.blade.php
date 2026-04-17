@@ -97,8 +97,13 @@ new class extends Component {
         try {
             $subject = Subject::onlyTrashed()->findOrFail($id);
 
-            if ($subject->syllabus_path && Storage::disk('public')->exists($subject->syllabus_path)) {
-                Storage::disk('public')->delete($subject->syllabus_path);
+            if ($subject->syllabus_path) {
+                foreach (['local', 'public'] as $disk) {
+                    if (Storage::disk($disk)->exists($subject->syllabus_path)) {
+                        Storage::disk($disk)->delete($subject->syllabus_path);
+                        break;
+                    }
+                }
             }
 
             $subject->forceDelete();
