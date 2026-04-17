@@ -18,8 +18,8 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-900 select-none" oncontextmenu="return false;">
-<div class="mx-auto max-w-6xl p-4 md:p-6">
+<body class="bg-gray-100 text-gray-900 select-none flex flex-col h-screen" oncontextmenu="return false;">
+<div class="mx-auto max-w-6xl p-4 md:p-6 flex-1 flex flex-col w-full min-h-0">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
         <a href=" {{route('client.home')}}" class="flex items-center ms-5 gap-3" wire:navigate>
             <img src="{{asset('assets/images/FITA.png')}}" class="size-13 md:size-16 rounded-[50%] object-cover shadow-md" alt="Logo" />
@@ -34,7 +34,7 @@
         </div>
     </div>
 
-    <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden">
+    <div class="rounded-lg border border-gray-200 bg-white shadow-sm overflow-hidden flex-1 flex flex-col min-h-0">
         @if($previewType === 'pdf')
             <div class="border-b bg-gray-50 px-4 py-2">
                 <div class="flex flex-wrap items-center gap-2 text-sm">
@@ -57,7 +57,7 @@
                 </div>
             </div>
 
-            <div id="pdf-viewer" class="h-[68vh] w-full overflow-y-auto bg-gray-500 relative">
+            <div id="pdf-viewer" class="flex-1 w-full overflow-y-auto bg-gray-500 relative">
                 <div id="pdf-loading" class="absolute inset-0 flex flex-col items-center justify-center bg-gray-500/90 text-white z-10">
                     <span class="loading loading-spinner loading-lg mb-3"></span>
                     <p id="pdf-loading-text" class="text-sm font-medium">{{ __('Đang tải tài liệu, vui lòng đợi...') }}</p>
@@ -65,7 +65,7 @@
                 <div id="pdf-pages" class="mx-auto flex w-full max-w-5xl flex-col items-center py-6 gap-6"></div>
             </div>
         @elseif($previewType === 'office')
-            <iframe src="{{ $officeEmbedUrl }}" title="Syllabus Preview" class="h-[68vh] w-full border-0" loading="lazy"></iframe>
+            <iframe src="{{ $officeEmbedUrl }}" title="Syllabus Preview" class="flex-1 w-full border-0" loading="lazy"></iframe>
             <div class="border-t px-4 py-3 text-sm text-gray-600">
                 {{ __('If preview does not load, please contact the administrator.') }}
             </div>
@@ -379,10 +379,10 @@
             const code = String(event.code || '');
             const isCtrlOrMeta = event.ctrlKey || event.metaKey;
 
-            // if (key === 'f12' || key === 'printscreen' || code === 'PrintScreen') {
-            //     stopEvent(event);
-            //     return;
-            // }
+            if (key === 'f12' || key === 'printscreen' || code === 'PrintScreen') {
+                stopEvent(event);
+                return;
+            }
 
             if (isCtrlOrMeta && blockedComboKeys.has(key)) {
                 stopEvent(event);
