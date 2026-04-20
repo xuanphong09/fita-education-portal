@@ -126,6 +126,20 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     margin-left: auto;
     margin-right: auto;
 }
+/* Gọi lại dấu chấm tròn cho thẻ ul */
+.tinymce-content ul {
+    list-style-type: disc;
+}
+
+/* Gọi lại số thứ tự cho thẻ ol */
+.tinymce-content ol {
+    list-style-type: decimal;
+}
+
+/* (Tuỳ chọn) Nếu danh sách có lồng nhau (ul trong ul), bạn nên thêm dòng này để nó đổi kiểu dấu chấm cho đẹp */
+.tinymce-content ul ul {
+    list-style-type: circle;
+}
 
 .prose :where(p):not(:where([class~="not-prose"] *)) {
     margin-top: 1.25em;
