@@ -527,7 +527,9 @@ new class extends Component {
         // Xử lý ảnh ngoài cho nội dung bài viết
         $contentImageService = app(ContentImageService::class);
         $content_vi = $contentImageService->downloadAndReplaceExternalImages($this->content_vi);
+        $content_vi = $contentImageService->downloadDocuments($this->content_vi);
         $content_en = $contentImageService->downloadAndReplaceExternalImages($this->content_en);
+        $content_en = $contentImageService->downloadDocuments($this->content_en);
         $content_vi = $this->cleanEmptyHtmlLines($content_vi);
         $content_en = $this->cleanEmptyHtmlLines($content_en);
 

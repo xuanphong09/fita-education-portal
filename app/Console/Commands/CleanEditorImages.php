@@ -14,29 +14,37 @@ class CleanEditorImages extends Command
 
     public function handle()
     {
-        $this->info('Bắt đầu quét ảnh rác...');
-        $deletedCount = 0;
+        // Danh sách các thư mục cần quét rác
+        $folders = [
+            'uploads/posts/editor',
+            'uploads/posts/documents'
+        ];
 
-        // 1. Lấy tất cả các file trong thư mục editor
-        $files = Storage::disk('public')->files('uploads/posts/editor');
+        foreach ($folders as $folder) {
+            $this->info("--- Đang quét thư mục: {$folder} ---");
 
-        foreach ($files as $file) {
-            // Lấy URL của file (VD: /storage/uploads/posts/editor/anh1.jpg)
-            $url = Storage::url($file);
+            // Dùng allFiles() để quét sạch cả các thư mục con (đệ quy)
+            $files = Storage::disk('public')->allFiles($folder);
+            $deletedCount = 0;
 
-            // 2. Tìm xem cái URL này có nằm trong cột content_vi hoặc content_en của bài viết nào không
-            $isUsed = Post::where('content->vi', 'LIKE', '%' . $url . '%')
-                ->orWhere('content->en', 'LIKE', '%' . $url . '%')
-                ->exists();
+            foreach ($files as $file) {
+                $url = Storage::url($file);
+                $path = $file; // Đường dẫn tương đối trong disk
 
-            // 3. Nếu không có bài viết nào dùng ảnh này -> Nó là rác -> XÓA
-            if (!$isUsed) {
-                Storage::disk('public')->delete($file);
-                $this->line("Đã xóa rác: " . $file);
-                $deletedCount++;
+                // 1. Kiểm tra trong nội dung bài viết (Post)
+                $usedInPost = Post::where('content->vi', 'LIKE', '%' . $url . '%')
+                    ->orWhere('content->en', 'LIKE', '%' . $url . '%')
+                    ->exists();
+
+                // 3. Chỉ xóa nếu KHÔNG bài viết nào dùng VÀ KHÔNG môn học nào dùng
+                if (!$usedInPost) {
+                    Storage::disk('public')->delete($file);
+                    $this->line("   [X] Đã xóa: " . $file);
+                    $deletedCount++;
+                }
             }
-        }
 
-        $this->info("Hoàn tất! Đã dọn dẹp {$deletedCount} ảnh rác.");
+            $this->info("Hoàn tất thư mục {$folder}. Đã dọn dẹp {$deletedCount} file rác.");
+        }
     }
 }
