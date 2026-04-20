@@ -257,6 +257,28 @@
 
         $useDynamicHeader = $headerMenuItems->isNotEmpty();
 
+        $isAbsoluteUrl = fn (?string $url): bool => filled($url) && preg_match('/^(https?:)?\/\//i', trim($url)) === 1;
+        $isAbsoluteExternalUrl = function (?string $url) use ($isAbsoluteUrl): bool {
+            if (!$isAbsoluteUrl($url)) {
+                return false;
+            }
+
+            $normalizedUrl = trim((string) $url);
+
+            // parse_url() needs a scheme for protocol-relative links like //example.com
+            if (str_starts_with($normalizedUrl, '//')) {
+                $normalizedUrl = request()->getScheme() . ':' . $normalizedUrl;
+            }
+
+            $targetHost = parse_url($normalizedUrl, PHP_URL_HOST);
+
+            if (!filled($targetHost)) {
+                return true;
+            }
+
+            return strcasecmp((string) $targetHost, request()->getHost()) !== 0;
+        };
+
         $trainingMajors = collect();
 
         if (!$useDynamicHeader) {
@@ -292,6 +314,7 @@
                             <x-button
                                 tabindex="0"
                                 :link="!str_starts_with($item['url'], '#') ? $item['url'] : ''"
+                                :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                                 class="btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                 responsive
                                 x-data="{ isScrolled: false }"
@@ -308,6 +331,7 @@
                                             <div class="dropdown dropdown-hover dropdown-right w-full p-0! auto-flip">
                                                 <x-button
                                                     :link="!str_starts_with($child['url'], '#') ? $child['url'] : ''"
+                                                    :no-wire-navigate="$isAbsoluteExternalUrl($child['url'])"
                                                     class="btn-ghost text-black text-[15px] w-full py-4 px-5 border-transparent font-medium rounded-none flex justify-between hover:bg-fita hover:text-white focus:bg-fita focus:text-white active:bg-fita active:text-white whitespace-nowrap after:content-[''] after:ml-2 after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                                     label="{{ $child['name'] }}"
                                                     x-on:click.prevent="$event.currentTarget.blur()"
@@ -319,6 +343,7 @@
                                                                 class="btn-ghost text-black text-[14px] py-3 px-4 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white focus:bg-fita focus:text-white active:bg-fita active:text-white whitespace-nowrap"
                                                                 label="{{ $grand['name'] }}"
                                                                 link="{{ $grand['url'] }}"
+                                                                :no-wire-navigate="$isAbsoluteExternalUrl($grand['url'])"
                                                             />
                                                         </li>
                                                     @endforeach
@@ -329,6 +354,7 @@
                                                 class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"
                                                 label="{{ $child['name'] }}"
                                                 link="{{ $child['url'] }}"
+                                                :no-wire-navigate="$isAbsoluteExternalUrl($child['url'])"
                                             />
                                         @endif
                                     </li>
@@ -338,6 +364,7 @@
                     @else
                         <x-button
                             link="{{ $item['url'] }}"
+                            :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                             class="btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow"
                             responsive
                             x-data="{ isScrolled: false }"
@@ -457,6 +484,7 @@
                                                 title="{{ $grand['name'] }}"
                                                 class="rounded-none hover:bg-fita hover:text-white"
                                                 link="{{ $grand['url'] }}"
+                                                :no-wire-navigate="$isAbsoluteExternalUrl($grand['url'])"
                                             />
                                         @endforeach
                                     </x-menu-sub>
@@ -465,6 +493,7 @@
                                         title="{{ $child['name'] }}"
                                         class="rounded-none hover:bg-fita hover:text-white"
                                         link="{{ $child['url'] }}"
+                                        :no-wire-navigate="$isAbsoluteExternalUrl($child['url'])"
                                     />
                                 @endif
                             @endforeach
@@ -473,6 +502,7 @@
                         <x-menu-item
                             title="{{ $item['name'] }}"
                             link="{{ $item['url'] }}"
+                            :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                             class="rounded-none hover:bg-fita hover:text-white"
                         />
                     @endif

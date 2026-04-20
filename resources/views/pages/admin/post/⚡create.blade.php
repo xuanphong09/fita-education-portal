@@ -720,7 +720,7 @@ new class extends Component {
                     wire:model="category_ids"
                     multiple
                     size="8"
-                    class="select select-bordered w-full"
+                    class="select select-bordered w-full max-h-80 overflow-auto"
                 >
                     @foreach($this->categoryOptions as $category)
                         <option value="{{ $category['id'] }}">{{ $category['name'] }}</option>
