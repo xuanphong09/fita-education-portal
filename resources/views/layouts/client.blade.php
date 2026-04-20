@@ -291,6 +291,7 @@
                         <div class="dropdown dropdown-hover h-full group auto-flip-bottom">
                             <x-button
                                 tabindex="0"
+                                :link="!str_starts_with($item['url'], '#') ? $item['url'] : ''"
                                 class="btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                 responsive
                                 x-data="{ isScrolled: false }"
@@ -306,6 +307,7 @@
                                         @if(!empty($child['children']))
                                             <div class="dropdown dropdown-hover dropdown-right w-full p-0! auto-flip">
                                                 <x-button
+                                                    :link="!str_starts_with($child['url'], '#') ? $child['url'] : ''"
                                                     class="btn-ghost text-black text-[15px] w-full py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white focus:bg-fita focus:text-white active:bg-fita active:text-white whitespace-nowrap after:content-[''] after:ml-2 after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                                     label="{{ $child['name'] }}"
                                                     x-on:click.prevent="$event.currentTarget.blur()"
