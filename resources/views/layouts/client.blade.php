@@ -315,7 +315,7 @@
                                 tabindex="0"
                                 :link="!str_starts_with($item['url'], '#') ? $item['url'] : ''"
                                 :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
-                                class="btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
+                                class="px-2 btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                 responsive
                                 x-data="{ isScrolled: false }"
                                 @scroll.window="isScrolled = (window.pageYOffset > 50)"
@@ -365,7 +365,7 @@
                         <x-button
                             link="{{ $item['url'] }}"
                             :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
-                            class="btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow"
+                            class="px-2 btn-ghost text-black text-[18px]/[60px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow"
                             responsive
                             x-data="{ isScrolled: false }"
                             @scroll.window="isScrolled = (window.pageYOffset > 50)"
