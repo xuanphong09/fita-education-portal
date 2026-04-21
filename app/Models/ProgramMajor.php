@@ -41,5 +41,10 @@ class ProgramMajor extends Model
     {
         return $this->hasMany(Major::class, 'program_major_id');
     }
+
+    public function trainingPrograms(): HasMany
+    {
+        return $this->hasMany(TrainingProgram::class);
+    }
 }
 

@@ -19,6 +19,7 @@ class TrainingProgram extends Model
         'level',
         'language',
         'duration_time',
+        'program_major_id',
         'major_id',
         'intake_id',
         'school_year_start',
@@ -49,6 +50,11 @@ class TrainingProgram extends Model
     public function major(): BelongsTo
     {
         return $this->belongsTo(Major::class);
+    }
+
+    public function programMajor(): BelongsTo
+    {
+        return $this->belongsTo(ProgramMajor::class);
     }
 
     public function intake(): BelongsTo

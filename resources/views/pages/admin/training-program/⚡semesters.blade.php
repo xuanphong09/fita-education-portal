@@ -999,7 +999,7 @@ new class extends Component {
     </x-slot:breadcrumb>
 
     <x-header title="Quản lý học kỳ và môn học"
-              subtitle="{{ $this->program->version }} - {{ $this->program->major->programMajor->name }} - {{ $this->program->major->name }}"
+              subtitle="{{ $this->program->version }} - {{ $this->program?->programMajor?->name }} - {{ $this->program?->major?->name }}"
               class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
         <x-slot:actions>
             <x-button label="Danh sách môn học" icon="o-rectangle-stack" class="btn-ghost" link="{{ route('admin.subject.index') }}" />

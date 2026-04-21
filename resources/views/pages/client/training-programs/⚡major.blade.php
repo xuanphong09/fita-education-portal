@@ -4,6 +4,7 @@ use App\Models\Major;
 use App\Models\ProgramMajor;
 use App\Models\Subject;
 use App\Models\TrainingProgram;
+use App\Models\Intake;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -21,8 +22,8 @@ class extends Component {
     #[Url(as: 'chuyen-nganh')]
     public ?string $selectedMajorSlug = null;
 
-    #[Url(as: 'phien-ban')]
-    public ?string $version = null;
+    #[Url(as: 'khoa')]
+    public ?int $intakeId = null;
 
     #[Url(as: 'hoc-ky')]
     public ?int $semesterNo = null;
@@ -82,8 +83,6 @@ class extends Component {
     {
         $this->selectedMajorSlug = null;
         $this->major = null;
-
-        $this->version = null;
         $this->semesterNo = null;
         $this->expanded = [];
         $this->showSemesterTimelineModal = false;
@@ -107,13 +106,10 @@ class extends Component {
 
         $this->major = $selectedMajor;
         $this->programMajorSlug = $selectedMajor->programMajor?->slug;
-        $this->version = null;
         $this->semesterNo = null;
         $this->expanded = [];
         $this->showSemesterTimelineModal = false;
         $this->pendingOpenSemesterTimelineModal = true;
-
-        $this->redirectToCanonicalMajorUrl($selectedMajor);
     }
 
     protected function redirectToCanonicalMajorUrl(Major $major): void
@@ -125,7 +121,7 @@ class extends Component {
         $params = [
             'chuyen-nganh' => (string) $major->slug,
             'nganh' => $major->programMajor?->slug,
-            'phien-ban' => $this->version,
+            'khoa' => $this->intakeId,
             'hoc-ky' => $this->semesterNo,
             'kieu' => $this->viewMode !== 'semester' ? $this->viewMode : null,
             'tim' => trim($this->search) !== '' ? $this->search : null,
@@ -135,8 +131,11 @@ class extends Component {
         $this->redirectRoute('client.training-programs.major', array_filter($params, fn ($value) => $value !== null), navigate: true);
     }
 
-    public function updatedVersion(): void
+    public function updatedIntakeId(): void
     {
+        $this->programMajorSlug = null;
+        $this->selectedMajorSlug = null;
+        $this->major = null;
         $this->semesterNo = null;
         $this->expanded = [];
         $this->showSemesterTimelineModal = false;
@@ -399,28 +398,76 @@ class extends Component {
 
     public function with(): array
     {
+        $publishedProgramQuery = fn ($query) => $query
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now());
+
+        $intakeOptions = Intake::query()
+            ->whereHas('trainingPrograms', function ($query) use ($publishedProgramQuery) {
+                $publishedProgramQuery($query);
+            })
+            ->orderByDesc('name')
+            ->get(['id', 'name'])
+            ->map(fn ($item) => ['id' => (int) $item->id, 'name' => (string) $item->name])
+            ->toArray();
+
         $programMajorOptions = ProgramMajor::query()
             ->where('is_active', true)
-            ->whereHas('majors.trainingPrograms', function ($query) {
-                $query->where('status', 'published')
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now());
+            ->where(function ($q) use ($publishedProgramQuery) {
+                // Trường hợp 1: Ngành có CTĐT gắn TRỰC TIẾP vào ngành (Không chia chuyên ngành)
+                $q->whereHas('trainingPrograms', function ($query) use ($publishedProgramQuery) {
+                    $publishedProgramQuery($query);
+                    if ($this->intakeId) {
+                        $query->where('intake_id', $this->intakeId);
+                    }
+                })
+                    // Trường hợp 2: HOẶC Ngành có CTĐT gắn vào các Chuyên ngành con của nó
+                    ->orWhereHas('majors.trainingPrograms', function ($query) use ($publishedProgramQuery) {
+                        $publishedProgramQuery($query);
+                        if ($this->intakeId) {
+                            $query->where('intake_id', $this->intakeId);
+                        }
+                    });
             })
             ->ordered()
             ->get();
 
         $majorOptions = Major::query()
             ->where('is_active', true)
+            ->when($this->intakeId, function ($query) use ($publishedProgramQuery) {
+                $query->whereHas('trainingPrograms', function ($programQuery) use ($publishedProgramQuery) {
+                    $publishedProgramQuery($programQuery);
+                    $programQuery->where('intake_id', $this->intakeId);
+                });
+            })
             ->when($this->programMajorSlug, function ($query) {
                 $query->whereHas('programMajor', fn ($programMajorQuery) => $programMajorQuery->where('slug', $this->programMajorSlug));
             })
-            ->whereHas('trainingPrograms', function ($query) {
-                $query->where('status', 'published')
-                    ->whereNotNull('published_at')
-                    ->where('published_at', '<=', now());
+            ->whereHas('trainingPrograms', function ($query) use ($publishedProgramQuery) {
+                $publishedProgramQuery($query);
             })
             ->ordered()
             ->get(['id', 'name', 'slug', 'program_major_id']);
+
+        $availableIntakes = collect($intakeOptions)->pluck('id');
+        if ($this->intakeId && !$availableIntakes->contains($this->intakeId)) {
+            $this->intakeId = null;
+            $this->programMajorSlug = null;
+            $this->selectedMajorSlug = null;
+            $this->major = null;
+        }
+
+        if ($this->programMajorSlug && !$programMajorOptions->contains(fn ($item) => $item->slug === $this->programMajorSlug)) {
+            $this->programMajorSlug = null;
+            $this->selectedMajorSlug = null;
+            $this->major = null;
+        }
+
+        if ($this->selectedMajorSlug && !$majorOptions->contains(fn ($item) => $item->slug === $this->selectedMajorSlug)) {
+            $this->selectedMajorSlug = null;
+            $this->major = null;
+        }
 
         $selectedMajor = $this->selectedMajorSlug
             ? $majorOptions->firstWhere('slug', $this->selectedMajorSlug)
@@ -428,10 +475,28 @@ class extends Component {
 
         $this->major = $selectedMajor;
 
-        if (!$this->major) {
+        $selectedProgramMajor = $this->programMajorSlug
+            ? $programMajorOptions->firstWhere('slug', $this->programMajorSlug)
+            : null;
+
+        // --- 1. KIỂM TRA TIẾN TRÌNH CHỌN ĐÃ HOÀN TẤT CHƯA? ---
+        $isSelectionComplete = false;
+
+        if ($this->intakeId && $selectedProgramMajor) {
+            if ($majorOptions->isNotEmpty()) {
+                if ($this->major) {
+                    $isSelectionComplete = true;
+                }
+            } else {
+                $isSelectionComplete = true;
+            }
+        }
+
+        // Nếu chưa chọn đủ thông tin -> Trả về giao diện trống
+        if (!$isSelectionComplete) {
             return [
                 'programs' => collect(),
-                'versionOptions' => [],
+                'intakeOptions' => $intakeOptions,
                 'activeProgram' => null,
                 'semesterBlocks' => collect(),
                 'groupBlocks' => collect(),
@@ -442,79 +507,56 @@ class extends Component {
             ];
         }
 
+        // --- 2. TRUY VẤN DUY NHẤT 1 CTĐT KHI ĐÃ CHỌN ĐỦ THÔNG TIN ---
         $normalizedKeyword = $this->normalizeSearchText($this->search);
+        $majorId = $this->major?->id ? (int) $this->major->id : null;
+        $programMajorId = $selectedProgramMajor?->id ? (int) $selectedProgramMajor->id : null;
 
-        $majorId = (int) $this->major->id;
-
-        $programs = TrainingProgram::query()
-            ->where('major_id', $majorId)
+        $activeProgramQuery = TrainingProgram::query()
+            ->where('intake_id', $this->intakeId)
             ->where('status', 'published')
             ->whereNotNull('published_at')
             ->where('published_at', '<=', now())
-            ->with(['major', 'intake'])
+            ->with([
+                'major',
+                'programMajor',
+                'intake',
+                'semesters' => function ($semesterQuery) {
+                    $semesterQuery->orderBy('semester_no')
+                        ->with(['subjects' => function ($subjectQuery) {
+                            $subjectQuery
+                                ->where('subjects.is_active', true)
+                                ->with(['groupSubject', 'prerequisites', 'equivalents'])
+                                ->orderBy('program_semester_subjects.order');
+                        }]);
+                },
+            ])
             ->orderByDesc('published_at')
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
 
-        $versionOptions = $programs
-            ->pluck('version')
-            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
-            ->unique()
-            ->map(fn ($value) => ['code' => (string) $value, 'name' => (string) $value])
-            ->toArray();
-
-        $version_tmp = $programs
-            ->pluck('version')
-            ->filter(fn ($value) => is_string($value) && trim($value) !== '')
-            ->unique()
-            ->values();
-
-        if ($this->version && !$version_tmp->contains($this->version)) {
-            $this->version = null;
-            $this->semesterNo = null;
+        if ($majorId) {
+            $activeProgramQuery->where('major_id', $majorId);
+        } else {
+            $activeProgramQuery->where('program_major_id', $programMajorId)->whereNull('major_id');
         }
 
-        $activeProgram = null;
+        $activeProgram = $activeProgramQuery->first();
+        $programs = $activeProgram ? collect([$activeProgram]) : collect();
+
+        // --- 3. XỬ LÝ KHỐI DỮ LIỆU MÔN HỌC BÊN TRONG ---
         $semesterBlocks = collect();
         $groupBlocks = collect();
         $currentSemesterTimeline = null;
         $nextSemesterTimeline = null;
-
-        if ($this->version) {
-            $activeProgram = TrainingProgram::query()
-                ->where('major_id', $majorId)
-                ->where('version', $this->version)
-                ->where('status', 'published')
-                ->whereNotNull('published_at')
-                ->where('published_at', '<=', now())
-                ->with([
-                    'major',
-                    'intake',
-                    'semesters' => function ($semesterQuery) {
-                        $semesterQuery->orderBy('semester_no')
-                            ->with(['subjects' => function ($subjectQuery) {
-                                $subjectQuery
-                                    ->where('subjects.is_active', true)
-                                    ->with(['groupSubject', 'prerequisites', 'equivalents'])
-                                    ->orderBy('program_semester_subjects.order');
-                            }]);
-                    },
-                ])
-                ->first();
-        }
 
         if ($activeProgram) {
             $today = now()->startOfDay();
 
             $timelineSemesters = $activeProgram->semesters
                 ->filter(function ($semester) {
-                    if (!$this->formatSemesterTimeline($semester)) {
-                        return false;
-                    }
-
+                    if (!$this->formatSemesterTimeline($semester)) return false;
                     $startDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'start_date'))->startOfDay();
                     $endDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'end_date'))->startOfDay();
-
                     return $endDate->greaterThanOrEqualTo($startDate);
                 })
                 ->values();
@@ -523,7 +565,6 @@ class extends Component {
                 ->first(function ($semester) use ($today) {
                     $startDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'start_date'))->startOfDay();
                     $endDate = \Illuminate\Support\Carbon::parse((string) data_get($semester, 'end_date'))->startOfDay();
-
                     return $today->between($startDate, $endDate, true);
                 });
 
@@ -532,18 +573,14 @@ class extends Component {
                     ->first(fn ($semester) => (int) $semester->semester_no > (int) $currentSemesterTimeline->semester_no);
             }
 
-            // Open modal only after the newly selected data has been fully recalculated.
             if ($this->pendingOpenSemesterTimelineModal) {
                 $this->showSemesterTimelineModal = (bool) $currentSemesterTimeline;
                 $this->pendingOpenSemesterTimelineModal = false;
             }
 
             $semesterCollection = $activeProgram->semesters;
-
             if ($this->semesterNo) {
-                $semesterCollection = $semesterCollection
-                    ->where('semester_no', $this->semesterNo)
-                    ->values();
+                $semesterCollection = $semesterCollection->where('semester_no', $this->semesterNo)->values();
             }
 
             $semesterBlocks = $semesterCollection
@@ -654,9 +691,7 @@ class extends Component {
                 ->values();
 
             if ($normalizedKeyword !== '') {
-                $semesterBlocks = $semesterBlocks
-                    ->filter(fn ($block) => $block['subjects']->isNotEmpty())
-                    ->values();
+                $semesterBlocks = $semesterBlocks->filter(fn ($block) => $block['subjects']->isNotEmpty())->values();
             }
 
             $groupBlocks = $semesterBlocks
@@ -688,7 +723,7 @@ class extends Component {
 
         return [
             'programs' => $programs,
-            'versionOptions' => $versionOptions,
+            'intakeOptions' => $intakeOptions,
             'activeProgram' => $activeProgram,
             'semesterBlocks' => $semesterBlocks,
             'groupBlocks' => $groupBlocks,
@@ -702,7 +737,7 @@ class extends Component {
 ?>
 
 <div>
-    <x-slot:title>{{ __('Training Programs') }} - {{ __('Specialized') }} {{ $this->specializationLabel }}</x-slot:title>
+    <x-slot:title>{{ __('Training Programs') }} - {{!$this->selectedMajorSlug?__('Major'): __('Specialized') }} {{ $this->specializationLabel }}</x-slot:title>
 
 {{--    <x-slot:breadcrumb>--}}
 {{--        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>--}}
@@ -725,7 +760,7 @@ class extends Component {
             </div>
             <div class="relative z-20">
                 <h2 class="text-center text-[35px]/[44px] font-semibold uppercase line-clamp-2">
-                    {{ $this->specializationLabel ? __('Specialized training program ') . ' ' . $this->specializationLabel : __('Training Programs') }}
+                    {{ $this->specializationLabel ? !$this->selectedMajorSlug?__('Major'). ' ' . $this->specializationLabel : __('Specialized training program ') . ' ' . $this->specializationLabel : __('Training Programs') }}
                 </h2>
                 <div class="flex items-center gap-1 text-gray-500 justify-center w-full">
                     <a href="{{route('client.home')}}" wire:navigate class="whitespace-nowrap hover:text-fita font-semibold text-slate-700">{{__('Home page')}}</a>
@@ -744,17 +779,30 @@ class extends Component {
         <div class="space-y-4">
             <x-card shadow>
                 <div class="grid grid-cols-5 gap-4">
+                    <div class="w-full md:col-span-1 col-span-5">
+                        <x-select
+                            label="{{__('Intake')}}"
+                            wire:model.live="intakeId"
+                            :options="$intakeOptions"
+                            option-value="id"
+                            option-label="name"
+                            placeholder="{{ __('No intake selected') }}"
+                            :disabled="empty($intakeOptions)"
+                        />
+                    </div>
+
                     <div class="w-full md:col-span-2 col-span-5">
                         <x-select
                             label="{{__('Major')}}"
                             wire:model.live="programMajorSlug"
-                            placeholder="{{ __('No major selected') }}"
+                            placeholder="{{ $this->intakeId ? __('No major selected') : __('Select intake first') }}"
                             :options="$programMajorOptions->map(fn ($item) => [
                             'value' => $item->slug,
                             'label' => $this->localizedName($item),
                         ])->values()->toArray()"
                             option-value="value"
                             option-label="label"
+                            :disabled="!$this->intakeId || $programMajorOptions->isEmpty()"
                         />
                     </div>
 
@@ -769,19 +817,7 @@ class extends Component {
                         ])->values()->toArray()"
                             option-value="value"
                             option-label="label"
-                            :disabled="!$this->programMajorSlug || $majorOptions->isEmpty()"
-                        />
-                    </div>
-
-                    <div class="w-full md:col-span-1 col-span-5">
-                        <x-select
-                            label="{{__('Intake')}}"
-                            wire:model.live.debounce.300ms="version"
-                            :options="$versionOptions"
-                            option-value="code"
-                            option-label="code"
-                            placeholder="{{ $this->selectedMajorSlug ? __('No intake selected') : __('Select specialization first') }}"
-                            :disabled="!$this->selectedMajorSlug || empty($versionOptions)"
+                            :disabled="!$this->intakeId || !$this->programMajorSlug || $majorOptions->isEmpty()"
                         />
                     </div>
                 </div>
@@ -850,8 +886,8 @@ class extends Component {
             @if(!$activeProgram)
                 <x-card shadow>
                     <div class="text-center text-[18px] py-10 text-gray-500">
-                        @if(!$this->programMajorSlug || !$this->selectedMajorSlug || !$this->version)
-                            {{ __('Please select major, specialization, and intake to view the training program.') }}
+                        @if(!$this->programMajorSlug || !$this->selectedMajorSlug || !$this->intakeId)
+                            {{ __('Please select intake, major, and specialization to view the training program.') }}
                         @else
                             {{ __('This major has no published training programs.') }}
                         @endif
@@ -869,7 +905,9 @@ class extends Component {
                     $programDuration = $activeProgram->duration_time
                         ? ($activeProgram->duration_time . ' ' . (app()->getLocale() === 'en' ? 'years' : 'năm'))
                         : 'N/A';
-                    $majorCode = $activeProgram->major?->programMajor?->code ?: 'N/A';
+                    $majorCode = $activeProgram->major?->programMajor?->code
+                        ?: $activeProgram->programMajor?->code
+                        ?: 'N/A';
                 @endphp
 
                 <x-card shadow>
@@ -907,7 +945,7 @@ class extends Component {
 
                         if ($this->majorLabel && $this->specializationLabel) {
                             if ($this->majorLabel === $this->specializationLabel) {
-                                $title .= ' - ' . __('Major/Specialized') . ' ' . $this->majorLabel;
+                                $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
                             } else {
                                 $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
                                 $title .= ' - ' . __('Specialized') . ' ' . $this->specializationLabel;
@@ -1120,7 +1158,7 @@ class extends Component {
 {{--                                            <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>--}}
                                         </div>
                                         <span
-                                            class="text-md">{{ count(data_get($nextSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
+                                            class="text-md">{{ count(data_get($nextSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($nextSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
                                     </div>
                                 @endif
                                 @if($nextSemesterTimeline)
@@ -1255,7 +1293,7 @@ class extends Component {
                 <div class="relative min-h-60">
                     <div
                         wire:loading.delay.short
-                        wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
+                        wire:target="programMajorSlug,selectedMajorSlug,intakeId,semesterNo,viewMode,search,typeFilter"
                         class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
                     >
                         <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
@@ -1267,7 +1305,7 @@ class extends Component {
                     <div
                         wire:loading.class="opacity-60 pointer-events-none"
                         wire:loading.class.remove="opacity-100"
-                        wire:target="programMajorSlug,selectedMajorSlug,version,semesterNo,viewMode,search,typeFilter"
+                        wire:target="programMajorSlug,selectedMajorSlug,intakeId,semesterNo,viewMode,search,typeFilter"
                         class="transition-opacity duration-150"
                     >
                         @if($viewMode === 'semester')

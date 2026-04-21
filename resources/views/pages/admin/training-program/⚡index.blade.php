@@ -1,11 +1,13 @@
 <?php
 
+use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use App\Models\Major;
+use App\Models\ProgramMajor;
 use App\Models\Intake;
 use App\Models\TrainingProgram;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,7 @@ new class extends Component {
     public int $perPage = 10;
     #[Url(as: 'search')]
     public string $search = '';
+    public ?int $program_major_id = null;
     public ?int $major_id = null;
     public ?int $intake_id = null;
     public string $filterStatus = '';
@@ -26,6 +29,7 @@ new class extends Component {
     public ?int $duplicateFromId = null;
     public string $duplicate_name_vi = '';
     public string $duplicate_name_en = '';
+    public ?int $duplicate_program_major_id = null;
     public ?int $duplicate_major_id = null;
     public ?int $duplicate_intake_id = null;
     public ?int $duplicate_school_year_start = null;
@@ -35,6 +39,13 @@ new class extends Component {
 
     public function updatedSearch(): void
     {
+        $this->resetPage();
+    }
+
+    public function updatedProgramMajorId(): void
+    {
+        // Khi thay đổi ngành, xóa bộ lọc chuyên ngành cũ
+        $this->major_id = null;
         $this->resetPage();
     }
 
@@ -51,6 +62,7 @@ new class extends Component {
     public function resetFilters(): void
     {
         $this->search = '';
+        $this->program_major_id = null;
         $this->major_id = null;
         $this->intake_id = null;
         $this->filterStatus = '';
@@ -64,6 +76,7 @@ new class extends Component {
         $this->duplicateFromId = $id;
         $this->duplicate_name_vi = (string)($program->getTranslation('name', 'vi', false) ?? '');
         $this->duplicate_name_en = (string)($program->getTranslation('name', 'en', false) ?? '');
+        $this->duplicate_program_major_id = $program->program_major_id;
         $this->duplicate_major_id = $program->major_id;
         $this->duplicate_intake_id = $program->intake_id;
         $this->duplicate_school_year_start = $program->school_year_start;
@@ -72,6 +85,13 @@ new class extends Component {
         $this->resetErrorBag();
         $this->refreshDuplicateVersion();
         $this->modalDuplicate = true;
+    }
+
+    public function updatedDuplicateProgramMajorId(): void
+    {
+        // Khi thay đổi ngành, xóa chuyên ngành cũ và cập nhật version
+        $this->duplicate_major_id = null;
+        $this->refreshDuplicateVersion();
     }
 
     public function updatedDuplicateIntakeId(): void
@@ -103,19 +123,45 @@ new class extends Component {
         return [
             'duplicate_name_vi' => ['required', 'string', 'max:255'],
             'duplicate_name_en' => ['nullable', 'string', 'max:255'],
+            'duplicate_program_major_id' => ['nullable', 'exists:program_majors,id'],
             'duplicate_major_id' => ['nullable', 'exists:majors,id'],
-            'duplicate_intake_id' => ['required', 'exists:intakes,id'],
+//            'duplicate_intake_id' => ['required', 'exists:intakes,id'],
             'duplicate_school_year_start' => ['required', 'integer', 'min:2020', 'max:2100'],
             'duplicate_school_year_end' => ['nullable', 'integer', 'min:2020', 'max:2100', 'gte:duplicate_school_year_start'],
-            'duplicate_version' => [
+//            'duplicate_version' => [
+//                'required',
+//                'string',
+//                'max:20',
+//                Rule::unique('training_programs', 'version')->where(function ($q) {
+//                    $q->whereNull('deleted_at');
+//
+//                    if ($this->duplicate_intake_id) {
+//                        $q->where('intake_id', $this->duplicate_intake_id);
+//                    }
+//
+//                    if ($this->duplicate_program_major_id) {
+//                        $q->where('program_major_id', $this->duplicate_program_major_id);
+//                    } else {
+//                        $q->whereNull('program_major_id');
+//                    }
+//
+//                    if ($this->duplicate_major_id) {
+//                        $q->where('major_id', $this->duplicate_major_id);
+//                    } else {
+//                        $q->whereNull('major_id');
+//                    }
+//                }),
+//            ],
+            'duplicate_intake_id' => [
                 'required',
-                'string',
-                'max:20',
-                Rule::unique('training_programs', 'version')->where(function ($q) {
+                'exists:intakes,id',
+                Rule::unique('training_programs', 'intake_id')->where(function ($q) {
                     $q->whereNull('deleted_at');
 
-                    if ($this->duplicate_intake_id) {
-                        $q->where('intake_id', $this->duplicate_intake_id);
+                    if ($this->duplicate_program_major_id) {
+                        $q->where('program_major_id', $this->duplicate_program_major_id);
+                    } else {
+                        $q->whereNull('program_major_id');
                     }
 
                     if ($this->duplicate_major_id) {
@@ -135,6 +181,7 @@ new class extends Component {
         'duplicate_name_vi.max' => 'Tên chương trình (Tiếng Việt) không được vượt quá 255 ký tự.',
         'duplicate_name_en.string' => 'Tên chương trình (Tiếng Anh) phải là một chuỗi.',
         'duplicate_name_en.max' => 'Tên chương trình (Tiếng Anh) không được vượt quá 255 ký tự.',
+        'duplicate_program_major_id.exists' => 'Ngành không tồn tại.',
         'duplicate_major_id.exists' => 'Chuyên ngành không tồn tại.',
         'duplicate_intake_id.required' => 'Khóa là bắt buộc.',
         'duplicate_intake_id.exists' => 'Khóa không tồn tại.',
@@ -146,43 +193,23 @@ new class extends Component {
         'duplicate_school_year_end.min' => 'Năm kết thúc không được nhỏ hơn 2020.',
         'duplicate_school_year_end.max' => 'Năm kết thúc không được lớn hơn 2100.',
         'duplicate_school_year_end.gte' => 'Năm kết thúc phải lớn hơn hoặc bằng năm bắt đầu.',
-        'duplicate_version.required' => 'Phiên bản là bắt buộc.',
-        'duplicate_version.string' => 'Phiên bản phải là một chuỗi.',
-        'duplicate_version.max' => 'Phiên bản không được vượt quá 20 ký tự.',
-        'duplicate_version.unique' => 'Phiên bản đã tồn tại trong cùng khóa và chuyên ngành. Vui lòng chọn phiên bản khác hoặc thay đổi khóa/chuyên ngành.',
+//        'duplicate_version.required' => 'Phiên bản là bắt buộc.',
+//        'duplicate_version.string' => 'Phiên bản phải là một chuỗi.',
+//        'duplicate_version.max' => 'Phiên bản không được vượt quá 20 ký tự.',
+//        'duplicate_version.unique' => 'Phiên bản đã tồn tại trong cùng ngành/chuyên ngành/khóa. Vui lòng chọn phiên bản khác hoặc thay đổi ngành/chuyên ngành/khóa.',
+        'duplicate_intake_id.unique' => 'Phiên bản đã tồn tại trong cùng ngành/chuyên ngành/khóa.',
         'duplicate_status.required' => 'Trạng thái là bắt buộc.',
         'duplicate_status.in' => 'Trạng thái không hợp lệ. Phải là draft, published hoặc archived.',
     ];
 
     public function confirmDuplicate(): void
     {
-        $this->validate([
-            'duplicate_name_vi' => ['required', 'string', 'max:255'],
-            'duplicate_name_en' => ['nullable', 'string', 'max:255'],
-            'duplicate_major_id' => ['nullable', 'exists:majors,id'],
-            'duplicate_intake_id' => ['required', 'exists:intakes,id'],
-            'duplicate_school_year_start' => ['required', 'integer', 'min:2020', 'max:2100'],
-            'duplicate_school_year_end' => ['nullable', 'integer', 'min:2020', 'max:2100', 'gte:duplicate_school_year_start'],
-            'duplicate_version' => [
-                'required',
-                'string',
-                'max:20',
-                Rule::unique('training_programs', 'version')->where(function ($q) {
-                    $q->whereNull('deleted_at');
-
-                    if ($this->duplicate_intake_id) {
-                        $q->where('intake_id', $this->duplicate_intake_id);
-                    }
-
-                    if ($this->duplicate_major_id) {
-                        $q->where('major_id', $this->duplicate_major_id);
-                    } else {
-                        $q->whereNull('major_id');
-                    }
-                }),
-            ],
-            'duplicate_status' => ['required', 'in:draft,published,archived'],
-        ]);
+        try {
+            $this->validate();
+        } catch (ValidationException $e) {
+            $this->error('Vui lòng kiểm tra thông tin đã nhập.');
+            throw $e;
+        }
 
         $sourceProgram = TrainingProgram::with('semesters.subjects')->findOrFail($this->duplicateFromId);
 
@@ -190,6 +217,7 @@ new class extends Component {
             $newProgram = TrainingProgram::create([
                 'version' => $this->duplicate_version,
                 'status' => $this->duplicate_status,
+                'program_major_id' => $this->duplicate_program_major_id,
                 'major_id' => $this->duplicate_major_id,
                 'intake_id' => $this->duplicate_intake_id,
                 'type' => $sourceProgram->type,
@@ -260,6 +288,7 @@ new class extends Component {
         $this->duplicateFromId = null;
         $this->duplicate_name_vi = '';
         $this->duplicate_name_en = '';
+        $this->duplicate_program_major_id = null;
         $this->duplicate_major_id = null;
         $this->duplicate_intake_id = null;
         $this->duplicate_school_year_start = null;
@@ -271,6 +300,7 @@ new class extends Component {
     public function getHasActiveFiltersProperty(): bool
     {
         return trim($this->search) !== ''
+            || !is_null($this->program_major_id)
             || !is_null($this->major_id)
             || !is_null($this->intake_id)
             || $this->filterStatus !== '';
@@ -281,7 +311,7 @@ new class extends Component {
         $search = trim($this->search);
 
         $query = TrainingProgram::query()
-            ->with(['major', 'intake'])
+            ->with(['programMajor', 'major', 'intake'])
             ->withCount('semesters');
 
         if ($search !== '') {
@@ -291,6 +321,10 @@ new class extends Component {
                     ->orWhereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ?", [$keyword])
                     ->orWhereRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ?", [$keyword]);
             });
+        }
+
+        if ($this->program_major_id) {
+            $query->where('program_major_id', $this->program_major_id);
         }
 
         if ($this->major_id) {
@@ -320,7 +354,56 @@ new class extends Component {
 
     public function getMajorOptionsProperty(): array
     {
-        return Major::query()
+        $query = Major::query();
+
+        // Nếu đã chọn ngành, lọc chỉ lấy chuyên ngành thuộc ngành đó
+        if ($this->program_major_id) {
+            $query->where('program_major_id', $this->program_major_id);
+        }
+
+        return $query
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get(['id', 'name', 'slug'])
+            ->map(function (Major $major) {
+                return [
+                    'id' => $major->id,
+                    'name' => $major->getTranslation('name', app()->getLocale(), false)
+                        ?: $major->getTranslation('name', 'vi', false)
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
+                ];
+            })
+            ->toArray();
+    }
+
+    public function getProgramMajorOptionsProperty(): array
+    {
+        return ProgramMajor::query()
+            ->where('is_active', true)
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get(['id', 'name', 'slug'])
+            ->map(function (ProgramMajor $programMajor) {
+                return [
+                    'id' => $programMajor->id,
+                    'name' => $programMajor->getTranslation('name', app()->getLocale(), false)
+                        ?: $programMajor->getTranslation('name', 'vi', false)
+                            ?: $programMajor->getTranslation('name', 'en', false)
+                                ?: $programMajor->slug,
+                ];
+            })
+            ->toArray();
+    }
+
+    public function getDuplicateMajorOptionsProperty(): array
+    {
+        $query = Major::query();
+
+        // Nếu đã chọn ngành, lọc chỉ lấy chuyên ngành thuộc ngành đó
+        if ($this->duplicate_program_major_id) {
+            $query->where('program_major_id', $this->duplicate_program_major_id);
+        }
+
+        return $query
             ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
             ->get(['id', 'name', 'slug'])
             ->map(function (Major $major) {
@@ -397,6 +480,16 @@ new class extends Component {
     </x-header>
     <div class="flex flex-wrap gap-3 mb-4">
         <x-select
+            placeholder="Lọc theo ngành"
+            placeholder-value=""
+            wire:model.live="program_major_id"
+            :options="$this->programMajorOptions"
+            option-value="id"
+            option-label="name"
+            class="select-md w-48"
+        />
+
+        <x-select
             placeholder="{{ __('Filter by major') }}"
             placeholder-value=""
             wire:model.live="major_id"
@@ -469,7 +562,10 @@ new class extends Component {
             @scope('cell_scope', $program)
             <div class="text-sm">
                 <div><span
-                        class="text-gray-500">{{ __('Major:') }}</span> {{ $program->major?->getTranslation('name', app()->getLocale(), false) ?: $program->major?->getTranslation('name', 'vi', false) ?: $program->major?->getTranslation('name', 'en', false) ?: __('General') }}
+                        class="text-gray-500"> Ngành: </span> {{ $program->programMajor?->getTranslation('name', app()->getLocale(), false) ?: $program->programMajor?->getTranslation('name', 'vi', false) ?: $program->programMajor?->getTranslation('name', 'en', false) ?: __('General') }}
+                </div>
+                <div><span
+                        class="text-gray-500"> Chuyên ngành: </span> {{ $program->major?->getTranslation('name', app()->getLocale(), false) ?: $program->major?->getTranslation('name', 'vi', false) ?: $program->major?->getTranslation('name', 'en', false) ?: __('General') }}
                 </div>
                 <div><span class="text-gray-500">Khóa:</span> {{ $program->intake?->name ?? '—' }}</div>
             </div>
@@ -530,7 +626,7 @@ new class extends Component {
     <x-modal wire:model="modalDuplicate" title="Nhân bản chương trình đào tạo" separator
              class="modalDuplicateTrainingProgram">
         <div class="space-y-2 py-2 px-1 max-h-[70vh] overflow-y-auto pr-1">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-2">
                 <x-input
                     label="Tên chương trình (Tiếng Việt)"
                     placeholder="Nhập tên tiếng Việt"
@@ -544,13 +640,24 @@ new class extends Component {
                 />
 
                 <x-select
+                    label="Ngành"
+                    placeholder="Chọn ngành"
+                    placeholder-value=""
+                    wire:model.live="duplicate_program_major_id"
+                    :options="$this->programMajorOptions"
+                    option-value="id"
+                    option-label="name"
+                />
+
+                <x-select
                     label="Chuyên ngành"
                     placeholder="Chọn chuyên ngành"
                     placeholder-value=""
                     wire:model.live="duplicate_major_id"
-                    :options="$this->majorOptions"
+                    :options="$this->duplicateMajorOptions"
                     option-value="id"
                     option-label="name"
+                    :disabled="!$this->duplicate_program_major_id"
                 />
 
                 <x-select
@@ -578,12 +685,12 @@ new class extends Component {
                     wire:model="duplicate_school_year_end"
                 />
 
-                <x-input
-                    label="Phiên bản (tự động tạo)"
-                    placeholder="Phiên bản sẽ tự động sinh ra"
-                    wire:model="duplicate_version"
-                    readonly
-                />
+{{--                <x-input--}}
+{{--                    label="Phiên bản (tự động tạo)"--}}
+{{--                    placeholder="Phiên bản sẽ tự động sinh ra"--}}
+{{--                    wire:model="duplicate_version"--}}
+{{--                    readonly--}}
+{{--                />--}}
 
                 <x-select
                     label="Trạng thái"

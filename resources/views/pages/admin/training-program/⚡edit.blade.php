@@ -5,6 +5,7 @@ use Livewire\Component;
 use Mary\Traits\Toast;
 use App\Models\Intake;
 use App\Models\Major;
+use App\Models\ProgramMajor;
 use App\Models\TrainingProgram;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -22,6 +23,7 @@ new class extends Component {
     public string $language_vi = '';
     public string $language_en = '';
     public ?int $duration_time = null;
+    public ?int $program_major_id = null;
     public ?int $major_id = null;
     public ?int $intake_id = null;
     public ?int $school_year_start = null;
@@ -46,6 +48,7 @@ new class extends Component {
         $this->language_vi = $program->getTranslation('language', 'vi', false) ?? '';
         $this->language_en = $program->getTranslation('language', 'en', false) ?? '';
         $this->duration_time = $program->duration_time;
+        $this->program_major_id = $program->program_major_id;
         $this->major_id = $program->major_id;
         $this->intake_id = $program->intake_id;
         $this->school_year_start = $program->school_year_start;
@@ -69,27 +72,55 @@ new class extends Component {
             'language_vi' => ['required', 'string', 'max:100'],
             'language_en' => ['nullable', 'string', 'max:100'],
             'duration_time' => ['required', 'integer', 'min:1', 'max:20'],
+            'program_major_id' => ['nullable', 'exists:program_majors,id'],
             'major_id' => ['nullable', 'exists:majors,id'],
-            'intake_id' => ['required', 'exists:intakes,id'],
+//            'intake_id' => ['required', 'exists:intakes,id'],
             'school_year_start' => ['required', 'integer', 'min:2020', 'max:2100'],
             'school_year_end' => ['nullable', 'integer', 'min:2020', 'max:2100', 'gte:school_year_start'],
-            'version' => [
-                'required', 'string', 'max:20',
-                Rule::unique('training_programs', 'version')
+//            'version' => [
+//                'required', 'string', 'max:20',
+//                Rule::unique('training_programs', 'version')
+//                    ->ignore($this->id)
+//                    ->where(function ($q) {
+//                        $q->whereNull('deleted_at');
+//
+//                        if ($this->intake_id) {
+//                            $q->where('intake_id', $this->intake_id);
+//                        }
+//
+//                        if ($this->program_major_id) {
+//                            $q->where('program_major_id', $this->program_major_id);
+//                        } else {
+//                            $q->whereNull('program_major_id');
+//                        }
+//
+//                        if ($this->major_id) {
+//                            $q->where('major_id', $this->major_id);
+//                        } else {
+//                            $q->whereNull('major_id');
+//                        }
+//                    }),
+//            ],
+            'intake_id' => [
+                'required',
+                'exists:intakes,id',
+                Rule::unique('training_programs', 'intake_id')
                     ->ignore($this->id)
                     ->where(function ($q) {
-                        $q->whereNull('deleted_at');
+                    $q->whereNull('deleted_at');
 
-                        if ($this->intake_id) {
-                            $q->where('intake_id', $this->intake_id);
-                        }
+                    if ($this->program_major_id) {
+                        $q->where('program_major_id', $this->program_major_id);
+                    } else {
+                        $q->whereNull('program_major_id');
+                    }
 
-                        if ($this->major_id) {
-                            $q->where('major_id', $this->major_id);
-                        } else {
-                            $q->whereNull('major_id');
-                        }
-                    }),
+                    if ($this->major_id) {
+                        $q->where('major_id', $this->major_id);
+                    } else {
+                        $q->whereNull('major_id');
+                    }
+                }),
             ],
             'total_credits' => ['required', 'integer', 'min:0', 'max:300'],
             'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
@@ -109,6 +140,7 @@ new class extends Component {
         'duration_time.integer' => 'Thời gian đào tạo phải là số nguyên.',
         'duration_time.min' => 'Thời gian đào tạo phải lớn hơn hoặc bằng 1.',
         'duration_time.max' => 'Thời gian đào tạo không được lớn hơn 20.',
+        'program_major_id.exists' => 'Ngành không hợp lệ.',
         'major_id.exists' => 'Chuyên ngành không hợp lệ.',
         'intake_id.required' => 'Vui lòng chọn khóa.',
         'intake_id.exists' => 'Khóa không hợp lệ.',
@@ -120,7 +152,8 @@ new class extends Component {
         'school_year_end.min' => 'Năm kết thúc không được nhỏ hơn 2020.',
         'school_year_end.max' => 'Năm kết thúc không được lớn hơn 2100.',
         'school_year_end.gte' => 'Năm kết thúc phải lớn hơn hoặc bằng năm bắt đầu.',
-        'version.unique' => 'Phiên bản đã tồn tại trong cùng chuyên ngành/khóa.',
+        'version.unique' => 'Phiên bản đã tồn tại trong cùng ngành/chuyên ngành/khóa.',
+        'intake_id.unique' => 'Chương trình đào tạo cho Khóa, Ngành và Chuyên ngành này đã tồn tại!',
         'version.required' => 'Phiên bản là bắt buộc.',
         'version.max' => 'Phiên bản không được vượt quá 20 ký tự.',
         'total_credits.required' => 'Tổng số tín chỉ là bắt buộc.',
@@ -148,7 +181,14 @@ new class extends Component {
 
     public function updated($property): void
     {
-        if (in_array($property, ['intake_id', 'school_year_start'], true)) {
+        // Khi thay đổi ngành, xóa chuyên ngành cũ và refresh version
+        if ($property === 'program_major_id') {
+            $this->major_id = null;
+            $this->refreshVersion();
+            return;
+        }
+
+        if (in_array($property, ['intake_id', 'school_year_start', 'major_id'], true)) {
             $this->refreshVersion();
         }
 
@@ -157,7 +197,14 @@ new class extends Component {
 
     public function getMajorOptionsProperty(): array
     {
-        return Major::query()
+        $query = Major::query();
+
+        // Nếu đã chọn ngành, lọc chỉ lấy chuyên ngành thuộc ngành đó
+        if ($this->program_major_id) {
+            $query->where('program_major_id', $this->program_major_id);
+        }
+
+        return $query
             ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
             ->get(['id', 'name', 'slug'])
             ->map(function (Major $major) {
@@ -167,6 +214,24 @@ new class extends Component {
                         ?: $major->getTranslation('name', 'vi', false)
                         ?: $major->getTranslation('name', 'en', false)
                         ?: $major->slug,
+                ];
+            })
+            ->toArray();
+    }
+
+    public function getProgramMajorOptionsProperty(): array
+    {
+        return ProgramMajor::query()
+            ->where('is_active', true)
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get(['id', 'name', 'slug'])
+            ->map(function (ProgramMajor $programMajor) {
+                return [
+                    'id' => $programMajor->id,
+                    'name' => $programMajor->getTranslation('name', app()->getLocale(), false)
+                        ?: $programMajor->getTranslation('name', 'vi', false)
+                        ?: $programMajor->getTranslation('name', 'en', false)
+                        ?: $programMajor->slug,
                 ];
             })
             ->toArray();
@@ -197,18 +262,18 @@ new class extends Component {
             throw $e;
         }
 
-        $this->dispatch('modal:confirm', [
-            'title' => 'Bạn có chắc chắn muốn lưu thay đổi không?',
-            'icon' => 'question',
-            'confirmButtonText' => 'Xác nhận',
-            'cancelButtonText' => 'Hủy',
-            'method' => 'confirmSave',
-        ]);
-    }
-
-    #[On('confirmSave')]
-    public function confirmSave(): void
-    {
+//        $this->dispatch('modal:confirm', [
+//            'title' => 'Bạn có chắc chắn muốn lưu thay đổi không?',
+//            'icon' => 'question',
+//            'confirmButtonText' => 'Xác nhận',
+//            'cancelButtonText' => 'Hủy',
+//            'method' => 'confirmSave',
+//        ]);
+//    }
+//
+//    #[On('confirmSave')]
+//    public function confirmSave(): void
+//    {
         $program = TrainingProgram::findOrFail($this->id);
 
         $publishedAt = $this->status === 'published'
@@ -221,6 +286,7 @@ new class extends Component {
             'level' => ['vi' => trim($this->level_vi), 'en' => trim($this->level_en)],
             'language' => ['vi' => trim($this->language_vi), 'en' => trim($this->language_en)],
             'duration_time' => $this->duration_time,
+            'program_major_id' => $this->program_major_id,
             'major_id' => $this->major_id,
             'intake_id' => $this->intake_id,
             'school_year_start' => $this->school_year_start,
@@ -232,7 +298,7 @@ new class extends Component {
             'notes' => trim($this->notes),
         ]);
 
-        $this->success('Cập nhật chương trình đào tạo thành công!', redirectTo: route('admin.training-program.index'));
+        $this->success('Cập nhật chương trình đào tạo thành công!');
     }
 };
 ?>
@@ -273,15 +339,16 @@ new class extends Component {
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                    <x-select label="Chuyên ngành/Hướng chuyên sâu" wire:model.live.debounce.400ms="major_id" :options="$this->majorOptions" option-value="id" option-label="name" placeholder="{{ __('(General program)') }}" placeholder-value=""/>
-                    <x-select label="Khóa" wire:model.live.debounce.400ms="intake_id" :options="$this->intakeOptions" option-value="id" option-label="name" required placeholder="Chọn khóa học"/>
-                    <x-input label="Thời gian đào tạo (năm)" type="number" min="1" wire:model.live.debounce.400ms="duration_time" required placeholder="4"/>
+                    <x-select label="Ngành" wire:model.live="program_major_id" :options="$this->programMajorOptions" option-value="id" option-label="name" placeholder="Chọn ngành (tùy chọn)" placeholder-value=""/>
+                    <x-select label="Chuyên ngành/Hướng chuyên sâu" wire:model.live="major_id" :options="$this->majorOptions" option-value="id" option-label="name" placeholder="{{ __('(General program)') }}" placeholder-value="" :disabled="!$this->program_major_id"/>
+                    <x-select label="Khóa" wire:model.live="intake_id" :options="$this->intakeOptions" option-value="id" option-label="name" placeholder="Chọn khóa"/>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <x-input label="Thời gian đào tạo (năm)" type="number" min="1" wire:model.live.debounce.400ms="duration_time" required placeholder="4"/>
                     <x-input label="Năm bắt đầu" type="number" wire:model.live.debounce.400ms="school_year_start" placeholder="2026"/>
                     <x-input label="Năm kết thúc" type="number" wire:model.live.debounce.400ms="school_year_end" placeholder="2030"/>
-                    <x-input label="Tổng số tín chỉ " type="number" min="0" wire:model.live.debounce.400ms="total_credits" placeholder="131"/>
                 </div>
+                <x-input label="Tổng số tín chỉ " type="number" min="0" wire:model.live.debounce.400ms="total_credits" placeholder="131"/>
             </x-card>
 
             <x-card title="Ghi chú" shadow class="p-3!">
@@ -296,7 +363,7 @@ new class extends Component {
             </x-card>
 
             <x-card title="Xuất bản" shadow class="p-3!">
-                <x-input label="Phiên bản" wire:model.live.debounce.300ms="version" placeholder="VD: K67 - 2022" required readonly/>
+{{--                <x-input label="Phiên bản" wire:model.live.debounce.300ms="version" placeholder="VD: K67 - 2022" required readonly/>--}}
                 <x-select label="Trạng thái" wire:model="status" :options="$this->statusOptions" option-value="id" option-label="name" />
                 <div class="mt-4">
                     <x-datetime label="Thời gian xuất bản" wire:model="published_at" icon="o-calendar" type="datetime-local"/>
