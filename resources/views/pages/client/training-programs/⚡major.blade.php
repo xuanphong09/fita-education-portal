@@ -684,6 +684,7 @@ class extends Component {
                     return [
                         'semester_no' => (int) $semester->semester_no,
                         'timeline' => $this->formatSemesterTimeline($semester),
+                        'semester_name' => $semester->semester_name,
                         'total_credits' => (float) $subjects->sum('credits'),
                         'subjects' => $subjects,
                     ];
@@ -1314,9 +1315,9 @@ class extends Component {
                                     <x-card shadow class="p-0!">
                                         <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
                                             <div>
-                                                <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }}</h3>
+                                                <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }} {{ $semesterBlock['semester_name']? '('.$semesterBlock['semester_name'].')' :'' }}</h3>
                                                 @if(!empty($semesterBlock['timeline']))
-                                                    <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>
+{{--                                                    <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>--}}
                                                 @endif
                                             </div>
                                             <span
