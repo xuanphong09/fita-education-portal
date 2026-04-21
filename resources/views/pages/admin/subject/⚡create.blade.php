@@ -2,6 +2,8 @@
 
 use App\Models\GroupSubject;
 use App\Models\Subject;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -22,10 +24,19 @@ new class extends Component {
     public array $prerequisite_subject_ids = [];
     public $syllabus_file;
 
+    public $import_file;
+    public array $importPreviewRows = [];
+    public array $selectedImportRowKeys = [];
+    public array $importMissingHeaders = [];
+    public string $importSearch = '';
+    public bool $showImportSuccessModal = false;
+    public int $importValidCount = 0;
+    public int $importInvalidCount = 0;
+
     protected function rules(): array
     {
         return [
-            'code' => ['required', 'string', 'max:255', 'regex:/^([A-Za-z0-9]+\/\s*)*[A-Za-z0-9]+\/?$/', Rule::unique('subjects', 'code')],
+            'code' => ['required', 'string', 'max:255', Rule::unique('subjects', 'code')],
             'name_vi' => ['required', 'string', 'max:255'],
             'name_en' => ['nullable', 'string', 'max:255'],
             'group_subject_id' => ['nullable', 'integer', 'exists:group_subjects,id'],
@@ -51,6 +62,13 @@ new class extends Component {
                 },
                 'max:10240',
             ],
+            'import_file' => [
+                'nullable',
+                'file',
+                'mimes:xlsx',
+                'mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream',
+                'max:10240',
+            ],
         ];
     }
 
@@ -68,6 +86,8 @@ new class extends Component {
         'syllabus_file.mimes' => 'Đề cương môn học chỉ hỗ trợ định dạng PDF.',
         'syllabus_file.mimetypes' => 'Nội dung file không đúng định dạng PDF hợp lệ.',
         'syllabus_file.max' => 'Đề cương môn học không được vượt quá 10MB.',
+        'import_file.mimes' => 'File import phải là định dạng .xlsx.',
+        'import_file.max' => 'File import không được vượt quá 10MB.',
     ];
 
     protected function allowedSyllabusMimeTypes(): array
@@ -132,6 +152,11 @@ new class extends Component {
 
         if (in_array($property, ['credits', 'credits_theory', 'credits_practice'], true)) {
             $this->validateCreditsDistribution();
+        }
+
+        if ($property === 'import_file' ) {
+            $this->validateOnly('import_file');
+            return;
         }
 
         $this->validateOnly($property);
@@ -217,6 +242,518 @@ new class extends Component {
         ]));
 
         $this->success('Tạo môn học thành công!', redirectTo: route('admin.subject.index'));
+    }
+
+    protected function normalizeHeader(string $value): string
+    {
+        $ascii = Str::of($value)->ascii()->lower()->replaceMatches('/[^a-z0-9]+/', '')->toString();
+        return trim($ascii);
+    }
+
+    protected function normalizeSearchText(?string $value): string
+    {
+        return Str::lower(Str::ascii(trim((string) $value)));
+    }
+
+    public function getFilteredImportPreviewRowsProperty(): array
+    {
+        $keyword = $this->normalizeSearchText($this->importSearch);
+
+        if ($keyword === '') {
+            return $this->importPreviewRows;
+        }
+
+        return array_values(array_filter($this->importPreviewRows, function (array $row) use ($keyword) {
+            $searchable = $this->normalizeSearchText(implode(' ', [
+                (string) ($row['code'] ?? ''),
+                (string) ($row['name_vi'] ?? ''),
+                (string) ($row['name_en'] ?? ''),
+            ]));
+
+            return str_contains($searchable, $keyword);
+        }));
+    }
+
+    protected function xlsxColumnIndex(string $column): int
+    {
+        $column = strtoupper(trim($column));
+        $result = 0;
+
+        for ($i = 0; $i < strlen($column); $i++) {
+            $result = ($result * 26) + (ord($column[$i]) - 64);
+        }
+
+        return max(0, $result - 1);
+    }
+
+    protected function extractXmlText(mixed $node, ?string $namespace): string
+    {
+        if (!$node) {
+            return '';
+        }
+
+        $text = '';
+        $work = $namespace ? $node->children($namespace) : $node;
+
+        if (isset($work->t)) {
+            $text .= (string) $work->t;
+        }
+
+        if (isset($work->r)) {
+            foreach ($work->r as $run) {
+                $runNode = $namespace ? $run->children($namespace) : $run;
+                $text .= (string) ($runNode->t ?? '');
+            }
+        }
+
+        return trim($text);
+    }
+
+    protected function parseWorksheetRows(string $sheetXml, array $sharedStrings): array
+    {
+        // Hack: Loại bỏ toàn bộ namespace để đọc XML cực kỳ dễ dàng
+        $sheetXml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $sheetXml);
+        $xml = simplexml_load_string($sheetXml);
+
+        if ($xml === false || !isset($xml->sheetData->row)) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ($xml->sheetData->row as $row) {
+            $values = [];
+
+            foreach ($row->c as $cell) {
+                $ref = (string) ($cell['r'] ?? '');
+                preg_match('/[A-Z]+/', $ref, $match);
+                $index = isset($match[0]) ? $this->xlsxColumnIndex($match[0]) : count($values);
+
+                $value = '';
+                $type = (string) ($cell['t'] ?? '');
+
+                if ($type === 's') {
+                    // Lấy chữ từ từ điển (Shared Strings)
+                    $sharedIdx = (int) ($cell->v ?? -1);
+                    $value = $sharedStrings[$sharedIdx] ?? '';
+                } elseif ($type === 'inlineStr') {
+                    // Lấy chữ trực tiếp bằng strip_tags
+                    $value = trim(strip_tags($cell->is->asXML()));
+                } else {
+                    // Dữ liệu số
+                    $value = (string) ($cell->v ?? '');
+                }
+
+                $values[$index] = trim($value);
+            }
+
+            if (!empty($values)) {
+                ksort($values);
+                $rows[] = $values;
+            }
+        }
+
+        return $rows;
+    }
+
+    protected function readXlsxSheets(string $path): array
+    {
+        $zip = new ZipArchive();
+        if ($zip->open($path) !== true) {
+            throw ValidationException::withMessages([
+                'import_file' => 'Không thể đọc file XLSX.',
+            ]);
+        }
+
+        $sharedStrings = [];
+        $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
+        if ($sharedStringsXml !== false) {
+            // Hack: Loại bỏ namespace
+            $sharedStringsXml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $sharedStringsXml);
+            $xml = simplexml_load_string($sharedStringsXml);
+            if ($xml !== false) {
+                foreach ($xml->si as $si) {
+                    // strip_tags sẽ vứt bỏ mọi thẻ XML (<r>, <t>,...), chỉ giữ lại đúng chữ cái
+                    $sharedStrings[] = trim(strip_tags($si->asXML()));
+                }
+            }
+        }
+
+        $sheetEntries = [];
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = (string) $zip->getNameIndex($i);
+            if (preg_match('#^xl/worksheets/[^/]+\.xml$#i', $name)) {
+                $sheetEntries[] = $name;
+            }
+        }
+
+        natcasesort($sheetEntries);
+        $sheetEntries = array_values($sheetEntries);
+
+        if (empty($sheetEntries)) {
+            $zip->close();
+            throw ValidationException::withMessages([
+                'import_file' => 'Không tìm thấy dữ liệu worksheet trong file Excel.',
+            ]);
+        }
+
+        $sheets = [];
+        foreach ($sheetEntries as $sheetName) {
+            $sheetXml = $zip->getFromName($sheetName);
+            if ($sheetXml === false) {
+                continue;
+            }
+
+            $rows = $this->parseWorksheetRows($sheetXml, $sharedStrings);
+            if (!empty($rows)) {
+                $sheets[$sheetName] = $rows;
+            }
+        }
+
+        $zip->close();
+
+        if (empty($sheets)) {
+            throw ValidationException::withMessages([
+                'import_file' => 'Không tìm thấy dữ liệu hợp lệ trong các sheet của file Excel.',
+            ]);
+        }
+
+        return $sheets;
+    }
+
+    protected function resolveHeaderMap(array $headerRow): array
+    {
+        $lookup = [
+            'tenhocphan' => 'name_vi',
+            'tenhocphann' => 'name_vi',
+            'tienganh' => 'name_en',
+            'tentienganh' => 'name_en',
+            'mahocphan' => 'code',
+            'tongsotc' => 'credits',
+            'tongtc' => 'credits',
+            'lt' => 'credits_theory',
+            'th' => 'credits_practice',
+            'nhommon' => 'group_name',
+            'nhommonhoc' => 'group_name',
+        ];
+
+        $map = [];
+        foreach ($headerRow as $index => $value) {
+            $normalized = $this->normalizeHeader((string) $value);
+            if ($normalized !== '' && isset($lookup[$normalized])) {
+                $map[$lookup[$normalized]] = (int) $index;
+            }
+        }
+
+        $required = ['name_vi', 'name_en', 'code', 'credits', 'credits_theory', 'credits_practice', 'group_name'];
+        $this->importMissingHeaders = array_values(array_filter($required, fn ($field) => !array_key_exists($field, $map)));
+
+        return $map;
+    }
+
+    protected function resolveHeaderMapFromRows(array $rows): array
+    {
+        $bestMap = [];
+        $bestHeaderRowIndex = -1;
+
+        $scanLimit = min(count($rows), 15);
+        for ($i = 0; $i < $scanLimit; $i++) {
+            $map = $this->resolveHeaderMap($rows[$i] ?? []);
+            if (count($map) > count($bestMap)) {
+                $bestMap = $map;
+                $bestHeaderRowIndex = $i;
+            }
+
+            if (count($bestMap) >= 7) {
+                break;
+            }
+        }
+
+        return [$bestMap, $bestHeaderRowIndex];
+    }
+
+    protected function importRules(): array
+    {
+        return [
+            'import_file' => [
+                'required',
+                'file',
+                'mimes:xlsx',
+                'mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream',
+                'max:10240',
+            ],
+        ];
+    }
+    protected array $groupMapCache = [];
+
+    // Viết thêm hàm này vào class
+    protected function mapGroupSubjectId(string $groupName): ?int
+    {
+        if (trim($groupName) === '') {
+            return null;
+        }
+
+        // Nếu cache rỗng, query 1 lần duy nhất lấy toàn bộ Nhóm môn học
+        if (empty($this->groupMapCache)) {
+            $this->groupMapCache = GroupSubject::all()->mapWithKeys(function ($g) {
+                // Tận dụng luôn hàm normalizeHeader để so khớp không phân biệt hoa thường/dấu câu
+                $nameVi = $g->getTranslation('name', 'vi', false) ?: '';
+                return [$this->normalizeHeader($nameVi) => $g->id];
+            })->toArray();
+        }
+
+        $normalizedInput = $this->normalizeHeader($groupName);
+
+        return $this->groupMapCache[$normalizedInput] ?? null;
+    }
+
+    public function parseImportFile(): void
+    {
+        $this->importPreviewRows = [];
+        $this->selectedImportRowKeys = [];
+        $this->importMissingHeaders = [];
+        $this->importSearch = '';
+        $this->showImportSuccessModal = false;
+        $this->importValidCount = 0;
+        $this->importInvalidCount = 0;
+
+        if (!$this->import_file) {
+            $this->error('Vui lòng chọn file Excel (.xlsx) trước khi đọc dữ liệu.');
+            return;
+        }
+
+        // Validate only import file to avoid unrelated validation (e.g. PDF syllabus field).
+        $this->validate($this->importRules());
+
+        $sheets = $this->readXlsxSheets((string) $this->import_file->getRealPath());
+
+        $rows = [];
+        $headerMap = [];
+        $headerRowIndex = -1;
+        $bestScore = -1;
+
+        foreach ($sheets as $sheetRows) {
+            if (count($sheetRows) < 2) {
+                continue;
+            }
+
+            [$candidateMap, $candidateHeaderIndex] = $this->resolveHeaderMapFromRows($sheetRows);
+            $score = count($candidateMap);
+
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $rows = $sheetRows;
+                $headerMap = $candidateMap;
+                $headerRowIndex = $candidateHeaderIndex;
+            }
+        }
+
+        if (empty($rows) || count($rows) < 2) {
+            $this->error('File import không có dữ liệu môn học.');
+            return;
+        }
+
+        $required = ['name_vi', 'name_en', 'code', 'credits', 'credits_theory', 'credits_practice', 'group_name'];
+        $this->importMissingHeaders = array_values(array_filter($required, fn ($field) => !array_key_exists($field, $headerMap)));
+
+        if (!empty($this->importMissingHeaders)) {
+            $labels = [
+                'name_vi' => 'Tên học phần',
+                'name_en' => 'Tên Tiếng anh',
+                'code' => 'Mã học phần',
+                'credits' => 'Tổng Số TC',
+                'credits_theory' => 'LT',
+                'credits_practice' => 'TH',
+                'group_name' => 'Nhóm môn',
+            ];
+
+            $missing = implode(', ', array_map(fn ($k) => $labels[$k] ?? $k, $this->importMissingHeaders));
+            $this->error('Thiếu cột bắt buộc trong file: ' . $missing);
+            return;
+        }
+
+        if ($headerRowIndex < 0 || $headerRowIndex >= count($rows) - 1) {
+            $this->error('Không tìm thấy dòng tiêu đề hợp lệ trong file Excel.');
+            return;
+        }
+
+        $existingCodes = Subject::query()->pluck('code')->map(fn ($v) => strtoupper(trim((string) $v)))->all();
+        $existingCodeSet = array_flip($existingCodes);
+        $seenInFile = [];
+
+        $preview = [];
+        $selected = [];
+        $key = 1;
+
+
+        for ($i = $headerRowIndex + 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+
+            $nameVi = trim((string) ($row[$headerMap['name_vi']] ?? ''));
+            $nameEn = trim((string) ($row[$headerMap['name_en']] ?? ''));
+            $code = strtoupper(trim((string) ($row[$headerMap['code']] ?? '')));
+            $creditsRaw = trim((string) ($row[$headerMap['credits']] ?? ''));
+            $creditsTheoryRaw = trim((string) ($row[$headerMap['credits_theory']] ?? ''));
+            $creditsPracticeRaw = trim((string) ($row[$headerMap['credits_practice']] ?? ''));
+            $groupName = trim((string) ($row[$headerMap['group_name']] ?? ''));
+
+            if ($nameVi === '' && $nameEn === '' && $code === '' && $creditsRaw === '' && $creditsTheoryRaw === '' && $creditsPracticeRaw === '' && $groupName === '') {
+                continue;
+            }
+
+            $errors = [];
+
+            if ($nameVi === '') {
+                $errors[] = 'Thiếu Tên học phần.';
+            }
+
+            if ($code === '') {
+                $errors[] = 'Thiếu Mã học phần.';
+            }
+//            elseif (!preg_match('/^([A-Za-z0-9]+\/\s*)*[A-Za-z0-9]+\/?$/', $code)) {
+//                $errors[] = 'Mã học phần không đúng định dạng.';
+//            }
+
+            if ($code !== '' && isset($existingCodeSet[$code])) {
+                $errors[] = 'Mã học phần đã tồn tại trong hệ thống.';
+            }
+
+            if ($code !== '') {
+                if (isset($seenInFile[$code])) {
+                    $errors[] = 'Mã học phần bị trùng trong file import.';
+                }
+                $seenInFile[$code] = true;
+            }
+
+            $credits = $this->toDecimal($creditsRaw);
+            $creditsTheory = $this->toDecimal($creditsTheoryRaw);
+            $creditsPractice = $this->toDecimal($creditsPracticeRaw);
+
+            if ($credits === null) {
+                $errors[] = 'Tổng Số TC không hợp lệ.';
+            }
+
+            if ($creditsTheory === null) {
+                $errors[] = 'LT không hợp lệ.';
+            }
+
+            if ($creditsPractice === null) {
+                $errors[] = 'TH không hợp lệ.';
+            }
+
+            if ($credits !== null && $creditsTheory !== null && $creditsPractice !== null) {
+                if (abs(($creditsTheory + $creditsPractice) - $credits) > 0.0001) {
+                    $errors[] = 'Tổng Số TC phải bằng LT + TH.';
+                }
+            }
+
+            $groupId = $this->mapGroupSubjectId($groupName);
+            if ($groupName !== '' && $groupId === null) {
+                $errors[] = 'Không tìm thấy Nhóm môn phù hợp trong hệ thống.';
+            }
+
+            $preview[] = [
+                'key' => $key,
+                'row_no' => $i + 1,
+                'name_vi' => $nameVi,
+                'name_en' => $nameEn,
+                'code' => $code,
+                'credits' => $credits,
+                'credits_theory' => $creditsTheory,
+                'credits_practice' => $creditsPractice,
+                'group_name' => $groupName,
+                'group_subject_id' => $groupId,
+                'errors' => $errors,
+                'is_valid' => empty($errors),
+            ];
+
+            if (empty($errors)) {
+                $selected[] = $key;
+            }
+
+            $key++;
+        }
+
+        $this->importPreviewRows = $preview;
+        $this->selectedImportRowKeys = $selected;
+
+        if (empty($preview)) {
+            $this->error('Không tìm thấy dữ liệu hợp lệ trong file import.');
+            return;
+        }
+
+        $invalidCount = count(array_filter($preview, fn ($row) => !$row['is_valid']));
+        $this->importValidCount = count($preview) - $invalidCount;
+        $this->importInvalidCount = $invalidCount;
+        $this->showImportSuccessModal = true;
+        $this->success('Đã đọc file thành công: ' . count($preview) . ' dòng, lỗi ' . $invalidCount . ' dòng.');
+    }
+
+    public function selectAllValidImportRows(): void
+    {
+        $this->selectedImportRowKeys = array_values(array_map(
+            fn ($row) => (int) $row['key'],
+            array_filter($this->importPreviewRows, fn ($row) => (bool) $row['is_valid'])
+        ));
+    }
+
+    public function clearImportSelection(): void
+    {
+        $this->selectedImportRowKeys = [];
+    }
+
+    public function saveImportedSubjects(): void
+    {
+        if (empty($this->importPreviewRows)) {
+            $this->error('Chưa có dữ liệu import để lưu.');
+            return;
+        }
+
+        $selected = array_flip(array_map('intval', $this->selectedImportRowKeys));
+
+        $rowsToSave = array_values(array_filter($this->importPreviewRows, function (array $row) use ($selected) {
+            return (bool) ($row['is_valid'] ?? false) && isset($selected[(int) ($row['key'] ?? 0)]);
+        }));
+
+        if (empty($rowsToSave)) {
+            $this->error('Vui lòng chọn ít nhất 1 dòng hợp lệ để lưu.');
+            return;
+        }
+
+        $codes = array_values(array_unique(array_map(fn ($row) => (string) $row['code'], $rowsToSave)));
+        $existing = Subject::query()->whereIn('code', $codes)->pluck('code')->all();
+
+        if (!empty($existing)) {
+            $this->error('Không thể lưu vì có mã học phần đã tồn tại: ' . implode(', ', $existing));
+            return;
+        }
+
+        DB::transaction(function () use ($rowsToSave) {
+            foreach ($rowsToSave as $row) {
+                Subject::query()->create([
+                    'code' => (string) $row['code'],
+                    'name' => [
+                        'vi' => (string) $row['name_vi'],
+                        'en' => (string) ($row['name_en'] ?? ''),
+                    ],
+                    'group_subject_id' => $row['group_subject_id'] ? (int) $row['group_subject_id'] : null,
+                    'credits' => (float) $row['credits'],
+                    'credits_theory' => (float) $row['credits_theory'],
+                    'credits_practice' => (float) $row['credits_practice'],
+                    'is_active' => $this->is_active,
+                ]);
+            }
+        });
+
+        $count = count($rowsToSave);
+
+        $this->importPreviewRows = [];
+        $this->selectedImportRowKeys = [];
+        $this->importMissingHeaders = [];
+        $this->importSearch = '';
+        $this->import_file = null;
+
+        $this->success('Đã import thành công ' . $count . ' môn học.', redirectTo: route('admin.subject.index'));
     }
 };
 ?>
@@ -329,9 +866,122 @@ new class extends Component {
                     class="toggle-primary"
                 />
             </x-card>
+            <x-card title="Import môn học" shadow class="p-3!">
+                <div class="grid grid-cols-1 gap-4 items-end">
+                    <x-file
+                        label="File Excel (.xlsx)"
+                        wire:model.live="import_file"
+                        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        hint="Dùng file Excel để import hàng loạt môn học. Tối đa 10MB."
+                    />
+
+                    <x-button
+                        label="Đọc file"
+                        class="bg-primary text-white w-full"
+                        wire:click="parseImportFile"
+                        spinner="parseImportFile"
+                    />
+                </div>
+
+                @if(!empty($importPreviewRows))
+                    @php
+                        $validCount = collect($importPreviewRows)->where('is_valid', true)->count();
+                        $invalidCount = collect($importPreviewRows)->where('is_valid', false)->count();
+                    @endphp
+
+                    <div class="mt-4 flex flex-wrap gap-2 items-center">
+                        <x-badge value="{{ count($importPreviewRows) }} dòng" class="badge-outline" />
+                        <x-badge value="{{ $validCount }} hợp lệ" class="badge-success text-white" />
+                        <x-badge value="{{ $invalidCount }} lỗi" class="badge-error text-white" />
+                        <x-button label="Mở danh sách import" class="w-full btn-md" wire:click="$set('showImportSuccessModal', true)" />
+                    </div>
+                @endif
+            </x-card>
         </div>
 
     </div>
+
+    <x-modal wire:model="showImportSuccessModal" title="Danh sách import môn học" separator box-class="max-w-7xl">
+        <div class="space-y-3 text-md">
+            <div class="flex flex-wrap gap-2 items-center justify-between">
+                <div class="flex flex-wrap gap-x-4 gap-y-2 items-center">
+                    <x-badge value="{{ count($importPreviewRows) }} dòng" class="badge-outline" />
+                    <x-badge value="{{ $importValidCount }} hợp lệ" class="badge-success text-white" />
+                    <x-badge value="{{ $importInvalidCount }} lỗi" class="badge-error text-white" />
+                    <x-badge value="{{ count($this->filteredImportPreviewRows) }} đang hiển thị" class="badge-ghost" />
+                    <x-input
+                        wire:model.live.debounce.300ms="importSearch"
+                        placeholder="Nhập mã môn hoặc tên môn..."
+                        clearable
+                        class="w-full lg:w-96 flex"
+                    />
+                </div>
+                <div class="flex gap-2">
+                    <x-button label="Chọn tất cả hợp lệ" class="btn-md" wire:click="selectAllValidImportRows" />
+                    <x-button label="Bỏ chọn" class="btn-md" wire:click="clearImportSelection" />
+                </div>
+            </div>
+
+            <div class="overflow-x-auto border border-gray-200 rounded-md max-h-[60vh]">
+                <table class="table table-zebra w-full">
+                    <thead class="text-black">
+                        <tr>
+                            <th class="w-10"></th>
+                            <th>STT</th>
+                            <th>Mã học phần</th>
+                            <th>Tên học phần</th>
+                            <th>Tên Tiếng anh</th>
+                            <th>Tổng Số TC</th>
+                            <th>LT</th>
+                            <th>TH</th>
+                            <th>Nhóm môn</th>
+                            <th>Trạng thái</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($this->filteredImportPreviewRows as $row)
+                            <tr>
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        value="{{ $row['key'] }}"
+                                        wire:model="selectedImportRowKeys"
+                                        @disabled(!$row['is_valid'])
+                                    >
+                                </td>
+                                <td>{{ $row['row_no'] }}</td>
+                                <td>{{ $row['code'] ?: '—' }}</td>
+                                <td>{{ $row['name_vi'] ?: '—' }}</td>
+                                <td>{{ $row['name_en'] ?: '—' }}</td>
+                                <td>{{ $row['credits'] ?? '—' }}</td>
+                                <td>{{ $row['credits_theory'] ?? '—' }}</td>
+                                <td>{{ $row['credits_practice'] ?? '—' }}</td>
+                                <td>{{ $row['group_name'] ?: '—' }}</td>
+                                <td>
+                                    @if($row['is_valid'])
+                                        <span class="text-green-600">Hợp lệ</span>
+                                    @else
+                                        <div class="text-red-600 text-md leading-5">
+                                            {{ implode(' ', $row['errors']) }}
+                                        </div>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="10" class="text-center text-gray-500 py-4">Không có dòng nào khớp từ khóa tìm kiếm.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <x-slot:actions>
+            <x-button label="Đóng" class="btn-ghost" wire:click="$set('showImportSuccessModal', false)" />
+            <x-button label="Lưu các dòng đã chọn" class="bg-primary text-white" wire:click="saveImportedSubjects" spinner="saveImportedSubjects" />
+        </x-slot:actions>
+    </x-modal>
 </div>
 
 
