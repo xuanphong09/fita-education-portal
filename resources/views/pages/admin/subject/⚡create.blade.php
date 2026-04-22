@@ -2,6 +2,7 @@
 
 use App\Models\GroupSubject;
 use App\Models\Subject;
+use App\Models\SubjectEquivalent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -24,6 +25,11 @@ new class extends Component {
     public array $prerequisite_subject_ids = [];
     public $syllabus_file;
 
+    // Các biến cho phần Môn tương đương
+    public array $equivalent_subject_ids = [];
+    public string $equivalentSearch = '';
+
+    // Các biến cho phần Import
     public $import_file;
     public array $importPreviewRows = [];
     public array $selectedImportRowKeys = [];
@@ -44,6 +50,8 @@ new class extends Component {
             'credits_theory' => $this->decimalRules('Tín chỉ lý thuyết'),
             'credits_practice' => $this->decimalRules('Tín chỉ thực hành'),
             'is_active' => ['boolean'],
+            'equivalent_subject_ids' => ['array'],
+            'equivalent_subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
             'syllabus_file' => [
                 'nullable',
                 'file',
@@ -112,12 +120,12 @@ new class extends Component {
             'required',
             'regex:/^\d+(?:[\.,]\d)?$/',
             function ($attribute, $value, $fail) use ($label) {
-            $decimal = $this->toDecimal($value);
+                $decimal = $this->toDecimal($value);
 
-            if ($decimal === null) {
+                if ($decimal === null) {
                     $fail($label . ' không hợp lệ.');
                     return;
-            }
+                }
 
                 if ($decimal < 0 || $decimal > 20) {
                     $fail($label . ' phải nằm trong khoảng từ 0 đến 20.');
@@ -139,7 +147,6 @@ new class extends Component {
 
     public function updated(string $property): void
     {
-        // Some UI interactions may emit "$field"; normalize before validateOnly.
         $property = ltrim($property, '$');
 
         if (!property_exists($this, $property)) {
@@ -175,13 +182,73 @@ new class extends Component {
             ->toArray();
     }
 
+    // --- CÁC HÀM XỬ LÝ MÔN TƯƠNG ĐƯƠNG ---
+    public function getEquivalentSubjectOptionsProperty(): array
+    {
+        // Khi tạo mới, lấy tất cả môn học đang active
+        return Subject::query()
+            ->where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->map(fn ($subject) => [
+                'id' => $subject->id,
+                'name' => $subject->code
+                    . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A')
+                    . ' (' . Subject::formatCredit($subject->credits) . ' TC)'
+            ])
+            ->toArray();
+    }
+
+    public function getSelectedEquivalentsProperty()
+    {
+        if (empty($this->equivalent_subject_ids)) {
+            return collect();
+        }
+        return Subject::query()->whereIn('id', $this->equivalent_subject_ids)->get();
+    }
+
+    public function getEquivalentOptionsProperty(): array
+    {
+        $keyword = trim($this->equivalentSearch);
+
+        if ($keyword === '') {
+            return $this->equivalentSubjectOptions;
+        }
+
+        $normalizedKeyword = $this->normalizeSearchText($keyword);
+
+        return collect($this->equivalentSubjectOptions)
+            ->filter(function (array $subject) use ($keyword, $normalizedKeyword) {
+                $name = (string) ($subject['name'] ?? '');
+
+                if (mb_stripos($name, $keyword) !== false) {
+                    return true;
+                }
+
+                return str_contains($this->normalizeSearchText($name), $normalizedKeyword);
+            })
+            ->values()
+            ->all();
+    }
+
+    public function removeEquivalent(int $equivalentId): void
+    {
+        // Gỡ ID khỏi mảng nháp, không đụng tới DB
+        if (in_array($equivalentId, $this->equivalent_subject_ids)) {
+            $this->equivalent_subject_ids = array_values(array_filter(
+                $this->equivalent_subject_ids,
+                fn($id) => $id !== $equivalentId
+            ));
+        }
+    }
+    // --- KẾT THÚC XỬ LÝ MÔN TƯƠNG ĐƯƠNG ---
+
     protected function validateCreditsDistribution(): void
     {
         $credits = $this->toDecimal($this->credits);
         $creditsTheory = $this->toDecimal($this->credits_theory);
         $creditsPractice = $this->toDecimal($this->credits_practice);
 
-        // Skip cross-field check while user is still typing/clearing one of the fields.
         if ($credits === null || $creditsTheory === null || $creditsPractice === null) {
             return;
         }
@@ -236,10 +303,19 @@ new class extends Component {
             $syllabusOriginalName = (string) $this->syllabus_file->getClientOriginalName();
         }
 
-        Subject::query()->create(array_merge($this->payload(), [
+        $subject = Subject::query()->create(array_merge($this->payload(), [
             'syllabus_path' => $syllabusPath,
             'syllabus_original_name' => $syllabusOriginalName,
         ]));
+
+        // Lưu danh sách môn tương đương sau khi tạo thành công Subject
+        try {
+            if (!empty($this->equivalent_subject_ids)) {
+                SubjectEquivalent::syncForSubject($subject->id, $this->equivalent_subject_ids);
+            }
+        } catch (\InvalidArgumentException $e) {
+            $this->error($e->getMessage());
+        }
 
         $this->success('Tạo môn học thành công!', redirectTo: route('admin.subject.index'));
     }
@@ -311,7 +387,6 @@ new class extends Component {
 
     protected function parseWorksheetRows(string $sheetXml, array $sharedStrings): array
     {
-        // Hack: Loại bỏ toàn bộ namespace để đọc XML cực kỳ dễ dàng
         $sheetXml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $sheetXml);
         $xml = simplexml_load_string($sheetXml);
 
@@ -333,14 +408,11 @@ new class extends Component {
                 $type = (string) ($cell['t'] ?? '');
 
                 if ($type === 's') {
-                    // Lấy chữ từ từ điển (Shared Strings)
                     $sharedIdx = (int) ($cell->v ?? -1);
                     $value = $sharedStrings[$sharedIdx] ?? '';
                 } elseif ($type === 'inlineStr') {
-                    // Lấy chữ trực tiếp bằng strip_tags
                     $value = trim(strip_tags($cell->is->asXML()));
                 } else {
-                    // Dữ liệu số
                     $value = (string) ($cell->v ?? '');
                 }
 
@@ -368,12 +440,10 @@ new class extends Component {
         $sharedStrings = [];
         $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
         if ($sharedStringsXml !== false) {
-            // Hack: Loại bỏ namespace
             $sharedStringsXml = preg_replace('/xmlns[^=]*="[^"]*"/i', '', $sharedStringsXml);
             $xml = simplexml_load_string($sharedStringsXml);
             if ($xml !== false) {
                 foreach ($xml->si as $si) {
-                    // strip_tags sẽ vứt bỏ mọi thẻ XML (<r>, <t>,...), chỉ giữ lại đúng chữ cái
                     $sharedStrings[] = trim(strip_tags($si->asXML()));
                 }
             }
@@ -445,7 +515,7 @@ new class extends Component {
             }
         }
 
-        $required = ['name_vi', 'name_en', 'code', 'credits', 'credits_theory', 'credits_practice', 'group_name'];
+        $required = ['name_vi', 'code', 'credits', 'credits_theory', 'credits_practice', 'group_name'];
         $this->importMissingHeaders = array_values(array_filter($required, fn ($field) => !array_key_exists($field, $map)));
 
         return $map;
@@ -464,7 +534,7 @@ new class extends Component {
                 $bestHeaderRowIndex = $i;
             }
 
-            if (count($bestMap) >= 7) {
+            if (count($bestMap) >= 6) {
                 break;
             }
         }
@@ -484,19 +554,17 @@ new class extends Component {
             ],
         ];
     }
+
     protected array $groupMapCache = [];
 
-    // Viết thêm hàm này vào class
     protected function mapGroupSubjectId(string $groupName): ?int
     {
         if (trim($groupName) === '') {
             return null;
         }
 
-        // Nếu cache rỗng, query 1 lần duy nhất lấy toàn bộ Nhóm môn học
         if (empty($this->groupMapCache)) {
             $this->groupMapCache = GroupSubject::all()->mapWithKeys(function ($g) {
-                // Tận dụng luôn hàm normalizeHeader để so khớp không phân biệt hoa thường/dấu câu
                 $nameVi = $g->getTranslation('name', 'vi', false) ?: '';
                 return [$this->normalizeHeader($nameVi) => $g->id];
             })->toArray();
@@ -522,7 +590,6 @@ new class extends Component {
             return;
         }
 
-        // Validate only import file to avoid unrelated validation (e.g. PDF syllabus field).
         $this->validate($this->importRules());
 
         $sheets = $this->readXlsxSheets((string) $this->import_file->getRealPath());
@@ -553,7 +620,7 @@ new class extends Component {
             return;
         }
 
-        $required = ['name_vi', 'name_en', 'code', 'credits', 'credits_theory', 'credits_practice', 'group_name'];
+        $required = ['name_vi', 'code', 'credits', 'credits_theory', 'credits_practice', 'group_name'];
         $this->importMissingHeaders = array_values(array_filter($required, fn ($field) => !array_key_exists($field, $headerMap)));
 
         if (!empty($this->importMissingHeaders)) {
@@ -610,9 +677,6 @@ new class extends Component {
             if ($code === '') {
                 $errors[] = 'Thiếu Mã học phần.';
             }
-//            elseif (!preg_match('/^([A-Za-z0-9]+\/\s*)*[A-Za-z0-9]+\/?$/', $code)) {
-//                $errors[] = 'Mã học phần không đúng định dạng.';
-//            }
 
             if ($code !== '' && isset($existingCodeSet[$code])) {
                 $errors[] = 'Mã học phần đã tồn tại trong hệ thống.';
@@ -830,15 +894,15 @@ new class extends Component {
                     />
                 </div>
                 @error('credits_error')
-                    <div class="mt-2 text-xs text-red-500">
-                        {{ $message }}
-                    </div>
+                <div class="mt-2 text-xs text-red-500">
+                    {{ $message }}
+                </div>
                 @enderror
                 <div class="mt-3 text-xs text-gray-500">
                     Gợi ý: tổng LT + TH bằng tổng tín chỉ của môn học.
                 </div>
 
-                <div class="mt-4">
+                <div class="mt-4 mb-4">
                     <x-file
                         label="Đề cương môn học (PDF)"
                         wire:model.live="syllabus_file"
@@ -846,6 +910,61 @@ new class extends Component {
                         hint="Tối đa 10MB"
                     />
                 </div>
+
+                <div class="mt-8 border-t pt-4 col-span-2">
+                    <label class="font-semibold text-gray-700 mb-3 block">Danh sách môn học tương đương</label>
+                    <x-input
+                        icon="o-magnifying-glass"
+                        placeholder="Tìm môn tương đương theo mã hoặc tên môn..."
+                        wire:model.live.debounce.300ms="equivalentSearch"
+                        clearable
+                    />
+                    <div class="relative mt-2">
+                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-50 overflow-auto">
+                            @forelse($this->equivalentOptions as $subject)
+                                <div class="select-none" wire:key="subject-equivalent-{{ $subject['id'] }}">
+                                    <x-checkbox
+                                        label="{{ $subject['name'] }}"
+                                        wire:model.live="equivalent_subject_ids"
+                                        value="{{ $subject['id'] }}"
+                                        class="checkbox-primary checkbox-sm"
+                                    />
+                                </div>
+                            @empty
+                                <div class="col-span-full text-center py-4 text-red-500">
+                                    Không tìm thấy môn học nào.
+                                </div>
+                            @endforelse
+                            <div wire:loading.flex wire:target="equivalentSearch" class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
+                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                                    <x-loading class="loading-spinner text-primary" />
+                                    <span>Đang lọc môn học tương đương...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 col-span-2">
+                    <label class="font-semibold text-black mb-2 block">Các môn tương đương đã chọn</label>
+                    @if(empty($equivalent_subject_ids))
+                        <div class="text-sm text-gray-500">Chưa có môn tương đương.</div>
+                    @else
+                        <div class="grid grid-cols-1 gap-2">
+                            @foreach($this->selectedEquivalents as $equiv)
+                                @if($equiv)
+                                    <div class="flex items-center justify-between rounded border p-2">
+                                        <div class="text-sm font-medium">{{ $equiv->code }} - {{ $equiv->getTranslation('name','vi',false) ?: '—' }} - {{ $equiv->credits_display. ' TC' }}</div>
+                                        <div class="flex gap-2">
+                                            <x-button class="btn-xs btn-ghost text-error" icon="o-trash" wire:click="removeEquivalent({{ $equiv->id }})" tooltip="Gỡ bỏ khỏi danh sách" />
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+
             </x-card>
         </div>
 
@@ -925,53 +1044,53 @@ new class extends Component {
             <div class="overflow-x-auto border border-gray-200 rounded-md max-h-[60vh]">
                 <table class="table table-zebra w-full">
                     <thead class="text-black">
-                        <tr>
-                            <th class="w-10"></th>
-                            <th>STT</th>
-                            <th>Mã học phần</th>
-                            <th>Tên học phần</th>
-                            <th>Tên Tiếng anh</th>
-                            <th>Tổng Số TC</th>
-                            <th>LT</th>
-                            <th>TH</th>
-                            <th>Nhóm môn</th>
-                            <th>Trạng thái</th>
-                        </tr>
+                    <tr>
+                        <th class="w-10"></th>
+                        <th>STT</th>
+                        <th>Mã học phần</th>
+                        <th>Tên học phần</th>
+                        <th>Tên Tiếng anh</th>
+                        <th>Tổng Số TC</th>
+                        <th>LT</th>
+                        <th>TH</th>
+                        <th>Nhóm môn</th>
+                        <th>Trạng thái</th>
+                    </tr>
                     </thead>
                     <tbody>
-                        @forelse($this->filteredImportPreviewRows as $row)
-                            <tr>
-                                <td>
-                                    <input
-                                        type="checkbox"
-                                        value="{{ $row['key'] }}"
-                                        wire:model="selectedImportRowKeys"
-                                        @disabled(!$row['is_valid'])
-                                    >
-                                </td>
-                                <td>{{ $row['row_no'] }}</td>
-                                <td>{{ $row['code'] ?: '—' }}</td>
-                                <td>{{ $row['name_vi'] ?: '—' }}</td>
-                                <td>{{ $row['name_en'] ?: '—' }}</td>
-                                <td>{{ $row['credits'] ?? '—' }}</td>
-                                <td>{{ $row['credits_theory'] ?? '—' }}</td>
-                                <td>{{ $row['credits_practice'] ?? '—' }}</td>
-                                <td>{{ $row['group_name'] ?: '—' }}</td>
-                                <td>
-                                    @if($row['is_valid'])
-                                        <span class="text-green-600">Hợp lệ</span>
-                                    @else
-                                        <div class="text-red-600 text-md leading-5">
-                                            {{ implode(' ', $row['errors']) }}
-                                        </div>
-                                    @endif
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="10" class="text-center text-gray-500 py-4">Không có dòng nào khớp từ khóa tìm kiếm.</td>
-                            </tr>
-                        @endforelse
+                    @forelse($this->filteredImportPreviewRows as $row)
+                        <tr>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    value="{{ $row['key'] }}"
+                                    wire:model="selectedImportRowKeys"
+                                    @disabled(!$row['is_valid'])
+                                >
+                            </td>
+                            <td>{{ $row['row_no'] }}</td>
+                            <td>{{ $row['code'] ?: '—' }}</td>
+                            <td>{{ $row['name_vi'] ?: '—' }}</td>
+                            <td>{{ $row['name_en'] ?: '—' }}</td>
+                            <td>{{ $row['credits'] ?? '—' }}</td>
+                            <td>{{ $row['credits_theory'] ?? '—' }}</td>
+                            <td>{{ $row['credits_practice'] ?? '—' }}</td>
+                            <td>{{ $row['group_name'] ?: '—' }}</td>
+                            <td>
+                                @if($row['is_valid'])
+                                    <span class="text-green-600">Hợp lệ</span>
+                                @else
+                                    <div class="text-red-600 text-md leading-5">
+                                        {{ implode(' ', $row['errors']) }}
+                                    </div>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="10" class="text-center text-gray-500 py-4">Không có dòng nào khớp từ khóa tìm kiếm.</td>
+                        </tr>
+                    @endforelse
                     </tbody>
                 </table>
             </div>
@@ -983,6 +1102,3 @@ new class extends Component {
         </x-slot:actions>
     </x-modal>
 </div>
-
-
-

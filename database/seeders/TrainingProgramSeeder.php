@@ -342,7 +342,7 @@ class TrainingProgramSeeder extends Seeder
             }
 
             try {
-                SubjectEquivalent::syncForProgramSubject($program->id, $subject->id, $equivalentIds);
+                SubjectEquivalent::syncForSubject($subject->id, $equivalentIds);
             } catch (\Throwable $e) {
                 continue;
             }

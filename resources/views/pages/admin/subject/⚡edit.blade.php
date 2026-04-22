@@ -4,7 +4,9 @@ use App\Models\GroupSubject;
 use App\Models\ProgramSemester;
 use App\Models\Subject;
 use App\Models\SubjectPrerequisite;
+use App\Models\SubjectEquivalent;
 use App\Models\TrainingProgram;
+use Livewire\Attributes\On;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Livewire\Component;
@@ -26,10 +28,12 @@ new class extends Component {
     public string $credits_practice = '0';
     public bool $is_active = true;
     public array $prerequisite_subject_ids = [];
+    public array $equivalent_subject_ids = [];
     public $syllabus_file;
     public ?string $current_syllabus_path = null;
     public ?string $current_syllabus_name = null;
     public bool $remove_syllabus = false;
+    public string $equivalentSearch = '';
 
     public function mount(int $id): void
     {
@@ -53,6 +57,15 @@ new class extends Component {
         $this->prerequisite_subject_ids = $programId
             ? $subject->prerequisitesForProgram((int)$programId)->pluck('subjects.id')->map(fn($value) => (int)$value)->all()
             : [];
+
+        // Load global equivalents
+        $this->equivalent_subject_ids = SubjectEquivalent::query()
+            ->forSubject($this->id)
+            ->pluck('equivalent_subject_id')
+            ->map(fn($v) => (int)$v)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     protected function rules(): array
@@ -68,6 +81,8 @@ new class extends Component {
             'is_active' => ['boolean'],
             'prerequisite_subject_ids' => ['array'],
             'prerequisite_subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
+            'equivalent_subject_ids' => ['array'],
+            'equivalent_subject_ids.*' => ['integer', 'distinct', 'exists:subjects,id'],
             'syllabus_file' => [
                 'nullable',
                 'file',
@@ -241,6 +256,57 @@ new class extends Component {
             ->get();
     }
 
+    public function getEquivalentSubjectOptionsProperty(): array
+    {
+        return Subject::query()
+            ->where('is_active', true)
+            ->when($this->id, fn ($q) => $q->where('id', '!=', $this->id))
+            ->orderBy('code')
+            ->get()
+            ->map(fn ($subject) => [
+                'id' => $subject->id,
+                'name' => $subject->code
+                    . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A')
+                    . ' (' . Subject::formatCredit($subject->credits) . ' TC)'
+            ])
+            ->toArray();
+    }
+
+    public function getSelectedEquivalentsProperty()
+    {
+        if (empty($this->equivalent_subject_ids)) {
+            return collect();
+        }
+        return Subject::query()->whereIn('id', $this->equivalent_subject_ids)->get();
+    }
+
+    public function getEquivalentOptionsProperty(): array
+    {
+        $keyword = trim($this->equivalentSearch);
+
+        if ($keyword === '') {
+            return $this->equivalentSubjectOptions;
+        }
+
+        $normalizedKeyword = $this->normalizeSearchText($keyword);
+
+        return collect($this->equivalentSubjectOptions)
+            ->filter(function (array $subject) use ($keyword, $normalizedKeyword) {
+                $name = (string) ($subject['name'] ?? '');
+
+                if (mb_stripos($name, $keyword) !== false) {
+                    return true;
+                }
+
+                return str_contains($this->normalizeSearchText($name), $normalizedKeyword);
+            })
+            ->values()
+            ->all();
+    }
+    protected function normalizeSearchText(string $value): string
+    {
+        return mb_strtolower(trim(Str::ascii($value)));
+    }
     public function getRequiredBySubjectsProperty()
     {
         // Gọi thẳng từ Model Pivot (nơi chứa training_program_id)
@@ -388,7 +454,25 @@ new class extends Component {
             }
         }
 
+        // Sync global equivalents
+        try {
+            SubjectEquivalent::syncForSubject($this->id, $this->equivalent_subject_ids ?? []);
+        } catch (\InvalidArgumentException $e) {
+            $this->error($e->getMessage());
+        }
+
         $this->success('Cập nhật môn học thành công!');
+    }
+
+    public function removeEquivalent(int $equivalentId): void
+    {
+        // Lọc bỏ ID cần xóa khỏi mảng tạm trên giao diện (Không đụng gì tới DB)
+        if (in_array($equivalentId, $this->equivalent_subject_ids)) {
+            $this->equivalent_subject_ids = array_values(array_filter(
+                $this->equivalent_subject_ids,
+                fn($id) => $id !== $equivalentId
+            ));
+        }
     }
 };
 ?>
@@ -481,6 +565,59 @@ new class extends Component {
                         accept=".pdf,application/pdf"
                         hint="Tối đa 10MB"
                     />
+                </div>
+
+                <div class="mt-4 col-span-2">
+                    <label class="font-semibold text-gray-700 mb-3 block">Danh sách môn học tương đương</label>
+                    <x-input
+                        icon="o-magnifying-glass"
+                        placeholder="Tìm môn tương đương theo mã hoặc tên môn..."
+                        wire:model.live.debounce.300ms="equivalentSearch"
+                        clearable
+                    />
+                    <div class="relative mt-2">
+                        <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-50 overflow-auto">
+                            @forelse($this->equivalentOptions as $subject)
+                                <div class="select-none" wire:key="subject-equivalent-{{ $subject['id'] }}">
+                                    <x-checkbox
+                                        label="{{ $subject['name'] }}"
+                                        wire:model.live="equivalent_subject_ids"
+                                        value="{{ $subject['id'] }}"
+                                        class="checkbox-primary checkbox-sm"
+                                    />
+                                </div>
+                            @empty
+                                <div class="col-span-full text-center py-4 text-red-500">
+                                    Chưa có môn học nào trong chương trình đào tạo này.
+                                </div>
+                            @endforelse
+                            <div wire:loading.flex wire:target="equivalentSearch,attach_subject_id" class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
+                                <div class="flex items-center gap-2 text-sm text-gray-600">
+                                    <x-loading class="loading-spinner text-primary" />
+                                    <span>Đang lọc môn học tương đương...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label class="font-semibold text-black mb-2 block">Các môn tương đương hiện tại</label>
+                    @if(empty($equivalent_subject_ids))
+                        <div class="text-sm text-gray-500">Chưa có môn tương đương.</div>
+                    @else
+                        <div class="grid grid-cols-1 gap-2">
+                            @foreach($this->selectedEquivalents as $equiv)
+                                @if($equiv)
+                                    <div class="flex items-center justify-between rounded border p-2">
+                                        <div class="text-sm font-medium">{{ $equiv->code }} - {{ $equiv->getTranslation('name','vi',false) ?: '—' }} - {{ $equiv->credits_display. ' TC' }}</div>
+                                        <div class="flex gap-2">
+                                            <x-button class="btn-xs btn-ghost text-error" icon="o-trash" wire:click="removeEquivalent({{ $equiv->id }})" tooltip="Xóa quan hệ tương đương" spinner="removeEquivalent({{ $equiv->id }})"/>
+                                        </div>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
             </x-card>
 

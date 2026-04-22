@@ -101,9 +101,7 @@ new class extends Component {
                         'prerequisites as prerequisites_count' => function ($prereqQuery) {
                             $prereqQuery->where('subject_prerequisites.training_program_id', $this->programId);
                         },
-                        'equivalents as equivalents_count' => function ($equivalentQuery) {
-                            $equivalentQuery->where('subject_equivalents.training_program_id', $this->programId);
-                        },
+                        'equivalents as equivalents_count',
                     ])
                     ->with(['prerequisites' => function ($prereqQuery) {
                         $prereqQuery
@@ -132,7 +130,6 @@ new class extends Component {
                                     ->limit(1)
                                     ->select('program_semesters.semester_no'),
                             ])
-                            ->where('subject_equivalents.training_program_id', $this->programId)
                             ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
                             ->orderBy('group_subjects.sort_order');
                     }]);
@@ -563,13 +560,6 @@ new class extends Component {
                 })
                 ->delete();
 
-            SubjectEquivalent::query()
-                ->forProgram($this->programId)
-                ->where(function ($q) use ($semesterSubjectIds) {
-                    $q->whereIn('subject_id', $semesterSubjectIds->all())
-                        ->orWhereIn('equivalent_subject_id', $semesterSubjectIds->all());
-                })
-                ->delete();
         }
 
         $semester->delete();
@@ -602,7 +592,6 @@ new class extends Component {
                 ->all();
 
             $this->attach_subject_equivalent_id = SubjectEquivalent::query()
-                ->forProgram($this->programId)
                 ->forSubject($subject->id)
                 ->pluck('equivalent_subject_id')
                 ->map(fn ($id) => (int) $id)
@@ -746,8 +735,7 @@ new class extends Component {
                 $this->attach_subject_prerequisite_id
             );
 
-            SubjectEquivalent::syncForProgramSubject(
-                $this->programId,
+            SubjectEquivalent::syncForSubject(
                 (int) $this->attach_subject_id,
                 $this->attach_subject_equivalent_id
             );
@@ -826,14 +814,6 @@ new class extends Component {
                 ->where('subject_id', $subjectId)
                 ->delete();
 
-            SubjectEquivalent::query()
-                ->forProgram($this->programId)
-                ->where(function ($q) use ($subjectId) {
-                    $q->where('subject_id', $subjectId)
-                        ->orWhere('equivalent_subject_id', $subjectId);
-                })
-                ->delete();
-
             $this->recalculateSemesterCredits($semester->id);
             $this->success('Đã xóa môn học khỏi học kỳ thành công.');
         } catch (QueryException $e) {
@@ -894,9 +874,7 @@ new class extends Component {
                         'prerequisites as prerequisites_count' => function ($prereqQuery) {
                             $prereqQuery->where('subject_prerequisites.training_program_id', $this->programId);
                         },
-                        'equivalents as equivalents_count' => function ($equivalentQuery) {
-                            $equivalentQuery->where('subject_equivalents.training_program_id', $this->programId);
-                        },
+                        'equivalents as equivalents_count',
                     ])
                     ->with(['prerequisites' => function ($prereqQuery) {
                         $prereqQuery
@@ -925,7 +903,6 @@ new class extends Component {
                                     ->limit(1)
                                     ->select('program_semesters.semester_no'),
                             ])
-                            ->where('subject_equivalents.training_program_id', $this->programId)
                             ->join('group_subjects', 'group_subjects.id', '=', 'subjects.group_subject_id')
                             ->orderBy('group_subjects.sort_order');
                     }]);
@@ -970,8 +947,27 @@ new class extends Component {
             })
             ->values();
     }
+    public function getSelectedEquivalentsProperty()
+    {
+        if (empty($this->attach_subject_equivalent_id)) {
+            return collect();
+        }
 
-    public function headers(): array
+        return Subject::query()->whereIn('id', $this->attach_subject_equivalent_id)->get();
+    }
+
+    public function removeEquivalent(int $equivalentId): void
+    {
+        // Lọc bỏ ID cần xóa khỏi mảng tạm trên giao diện (Không đụng gì tới DB)
+        if (in_array($equivalentId, $this->attach_subject_equivalent_id)) {
+            $this->attach_subject_equivalent_id = array_values(array_filter(
+                $this->attach_subject_equivalent_id,
+                fn($id) => (int)$id !== $equivalentId
+            ));
+        }
+    }
+
+        public function headers(): array
     {
         return [
             ['key' => 'id', 'label' => 'STT', 'sortable' => false, 'class' => 'w-12'],
@@ -1322,7 +1318,7 @@ new class extends Component {
                             <div class="select-none" wire:key="subject-equivalent-{{ $subject['id'] }}">
                                 <x-checkbox
                                     label="{{ $subject['name'] }}"
-                                    wire:model="attach_subject_equivalent_id"
+                                    wire:model.live="attach_subject_equivalent_id"
                                     value="{{ $subject['id'] }}"
                                     class="checkbox-primary checkbox-sm"
                                 />
@@ -1340,6 +1336,23 @@ new class extends Component {
                             </div>
                         </div>
                     </div>
+                </div>
+                <div class="mt-4 col-span-2">
+                    <label class="font-semibold text-black mb-2 block">Các môn tương đương hiện tại</label>
+                    @if(empty($attach_subject_equivalent_id))
+                        <div class="text-sm text-gray-500">Chưa có môn tương đương.</div>
+                    @else
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            @foreach($this->selectedEquivalents as $equiv)
+                                @if($equiv)
+                                    <div class="flex items-center justify-between rounded border p-2">
+                                        <div class="text-sm font-medium">{{ $equiv->code }} - {{ $equiv->getTranslation('name','vi',false) ?: '—' }} - {{ $equiv->credits_display. ' TC' }}</div>
+                                        <x-button class="btn-xs btn-ghost text-error" icon="o-trash" wire:click="removeEquivalent({{ $equiv->id }})" spinner="removeEquivalent({{ $equiv->id }})"/>
+                                    </div>
+                                @endif
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
 {{--                </div>--}}
                 <div class="md:col-span-2">
