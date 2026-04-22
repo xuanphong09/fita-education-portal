@@ -111,7 +111,7 @@ class Subject extends Model
             'equivalent_subject_id'
         )
             ->using(SubjectEquivalent::class)
-            ->withPivot(['id', 'training_program_id'])
+            ->withPivot(['id'])
             ->withTimestamps();
     }
 
@@ -124,7 +124,7 @@ class Subject extends Model
             'subject_id'
         )
             ->using(SubjectEquivalent::class)
-            ->withPivot(['id', 'training_program_id'])
+            ->withPivot(['id'])
             ->withTimestamps();
     }
 
@@ -138,10 +138,6 @@ class Subject extends Model
         return $this->hasMany(SubjectEquivalent::class, 'equivalent_subject_id');
     }
 
-    public function equivalentsForProgram(int $trainingProgramId): BelongsToMany
-    {
-        return $this->equivalents()->wherePivot('training_program_id', $trainingProgramId);
-    }
 
     public function scopeOrdered(Builder $query): Builder
     {

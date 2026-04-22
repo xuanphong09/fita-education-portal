@@ -265,14 +265,6 @@ new class extends Component {
                     \App\Models\SubjectPrerequisite::syncForProgramSubject($newProgram->id, $subject->id, $prerequisites);
                 }
 
-                $equivalents = \App\Models\SubjectEquivalent::where('training_program_id', $sourceProgram->id)
-                    ->where('subject_id', $subject->id)
-                    ->pluck('equivalent_subject_id')
-                    ->toArray();
-
-                if (!empty($equivalents)) {
-                    \App\Models\SubjectEquivalent::syncForProgramSubject($newProgram->id, $subject->id, $equivalents);
-                }
             }
         });
 

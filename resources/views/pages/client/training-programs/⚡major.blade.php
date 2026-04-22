@@ -612,9 +612,7 @@ class extends Component {
                                 })
                                 ->implode(' ');
 
-                            $equivalents = $subject->equivalents
-                                ->filter(fn ($equivalent) => (int) ($equivalent->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
-                                ->values();
+                            $equivalents = $subject->equivalents->values();
 
                             $equivalentItems = $equivalents
                                 ->map(fn ($equivalent) => [
@@ -942,14 +940,14 @@ class extends Component {
 
                 @if($currentSemesterTimeline)
                     @php
-                        $title = __('Semester timeline');
+                        $title = __('Semester timeline') .' - ' . $activeProgram->intake->name;
 
                         if ($this->majorLabel && $this->specializationLabel) {
                             if ($this->majorLabel === $this->specializationLabel) {
                                 $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
                             } else {
                                 $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
-                                $title .= ' - ' . __('Specialized') . ' ' . $this->specializationLabel;
+                                $title .= ' - ' . __('Specialization/Area of specialization') . ' ' . $this->specializationLabel;
                             }
                         }
                     @endphp
@@ -979,10 +977,7 @@ class extends Component {
                                             ->map(fn ($prerequisite) => (string) $prerequisite->code)
                                             ->filter(fn ($code) => trim($code) !== '')
                                             ->implode(', ');
-
-                                        $equivalents = collect($subject->equivalents ?? [])
-                                            ->filter(fn ($equivalent) => (int) ($equivalent->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
-                                            ->values();
+                                        $equivalents = collect($subject->equivalents ?? [])->values();
 
                                         $equivalentItems = $equivalents
                                             ->map(fn ($equivalent) => [
