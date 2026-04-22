@@ -95,7 +95,7 @@ new class extends Component {
     <x-slot:title>Thùng rác CTDT</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.training-program.index') }}" class="font-semibold text-slate-700">Quản lý CTDT</a>
+        <a href="{{ route('admin.training-program.index') }}" class="font-semibold text-slate-700" wire:navigate>Quản lý CTDT</a>
         <span class="mx-1">/</span>
         <span>Thùng rác</span>
     </x-slot:breadcrumb>

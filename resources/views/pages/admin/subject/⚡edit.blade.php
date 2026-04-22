@@ -481,7 +481,7 @@ new class extends Component {
     <x-slot:title>Chỉnh sửa môn học</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.subject.index') }}" class="font-semibold text-slate-700">Danh sách môn học</a>
+        <a href="{{ route('admin.subject.index') }}" class="font-semibold text-slate-700" wire:navigate>Danh sách môn học</a>
         <span class="mx-1">/</span>
         <span>Chỉnh sửa</span>
     </x-slot:breadcrumb>

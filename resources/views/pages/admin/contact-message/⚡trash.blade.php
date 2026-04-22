@@ -300,7 +300,7 @@ class extends Component {
     <x-slot:title>Thùng rác liên hệ</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.contact-message.index') }}" class="font-semibold text-slate-700">Quản lý liên hệ</a>
+        <a href="{{ route('admin.contact-message.index') }}" class="font-semibold text-slate-700" wire:navigate>Quản lý liên hệ</a>
         <span class="mx-1">/</span>
         <span>Thùng rác</span>
     </x-slot:breadcrumb>

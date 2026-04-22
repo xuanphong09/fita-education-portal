@@ -213,7 +213,7 @@ class extends Component {
 
     {{-- Breadcrumb --}}
     <x-slot:breadcrumb>
-        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Post list')}}</a>
+        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita" wire:navigate>{{__('Post list')}}</a>
         @if($currentCategory)
         <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
         <span>{{ $currentCategory->getTranslation('name', app()->getLocale()) }}</span>

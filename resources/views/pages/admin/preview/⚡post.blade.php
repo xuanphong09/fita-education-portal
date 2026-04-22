@@ -126,7 +126,7 @@ class extends Component {
 <div>
     <x-slot:title>{{ $title }}</x-slot:title>
     <x-slot:breadcrumb>
-        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Posts')}}</a>
+        <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita" wire:navigate>{{__('Posts')}}</a>
         <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
         <span class="line-clamp-1 max-w-200">{{ $title }}</span>
     </x-slot:breadcrumb>

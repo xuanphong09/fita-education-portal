@@ -183,7 +183,7 @@ new class extends Component {
 
     {{-- Breadcrumb --}}
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.category.index') }}" class="font-semibold text-slate-700">Danh sách danh mục</a>
+        <a href="{{ route('admin.category.index') }}" class="font-semibold text-slate-700" wire:navigate>Danh sách danh mục</a>
         <span class="mx-1">/</span>
         <span>Chỉnh sửa danh mục</span>
     </x-slot:breadcrumb>

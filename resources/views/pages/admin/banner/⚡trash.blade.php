@@ -224,7 +224,7 @@ class extends Component {
     <x-slot:title>Thùng rác banner</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.banner.index') }}" class="font-semibold text-slate-700">Danh sách banner</a>
+        <a href="{{ route('admin.banner.index') }}" class="font-semibold text-slate-700" wire:navigate>Danh sách banner</a>
         <span class="mx-1">/</span>
         <span>Thùng rác</span>
     </x-slot:breadcrumb>

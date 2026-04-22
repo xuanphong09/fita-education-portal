@@ -97,7 +97,7 @@ class extends Component {
     <x-slot:title>Thùng rác album</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.album.index') }}" class="font-semibold text-slate-700">Danh sách album</a>
+        <a href="{{ route('admin.album.index') }}" class="font-semibold text-slate-700" wire:navigate>Danh sách album</a>
         <span class="mx-1">/</span>
         <span>Thùng rác</span>
     </x-slot:breadcrumb>

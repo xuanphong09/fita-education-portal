@@ -440,7 +440,7 @@ new class extends Component {
     <x-slot:title>Tạo bài viết</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.post.index') }}" class="font-semibold text-slate-700">Danh sách bài viết</a>
+        <a href="{{ route('admin.post.index') }}" class="font-semibold text-slate-700" wire:navigate>Danh sách bài viết</a>
         <span class="mx-1">/</span>
         <span>Tạo bài viết mới</span>
     </x-slot:breadcrumb>

@@ -98,7 +98,7 @@ new class extends Component {
     {{-- start - breadcrumb --}}
     <x-slot:breadcrumb>
         <a href="{{route('admin.role.index')}}"
-           class="font-semibold text-slate-700">{{__('List of Roles and Permissions')}}</a>
+           class="font-semibold text-slate-700" wire:navigate>{{__('List of Roles and Permissions')}}</a>
         <span class="mx-1">/</span>
         <span>{{__('Edit new roles')}}</span>
     </x-slot:breadcrumb>

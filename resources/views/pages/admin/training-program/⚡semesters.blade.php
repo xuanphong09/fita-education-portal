@@ -986,7 +986,7 @@ new class extends Component {
     <x-slot:title>Quản lý học kỳ và môn học</x-slot:title>
 
     <x-slot:breadcrumb>
-        <a href="{{ route('admin.training-program.index') }}" class="font-semibold text-slate-700">Danh sách chương trình đào tạo</a>
+        <a href="{{ route('admin.training-program.index') }}" class="font-semibold text-slate-700" wire:navigate>Danh sách chương trình đào tạo</a>
         <span class="mx-1">/</span>
         <a href="{{ route('admin.training-program.edit', $this->program->id) }}"
            class="font-semibold text-slate-700">{{ $this->program->getTranslation('name', 'vi', false) }}</a>

@@ -171,9 +171,9 @@ class extends Component {
     <x-slot:breadcrumb>
         @if($post->categories->isNotEmpty())
 {{--        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>--}}
-        <a href="{{route('client.posts.index', ['danh-muc' => $post->categories->first()->slug])}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{$post->categories->first()->getTranslation('name', app()->getLocale())}}</a>
+        <a href="{{route('client.posts.index', ['danh-muc' => $post->categories->first()->slug])}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita" wire:navigate>{{$post->categories->first()->getTranslation('name', app()->getLocale())}}</a>
         @else
-                    <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita">{{__('Post list')}}</a>
+                    <a href="{{route('client.posts.index')}}" wire:navigate class="whitespace-nowrap font-semibold text-slate-700 hover:text-fita" wire:navigate>{{__('Post list')}}</a>
         @endif
             <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>
         <span class="line-clamp-1 max-w-200">{{ $post->getTranslation('title', app()->getLocale()) }}</span>

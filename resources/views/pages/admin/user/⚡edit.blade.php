@@ -520,7 +520,7 @@ new class extends Component {
     {{-- start - breadcrumb --}}
     <x-slot:breadcrumb>
         <a href="{{route('admin.user.user-list')}}"
-           class="font-semibold text-slate-700">{{__('User list')}}</a>
+           class="font-semibold text-slate-700" wire:navigate>{{__('User list')}}</a>
         <span class="mx-1">/</span>
         <span>Chỉnh sửa người dùng</span>
     </x-slot:breadcrumb>
