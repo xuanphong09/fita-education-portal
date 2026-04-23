@@ -435,7 +435,7 @@ select.select:focus,
 }
 
 .modalDisplaySemesterTimeline div.modal-box{
-    @apply lg:w-300 max-w-[85%] py-4
+    @apply xl:w-300 lg:w-250 max-w-[85%] max-h-screen py-4
 }
 
 @keyframes modal-enter {

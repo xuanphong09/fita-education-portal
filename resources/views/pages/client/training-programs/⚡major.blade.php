@@ -1015,7 +1015,7 @@ class extends Component {
                             $nextRows = $buildSemesterRows($nextSemesterTimeline);
                         @endphp
 
-                        <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[70vh] overflow-y-auto pr-1">
+                        <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[65vh] overflow-y-auto pr-1">
                             <div class="rounded-md bg-fita2">
                                 <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 pt-2 text-white">
                                     <div>
