@@ -242,7 +242,7 @@ class extends Component {
         :slides="$slides"
         :autoplay="$configBanner->content_data['autoplay'] ?? false"
         :interval="$configBanner->content_data['interval'] ?? 5000"
-        class="h-[30vw] md:h-65 lg:h-91 2xl:h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
+        class="h-[35vw] md:h-65 lg:h-91 2xl:h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
     >
         @scope('content', $slide)
         <div
