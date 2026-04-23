@@ -966,7 +966,24 @@ new class extends Component {
             ));
         }
     }
+    public function updateSubjectOrder(array $orderedIds): void
+    {
+        if (!$this->selectedSemesterId) return;
 
+        $semester = ProgramSemester::query()
+            ->where('training_program_id', $this->programId)
+            ->find($this->selectedSemesterId);
+
+        if (!$semester) return;
+
+        foreach ($orderedIds as $index => $subjectId) {
+            $semester->subjects()->updateExistingPivot((int)$subjectId, [
+                'order' => $index + 1
+            ]);
+        }
+
+        // Không cần báo success để tránh bị spam thông báo liên tục khi kéo thả nhiều lần
+    }
         public function headers(): array
     {
         return [
@@ -1037,116 +1054,150 @@ new class extends Component {
 {{--                        </div>--}}
 
                         <div class="mt-5 overflow-x-auto">
-                            <x-table
-                                :headers="$this->headers()"
-                                :rows="$this->filteredSelectedSemesterSubjects"
-                                wire:model="expanded" expandable
-                                striped
-                                wire:loading.class="opacity-50 pointer-events-none select-none"
-                                class="
-                                    bg-white
-                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left
-                                    [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
-                                    [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                    [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                "
+                            <div x-data="{
+                                sortable: null,
+                                initSortable() {
+                                    if (this.sortable) this.sortable.destroy();
+                                    // Lấy thẻ tbody bên trong x-table để làm danh sách kéo thả
+                                    const tbody = this.$refs.sortableWrapper.querySelector('tbody');
+                                    if(tbody) {
+                                        this.sortable = new Sortable(tbody, {
+                                            animation: 150,
+                                            handle: '.drag-handle', // Chỉ kéo được khi nắm vào cột STT
+                                            ghostClass: 'bg-primary/10',
+                                            onEnd: () => {
+                                                let order = Array.from(tbody.querySelectorAll('tr'))
+                                                    .map(el => el.querySelector('.drag-handle')?.dataset?.id)
+                                                    .filter(Boolean);
+
+                                                if(order.length > 0) {
+                                                    $wire.updateSubjectOrder(order);
+                                                }
+                                            }
+                                        });
+                                    }
+                                }
+                            }"
+                                 x-init="$nextTick(() => initSortable())"
+                                 x-on:livewire:morph.updated.document="initSortable()"
                             >
-                                @scope('cell_id', $subject)
-                                {{ $subject->pivot->order ?? $subject->id }}
-                                @endscope
-
-                                @scope('cell_code', $subject)
-                                <div>{{ $subject->code }}</div>
-                                @if($this->semesterSubjectSearch !== '')
-                                    <div class="text-xs text-gray-500">HK {{ $subject->semester_no_in_program ?? '—' }}</div>
-                                @endif
-                                @endscope
-
-                                @scope('cell_name', $subject)
-                                <div class="font-semibold">{{ $subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
-                                <div class="text-sm text-gray-400">{{ $subject->getTranslation('name', 'en', false) ?: '' }}</div>
-                                @endscope
-
-                                @scope('cell_credits', $subject)
-                                <div class="font-semibold">{{ $subject->credits_display }} tín chỉ</div>
-                                <div class="text-sm text-gray-500 whitespace-nowrap">LT/TH: {{ $subject->credits_theory_display }}/{{ $subject->credits_practice_display }}</div>
-                                @endscope
-
-                                @scope('cell_type', $subject)
-                                @php
-                                    $typeLabel = match ($subject->pivot->type) {
-                                        'required' => 'Bắt buộc',
-                                        'elective' => 'Tự chọn',
-                                        'pcbb' => 'PCBB',
-                                        default => strtoupper((string) $subject->pivot->type),
-                                    };
-
-                                    $typeClass = match ($subject->pivot->type) {
-                                        'required' => 'badge-error',
-                                        'elective' => 'badge-success',
-                                        'pcbb' => 'badge-warning',
-                                        default => 'badge-neutral',
-                                    };
-                                @endphp
-                                <x-badge :value="$typeLabel" class="{{ $typeClass }} badge-md text-white font-semibold whitespace-nowrap" />
-                                @endscope
-
-                                @scope('cell_notes', $subject)
-                                {{ $subject->pivot->notes ?: '—' }}
-                                @endscope
-
-                                @scope('cell_actions', $subject)
-                                <div class="flex gap-1 justify-end">
-                                    <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" wire:click="editSubjectPivot({{ $subject->id }}, {{ (int) ($subject->semester_id_in_program ?? $this->selectedSemesterId) }})" tooltip="Chỉnh sửa"/>
-                                    <x-button icon="o-trash" class="btn-xs btn-ghost text-error" wire:click="removeSubjectFromSemester({{ $subject->id }}, {{ (int) ($subject->semester_id_in_program ?? $this->selectedSemesterId) }})" tooltip="Xóa"/>
-                                </div>
-                                @endscope
-
-                                @scope('expansion', $subject)
-                                <div class="bg-base-200/50 rounded-md">
-                                    <div class="text-sm font-semibold mb-2"> Môn học tiên quyết</div>
-
-                                    @if($subject->prerequisites->isEmpty())
-                                        <div class="text-sm text-gray-500">Không có môn học tiên quyết.</div>
-                                    @else
-                                        <div class="grid md:grid-cols-2 gap-2">
-                                            @foreach($subject->prerequisites as $prerequisite)
-                                                <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
-                                                    <div class="font-semibold">{{ $prerequisite->code }} - <span class="text-gray-600">{{ $prerequisite->getTranslation('name', 'vi', false) ?: '—' }}</span></div>
-                                                    <div class="text-md font-medium text-gray-600 mt-1">
-                                                        {{ ($prerequisite->credits_display ?? \App\Models\Subject::formatCredit($prerequisite->credits ?? 0)) }} TC
-                                                        • HK {{ $prerequisite->semester_no_in_program ?? '—' }}
-                                                    </div>
-                                                </div>
-                                            @endforeach
+                                <div x-ref="sortableWrapper">
+                                    <x-table
+                                        :headers="$this->headers()"
+                                        :rows="$this->filteredSelectedSemesterSubjects"
+                                        wire:model="expanded" expandable
+                                        striped
+                                        wire:loading.class="opacity-50 pointer-events-none select-none"
+                                        class="
+                                            bg-white
+                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left
+                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
+                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                        "
+                                    >
+                                        @scope('cell_id', $subject)
+                                        {{-- Biến cột STT thành tay cầm (Drag Handle) --}}
+                                        <div class="drag-handle flex items-center gap-2 cursor-move text-gray-500 hover:text-black" data-id="{{ $subject->id }}" title="Kéo thả để đổi thứ tự">
+                                            <x-icon name="o-bars-3" class="w-4 h-4" />
+                                            <span class="font-medium">{{ $subject->pivot->order ?? $subject->id }}</span>
                                         </div>
-                                    @endif
+                                        @endscope
 
-                                    <div class="text-sm font-semibold mb-2 mt-4">Môn học tương đương</div>
+                                        @scope('cell_code', $subject)
+                                        <div>{{ $subject->code }}</div>
+                                        @if($this->semesterSubjectSearch !== '')
+                                            <div class="text-xs text-gray-500">HK {{ $subject->semester_no_in_program ?? '—' }}</div>
+                                        @endif
+                                        @endscope
 
-                                    @if($subject->equivalents->isEmpty())
-                                        <div class="text-sm text-gray-500">Không có môn học tương đương.</div>
-                                    @else
-                                        <div class="grid md:grid-cols-2 gap-2">
-                                            @foreach($subject->equivalents as $equivalent)
-                                                <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
-                                                    <div class="font-semibold">{{ $equivalent->code }} - <span class="text-gray-600">{{ $equivalent->getTranslation('name', 'vi', false) ?: '—' }}</span></div>
+                                        @scope('cell_name', $subject)
+                                        <div class="font-semibold">{{ $subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
+                                        <div class="text-sm text-gray-400">{{ $subject->getTranslation('name', 'en', false) ?: '' }}</div>
+                                        @endscope
 
-                                                    <div class="text-md font-medium text-gray-600 mt-1">
-                                                        {{ ($equivalent->credits_display ?? \App\Models\Subject::formatCredit($equivalent->credits ?? 0)) }} TC
-                                                    </div>
-                                                </div>
-                                            @endforeach
+                                        @scope('cell_credits', $subject)
+                                        <div class="font-semibold">{{ $subject->credits_display }} tín chỉ</div>
+                                        <div class="text-sm text-gray-500 whitespace-nowrap">LT/TH: {{ $subject->credits_theory_display }}/{{ $subject->credits_practice_display }}</div>
+                                        @endscope
+
+                                        @scope('cell_type', $subject)
+                                        @php
+                                            $typeLabel = match ($subject->pivot->type) {
+                                                'required' => 'Bắt buộc',
+                                                'elective' => 'Tự chọn',
+                                                'pcbb' => 'PCBB',
+                                                default => strtoupper((string) $subject->pivot->type),
+                                            };
+
+                                            $typeClass = match ($subject->pivot->type) {
+                                                'required' => 'badge-error',
+                                                'elective' => 'badge-success',
+                                                'pcbb' => 'badge-warning',
+                                                default => 'badge-neutral',
+                                            };
+                                        @endphp
+                                        <x-badge :value="$typeLabel" class="{{ $typeClass }} badge-md text-white font-semibold whitespace-nowrap" />
+                                        @endscope
+
+                                        @scope('cell_notes', $subject)
+                                        {{ $subject->pivot->notes ?: '—' }}
+                                        @endscope
+
+                                        @scope('cell_actions', $subject)
+                                        <div class="flex gap-1 justify-end">
+                                            <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" wire:click="editSubjectPivot({{ $subject->id }}, {{ (int) ($subject->semester_id_in_program ?? $this->selectedSemesterId) }})" tooltip="Chỉnh sửa"/>
+                                            <x-button icon="o-trash" class="btn-xs btn-ghost text-error" wire:click="removeSubjectFromSemester({{ $subject->id }}, {{ (int) ($subject->semester_id_in_program ?? $this->selectedSemesterId) }})" tooltip="Xóa"/>
                                         </div>
-                                    @endif
+                                        @endscope
+
+                                        @scope('expansion', $subject)
+                                        <div class="bg-base-200/50 rounded-md">
+                                            <div class="text-sm font-semibold mb-2"> Môn học tiên quyết</div>
+
+                                            @if($subject->prerequisites->isEmpty())
+                                                <div class="text-sm text-gray-500">Không có môn học tiên quyết.</div>
+                                            @else
+                                                <div class="grid md:grid-cols-2 gap-2">
+                                                    @foreach($subject->prerequisites as $prerequisite)
+                                                        <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
+                                                            <div class="font-semibold">{{ $prerequisite->code }} - <span class="text-gray-600">{{ $prerequisite->getTranslation('name', 'vi', false) ?: '—' }}</span></div>
+                                                            <div class="text-md font-medium text-gray-600 mt-1">
+                                                                {{ ($prerequisite->credits_display ?? \App\Models\Subject::formatCredit($prerequisite->credits ?? 0)) }} TC
+                                                                • HK {{ $prerequisite->semester_no_in_program ?? '—' }}
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+
+                                            <div class="text-sm font-semibold mb-2 mt-4">Môn học tương đương</div>
+
+                                            @if($subject->equivalents->isEmpty())
+                                                <div class="text-sm text-gray-500">Không có môn học tương đương.</div>
+                                            @else
+                                                <div class="grid md:grid-cols-2 gap-2">
+                                                    @foreach($subject->equivalents as $equivalent)
+                                                        <div class="rounded border border-base-300 bg-white px-3 py-2 text-sm">
+                                                            <div class="font-semibold">{{ $equivalent->code }} - <span class="text-gray-600">{{ $equivalent->getTranslation('name', 'vi', false) ?: '—' }}</span></div>
+
+                                                            <div class="text-md font-medium text-gray-600 mt-1">
+                                                                {{ ($equivalent->credits_display ?? \App\Models\Subject::formatCredit($equivalent->credits ?? 0)) }} TC
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+                                        </div>
+                                        @endscope
+
+                                        <x-slot:empty>
+                                            <div class="py-4 text-center text-gray-500">Học kỳ này chưa có môn học nào.</div>
+                                        </x-slot:empty>
+
+                                    </x-table>
                                 </div>
-                                @endscope
-
-                                <x-slot:empty>
-                                    <div class="py-4 text-center text-gray-500">Học kỳ này chưa có môn học nào.</div>
-                                </x-slot:empty>
-
-                            </x-table>
+                            </div>
                             <div wire:loading.flex wire:target="openCreateSubjectPivot, editSubjectPivot, removeSubjectFromSemester"
                                  class="absolute inset-0 z-5 items-center justify-center bg-white/30 backdrop-blur-sm rounded-md transition-all duration-300">
                                 <div class="flex flex-col items-center gap-2 flex-1">
