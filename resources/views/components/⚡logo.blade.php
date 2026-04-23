@@ -14,7 +14,7 @@ new class extends Component
          @scroll.window="isScrolled = (window.pageYOffset > 50)"
          :class="isScrolled ? 'size-13' : 'md:size-18 size-13'"
     />
-    <div class="xl:flex hidden flex-col ms-2 wow fadeInDown @if(app()->getLocale() == 'en' && $this->layout == "client") ms-0! @endif">
+    <div class="xl:flex hidden flex-col ms-2 wow fadeInDown @if($this->layout == "footer")flex! @endif @if(app()->getLocale() == 'en' && $this->layout == "client") ms-0! @endif">
         <h1 class="font-bold tracking-wider uppercase text-white font-barlow overflow-hidden @if($this->layout == "client") text-fita! @endif @if($this->layout == "admin") md:text-[20px]/[26px]! text-[18px]/[24px]! @endif"
             x-data="{ isScrolled: false }"
             @scroll.window="isScrolled = (window.pageYOffset > 50)"
