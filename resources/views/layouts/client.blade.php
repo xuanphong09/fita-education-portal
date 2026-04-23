@@ -507,6 +507,50 @@
                         />
                     @endif
                 @endforeach
+                    @foreach($topHeaderMenuItems as $topMenuItem)
+
+                        @if(!empty($topMenuItem['children']))
+                            <div class="dropdown dropdown-hover dropdown-end hidden md:block">
+                                <div tabindex="0" role="button"
+                                     class="hover:cursor-pointer hover:opacity-90 hover:text-white hover:font-semibold font-normal text-slate-200
+                                 after:content-[''] after:inline-block after:align-[0.255em]
+                                 after:border-t-5 after:border-r-5 after:border-r-transparent
+                                 after:border-b-0 after:border-l-5 after:border-l-transparent
+                                 hover:after:border-t-white">
+                                    {{ $topMenuItem['name'] }}
+                                </div>
+
+                                <ul tabindex="0"
+                                    class="client-top-menu-level-2 cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
+                                    @foreach($topMenuItem['children'] as $topChild)
+                                        <li>
+                                            <a href="{{ $topChild['url'] }}" class="block px-4 py-2 hover:bg-gray-100">
+                                                {{ $topChild['name'] }}
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                            <x-menu-sub title="{{ $topMenuItem['name'] }}" class="rounded-none hover:bg-fita! hover:text-white!">
+                                @foreach($topMenuItem['children'] as $topChild)
+                                    <x-menu-item
+                                        title="{{ $topChild['name'] }}"
+                                        class="rounded-none hover:bg-fita hover:text-white"
+                                        link="{{ $topChild['url'] }}"
+                                        :no-wire-navigate="$isAbsoluteExternalUrl($topChild['url'])"
+                                    />
+                                @endforeach
+                            </x-menu-sub>
+                        @else
+                            <x-menu-item
+                                title="{{ $topMenuItem['name'] }}"
+                                link="{{ $topMenuItem['url'] }}"
+                                :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
+                                class="rounded-none hover:bg-fita hover:text-white"
+                            />
+                        @endif
+                        <span class="separator text-[18px] lg:ms-3 ms-2 lf:me-2 me-2 text-white hidden md:inline">|</span>
+                    @endforeach
             @else
                 <x-menu-sub title="{{__('Introduction')}}" class="rounded-none hover:bg-fita! hover:text-white!" >
                     <x-menu-item title="{{__('Faculty of Information Technology')}}" class="rounded-none hover:bg-fita hover:text-white" link="{{route('client.information')}}" :active="request()->routeIs('client.information')"/>
