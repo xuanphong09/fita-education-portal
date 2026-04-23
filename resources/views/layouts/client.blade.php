@@ -293,9 +293,21 @@
         }
     @endphp
 
-    <x-nav full-width class="bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none"
-           x-data="{ isScrolled: false }"
-           @scroll.window="isScrolled = (window.pageYOffset > 50)"
+    <x-nav full-width class="bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none transition-all duration-300"
+           x-data="{
+            isScrolled: false,
+            handleScroll() {
+                // Nếu chưa cuộn và vượt qua 60px -> Bật
+                if (!this.isScrolled && window.scrollY > 60) {
+                    this.isScrolled = true;
+                }
+                // Nếu đang cuộn và lùi về dưới 40px -> Tắt
+                else if (this.isScrolled && window.scrollY < 40) {
+                    this.isScrolled = false;
+                }
+            }
+        }"
+           x-on:scroll.window.throttle.50ms="handleScroll()"
            x-bind:class="isScrolled ? 'h-15' : 'md:h-20 h-15'"
     >
 
@@ -464,7 +476,12 @@
 {{-- start main layout --}}
 <x-main with-nav full-width>
 
-    <x-slot:sidebar drawer="main-drawer" collapsible class="client-menu bg-base-100 lg:bg-inherit lg:hidden pt-26 h-full! text-[15px] font-medium">
+    <x-slot:sidebar drawer="main-drawer" collapsible class="client-menu bg-base-100 lg:bg-inherit lg:hidden pt-26 h-full! text-[15px] font-medium"
+                    collapsible
+                    x-data="{ isScrolled: false }"
+                    @scroll.window="isScrolled = (window.pageYOffset > 50)"
+                    x-bind:class="isScrolled ? 'pt-26' : 'pt-32'"
+    >
         {{-- MENU --}}
         @php
             $currentMajorKey = (string) request()->query('chuyen-nganh', '');
@@ -510,27 +527,6 @@
                     @foreach($topHeaderMenuItems as $topMenuItem)
 
                         @if(!empty($topMenuItem['children']))
-                            <div class="dropdown dropdown-hover dropdown-end hidden md:block">
-                                <div tabindex="0" role="button"
-                                     class="hover:cursor-pointer hover:opacity-90 hover:text-white hover:font-semibold font-normal text-slate-200
-                                 after:content-[''] after:inline-block after:align-[0.255em]
-                                 after:border-t-5 after:border-r-5 after:border-r-transparent
-                                 after:border-b-0 after:border-l-5 after:border-l-transparent
-                                 hover:after:border-t-white">
-                                    {{ $topMenuItem['name'] }}
-                                </div>
-
-                                <ul tabindex="0"
-                                    class="client-top-menu-level-2 cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
-                                    @foreach($topMenuItem['children'] as $topChild)
-                                        <li>
-                                            <a href="{{ $topChild['url'] }}" class="block px-4 py-2 hover:bg-gray-100">
-                                                {{ $topChild['name'] }}
-                                            </a>
-                                        </li>
-                                    @endforeach
-                                </ul>
-                            </div>
                             <x-menu-sub title="{{ $topMenuItem['name'] }}" class="rounded-none hover:bg-fita! hover:text-white!">
                                 @foreach($topMenuItem['children'] as $topChild)
                                     <x-menu-item
@@ -549,7 +545,6 @@
                                 class="rounded-none hover:bg-fita hover:text-white"
                             />
                         @endif
-                        <span class="separator text-[18px] lg:ms-3 ms-2 lf:me-2 me-2 text-white hidden md:inline">|</span>
                     @endforeach
             @else
                 <x-menu-sub title="{{__('Introduction')}}" class="rounded-none hover:bg-fita! hover:text-white!" >
