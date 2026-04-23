@@ -272,8 +272,10 @@ class extends Component {
 
             <!-- Button-->
             @if(data_get($slide, 'urlText'))
-                <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right"
-                          class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">{{ __(data_get($slide, 'urlText')) }}</x-button>
+                <div class="hidden md:block">
+                    <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right"
+                              class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">{{ __(data_get($slide, 'urlText')) }}</x-button>
+                </div>
             @endif
         </div>
         @endscope
