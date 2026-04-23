@@ -31,6 +31,7 @@ new class extends Component {
     public ?string $semester_end_date = null;
 
     public ?int $attach_subject_id = null;
+    public ?int $attach_semester_id = null; // Thêm biến lưu Học kỳ đích để chuyển môn
     public ?int $pendingRemoveSubjectId = null;
     public ?int $pendingRemoveSemesterId = null;
     public ?int $pivot_original_subject_id = null;
@@ -83,6 +84,19 @@ new class extends Component {
             ->withCount('subjects')
             ->orderBy('semester_no')
             ->get();
+    }
+
+    public function getSemesterOptionsProperty(): array
+    {
+        return ProgramSemester::query()
+            ->where('training_program_id', $this->programId)
+            ->orderBy('semester_no')
+            ->get()
+            ->map(fn($sem) => [
+                'id' => $sem->id,
+                'name' => 'Học kỳ ' . $sem->semester_no . ($sem->semester_name ? ' (' . $sem->semester_name . ')' : '')
+            ])
+            ->toArray();
     }
 
 //    lấy học kỳ hiện tại, kèm theo toàn bộ môn học,
@@ -347,8 +361,8 @@ new class extends Component {
     {
         $this->editingSemesterId = null;
         $this->semester_no = max(1, (int) ProgramSemester::query()
-            ->where('training_program_id', $this->programId)
-            ->max('semester_no') + 1);
+                ->where('training_program_id', $this->programId)
+                ->max('semester_no') + 1);
         $this->semester_name = null;
         $this->semester_total_credits = 0;
         $this->semester_start_date = null;
@@ -405,34 +419,11 @@ new class extends Component {
 
     protected function rules(): array
     {
-        return $rules = [
-            'semester_no' => [
-                'required', 'integer', 'min:1', 'max:20',
-                Rule::unique('program_semesters', 'semester_no')
-                    ->ignore($this->editingSemesterId)
-                    ->where(fn($q) => $q->where('training_program_id', $this->programId)),
-            ],
-            'semester_total_credits' => ['required', 'integer', 'min:0', 'max:200'],
-            'attach_subject_id' => ['required', 'exists:subjects,id'],
-            'attach_type' => ['required', Rule::in(['required', 'elective', 'pcbb'])],
-            'attach_notes' => ['nullable', 'string'],
-            'attach_order' => ['required', 'integer', 'min:0', 'max:1000'],
-            'attach_subject_prerequisite_id' => ['array'],
-            'attach_subject_prerequisite_id.*' => ['integer', 'exists:subjects,id', 'different:attach_subject_id'],
-            'attach_subject_equivalent_id' => ['array'],
-            'attach_subject_equivalent_id.*' => [
-                'integer',
-                Rule::exists('subjects', 'id')->where(fn ($q) => $q->where('is_active', true)),
-                'distinct',
-                'different:attach_subject_id',
-                function ($attribute, $value, $fail) {
-                    if ($this->usedSubjectIds->contains((int) $value)) {
-                        $fail('Môn học tương đương phải nằm ngoài chương trình đào tạo hiện tại.');
-                    }
-                },
-            ],
+        return [
+            // Không áp dụng validate cho attach_semester_id ở đây vì validate chung, sẽ gọi trực tiếp ở nút Save
         ];
     }
+
     protected $messages = [
         'semester_no.required' => 'Vui lòng nhập số học kỳ.',
         'semester_no.integer' => 'Số học kỳ phải là một số nguyên.',
@@ -451,6 +442,8 @@ new class extends Component {
         'semester_end_date.required_with' => 'Vui lòng nhập cả ngày bắt đầu và ngày kết thúc.',
         'attach_subject_id.required' => 'Vui lòng chọn môn học.',
         'attach_subject_id.exists' => 'Môn học không tồn tại.',
+        'attach_semester_id.required' => 'Vui lòng chọn học kỳ.',
+        'attach_semester_id.exists' => 'Học kỳ không tồn tại.',
         'attach_type.required' => 'Vui lòng chọn loại môn học.',
         'attach_type.in' => 'Loại môn học không hợp lệ.',
         'attach_notes.string' => 'Ghi chú phải là một chuỗi.',
@@ -608,6 +601,7 @@ new class extends Component {
     {
         $this->attach_subject_id = null;
         $this->pivot_original_subject_id = null;
+        $this->attach_semester_id = $this->selectedSemesterId;
         $this->attach_type = 'required';
         $this->attach_notes = '';
         $this->attach_order = 0;
@@ -632,6 +626,7 @@ new class extends Component {
             ->max('program_semester_subjects.order');
 
         $this->resetSubjectForm();
+        $this->attach_semester_id = $this->selectedSemesterId;
         $this->attach_order = $nextOrder + 1;
         $this->modalAddSubject = true;
     }
@@ -661,6 +656,7 @@ new class extends Component {
 
         $this->attach_subject_id = $subject->id;
         $this->pivot_original_subject_id = $subject->id;
+        $this->attach_semester_id = $semester->id;
         $this->attach_type = $subject->pivot->type;
         $this->attach_notes = (string) ($subject->pivot->notes ?? '');
         $this->attach_order = (int) $subject->pivot->order;
@@ -670,9 +666,8 @@ new class extends Component {
 
     public function saveSubjectToSemester(): void
     {
-        if (!$this->selectedSemesterId) {
-            $this->error('Vui lòng chọn học kỳ trước.');
-            return;
+        if (!$this->attach_semester_id) {
+            $this->attach_semester_id = $this->selectedSemesterId;
         }
 
         // Prevent subject change when editing
@@ -683,6 +678,7 @@ new class extends Component {
 
         $this->validate([
             'attach_subject_id' => ['required', 'exists:subjects,id'],
+            'attach_semester_id' => ['required', Rule::exists('program_semesters', 'id')->where('training_program_id', $this->programId)],
             'attach_type' => ['required', Rule::in(['required', 'elective', 'pcbb'])],
             'attach_notes' => ['nullable', 'string'],
             'attach_order' => ['required', 'integer', 'min:0', 'max:1000'],
@@ -694,29 +690,37 @@ new class extends Component {
                 Rule::exists('subjects', 'id')->where(fn ($q) => $q->where('is_active', true)),
                 'distinct',
                 'different:attach_subject_id',
-                function ($attribute, $value, $fail) {
-                    if ($this->usedSubjectIds->contains((int) $value)) {
-                        $fail('Môn học tương đương phải nằm ngoài chương trình đào tạo hiện tại.');
-                    }
-                },
             ],
         ]);
 
-        $semester = ProgramSemester::query()
+        $targetSemester = ProgramSemester::query()
             ->where('training_program_id', $this->programId)
-            ->findOrFail($this->selectedSemesterId);
+            ->findOrFail($this->attach_semester_id);
 
-        $existsInAnotherSemester = ProgramSemester::query()
-            ->where('training_program_id', $this->programId)
-            ->where('id', '!=', $this->selectedSemesterId)
-            ->whereHas('subjects', fn ($q) => $q->where('subjects.id', $this->attach_subject_id))
-            ->value('semester_no');
+        $isMoving = $this->pivot_original_subject_id && $this->attach_semester_id !== $this->selectedSemesterId;
 
-        if ($existsInAnotherSemester) {
-            $message = "Môn này đã tồn tại ở học kỳ {$existsInAnotherSemester} trong CTDT.";
-            $this->addError('attach_subject_id', $message);
-            $this->error($message);
-            return;
+        // Nếu chuyển học kỳ, gỡ môn học khỏi học kỳ cũ
+        if ($isMoving) {
+            $oldSemester = ProgramSemester::find($this->selectedSemesterId);
+            if ($oldSemester) {
+                $oldSemester->subjects()->detach($this->attach_subject_id);
+                $this->recalculateSemesterCredits($oldSemester->id);
+            }
+        } else {
+            // Nếu thêm mới, kiểm tra xem nó đã tồn tại trong toàn CTĐT chưa
+            if (!$this->pivot_original_subject_id) {
+                $existsInAnotherSemester = ProgramSemester::query()
+                    ->where('training_program_id', $this->programId)
+                    ->whereHas('subjects', fn ($q) => $q->where('subjects.id', $this->attach_subject_id))
+                    ->value('semester_no');
+
+                if ($existsInAnotherSemester) {
+                    $message = "Môn này đã tồn tại ở học kỳ {$existsInAnotherSemester} trong CTDT.";
+                    $this->addError('attach_subject_id', $message);
+                    $this->error($message);
+                    return;
+                }
+            }
         }
 
         $payload = [
@@ -725,8 +729,9 @@ new class extends Component {
             'order' => $this->attach_order,
         ];
 
-        $semester->subjects()->syncWithoutDetaching([$this->attach_subject_id => $payload]);
-        $semester->subjects()->updateExistingPivot($this->attach_subject_id, $payload);
+        // Lưu vào học kỳ đích
+        $targetSemester->subjects()->syncWithoutDetaching([$this->attach_subject_id => $payload]);
+        $targetSemester->subjects()->updateExistingPivot($this->attach_subject_id, $payload);
 
         try {
             SubjectPrerequisite::syncForProgramSubject(
@@ -744,7 +749,11 @@ new class extends Component {
             return;
         }
 
-        $this->recalculateSemesterCredits($semester->id);
+        $this->recalculateSemesterCredits($targetSemester->id);
+
+        // Chuyển view hiển thị sang học kỳ vừa chuyển tới
+        $this->selectedSemesterId = $targetSemester->id;
+
         $this->resetSubjectForm();
         $this->modalAddSubject = false;
         $this->success('Đã lưu môn học vào học kỳ thành công.');
@@ -984,7 +993,7 @@ new class extends Component {
 
         // Không cần báo success để tránh bị spam thông báo liên tục khi kéo thả nhiều lần
     }
-        public function headers(): array
+    public function headers(): array
     {
         return [
             ['key' => 'id', 'label' => 'STT', 'sortable' => false, 'class' => 'w-12'],
@@ -1043,15 +1052,6 @@ new class extends Component {
                                 <x-button label="Thêm môn" icon="o-plus" class="btn-sm btn-primary text-white" wire:click="openCreateSubjectPivot" spinner/>
                             </div>
                         </div>
-
-{{--                        <div class="mb-3 max-w-md">--}}
-{{--                            <x-input--}}
-{{--                                icon="o-magnifying-glass"--}}
-{{--                                placeholder="Tìm kiếm môn học (mã, tên)..."--}}
-{{--                                wire:model.live.debounce.300ms="semesterSubjectSearch"--}}
-{{--                                clearable--}}
-{{--                            />--}}
-{{--                        </div>--}}
 
                         <div class="mt-5 overflow-x-auto">
                             <div x-data="{
@@ -1229,9 +1229,9 @@ new class extends Component {
                                             <span class="text-sm ">({{ $semester->semester_name }})</span>
                                         @endif
                                     </div>
-{{--                                    @if($semester->semester_name)--}}
-{{--                                        <div class="text-xs text-primary mt-1">{{ $semester->semester_name }}</div>--}}
-{{--                                    @endif--}}
+                                    {{--                                    @if($semester->semester_name)--}}
+                                    {{--                                        <div class="text-xs text-primary mt-1">{{ $semester->semester_name }}</div>--}}
+                                    {{--                                    @endif--}}
                                     @if($semester->start_date && $semester->end_date)
                                         <div class="text-sm text-gray-500 mt-1">
                                             {{ \Illuminate\Support\Carbon::parse($semester->start_date)->format('d/m/Y') }} - {{ \Illuminate\Support\Carbon::parse($semester->end_date)->format('d/m/Y') }}
@@ -1252,7 +1252,7 @@ new class extends Component {
             </x-card>
         </div>
     </div>
-{{--start modal hoc ky--}}
+    {{--start modal hoc ky--}}
     <x-modal wire:model="modalSemester" title="{{ $editingSemesterId ? 'Chỉnh sửa học kỳ' : 'Thêm học kỳ' }}" separator>
         <div wire:loading wire:target="openCreateSemester, editSemester" class="size-full p-10 text-center">
             <x-loading class="" />
@@ -1267,7 +1267,7 @@ new class extends Component {
                 <x-input label="Ngày bắt đầu" type="date" wire:model="semester_start_date" />
                 <x-input label="Ngày kết thúc" type="date" wire:model="semester_end_date" />
             </div>
-{{--                    <x-input label="Tong tin chi" type="number" min="0" wire:model="semester_total_credits" />--}}
+            {{--                    <x-input label="Tong tin chi" type="number" min="0" wire:model="semester_total_credits" />--}}
         </div>
 
 
@@ -1286,35 +1286,34 @@ new class extends Component {
         </div>
         <div class="space-y-3 py-0 px-1 max-h-[70vh] overflow-y-auto pr-1" wire:loading.remove wire:target="openCreateSubjectPivot" >
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-x-3 ">
-                    @if($pivot_original_subject_id)
-                        <div class="">
-                            <x-input label="Môn học" type="number" min="0" placeholder="{{ collect($this->subjectOptions)->firstWhere('id', $attach_subject_id)['name'] ?? 'N/A' }}" readonly />
-                        </div>
-                    @else
-                        <x-input
-                            label="Tìm thêm môn học"
-                            icon="o-magnifying-glass"
-                            placeholder="Nhập tên hoặc mã môn học..."
-                            wire:model.live.debounce.400ms="subjectSearch"
-                            clearable
+                @if($pivot_original_subject_id)
+                    <x-input label="Môn học (Không thể đổi)" type="text" value="{{ collect($this->subjectOptions)->firstWhere('id', $attach_subject_id)['name'] ?? 'N/A' }}" readonly />
+                    <x-select label="Học kỳ" wire:model="attach_semester_id" :options="$this->semesterOptions" option-value="id" option-label="name" />
+                @else
+                    <x-input
+                        label="Tìm thêm môn học"
+                        icon="o-magnifying-glass"
+                        placeholder="Nhập tên hoặc mã môn học..."
+                        wire:model.live.debounce.400ms="subjectSearch"
+                        clearable
+                    />
+                    <div>
+                        <x-choices-offline single
+                                           clearable
+                                           searchable
+                                           label="Môn học"
+                                           wire:model.live.debounce.300ms="attach_subject_id"
+                                           :options="$this->subjectOptions"
+                                           option-value="id" option-label="name"
+                                           placeholder="Chọn môn học"
+                                           noResultText="Không tìm thấy môn học nào"
                         />
-                        <div>
-                            <x-choices-offline single
-                                               clearable
-                                               searchable
-                                               label="Môn học"
-                                               wire:model.live.debounce.300ms="attach_subject_id"
-                                               :options="$this->subjectOptions"
-                                               option-value="id" option-label="name"
-                                               placeholder="Chọn môn học"
-                                               noResultText="Không tìm thấy môn học nào"
-                            />
-                            <div class="text-sm mt-2 text-primary font-medium">{{$attach_credits}}</div>
-                            <div class="text-xs text-gray-500 mt-1">
-                                Hiển thị tối đa {{ $this->subjectSearchLimit }} môn học
-                            </div>
+                        <div class="text-sm mt-2 text-primary font-medium">{{$attach_credits}}</div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            Hiển thị tối đa {{ $this->subjectSearchLimit }} môn học
                         </div>
-                    @endif
+                    </div>
+                @endif
 
                 <x-select label="Loại" wire:model.live.debounce.300ms="attach_type" :options="[
                     ['id' => 'required', 'name' => 'Môn bắt buộc'],
@@ -1332,20 +1331,20 @@ new class extends Component {
                     />
                     <div class="relative mt-2">
                         <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-50 overflow-auto">
-                        @forelse($this->filteredSubjectUsedOptions as $subject)
-                            <div class="select-none" wire:key="subject-used-{{ $subject['id'] }}">
-                                <x-checkbox
-                                    label="{{ ($subject['code'] ?? '') . ' - ' . ($subject['name_vi'] ?? '')  }} ({{ $subject['credits'] ?? '0' }} TC - HK {{ $subject['semester_no'] ?? '—' }})"
-                                    wire:model="attach_subject_prerequisite_id"
-                                    value="{{ $subject['id'] }}"
-                                    class="checkbox-primary checkbox-sm"
-                                />
-                            </div>
-                        @empty
-                            <div class="col-span-full text-center py-4 text-red-500">
-                                Chưa có môn học nào trong chương trình đào tạo này.
-                            </div>
-                        @endforelse
+                            @forelse($this->filteredSubjectUsedOptions as $subject)
+                                <div class="select-none" wire:key="subject-used-{{ $subject['id'] }}">
+                                    <x-checkbox
+                                        label="{{ ($subject['code'] ?? '') . ' - ' . ($subject['name_vi'] ?? '')  }} ({{ $subject['credits'] ?? '0' }} TC - HK {{ $subject['semester_no'] ?? '—' }})"
+                                        wire:model="attach_subject_prerequisite_id"
+                                        value="{{ $subject['id'] }}"
+                                        class="checkbox-primary checkbox-sm"
+                                    />
+                                </div>
+                            @empty
+                                <div class="col-span-full text-center py-4 text-red-500">
+                                    Chưa có môn học nào trong chương trình đào tạo này.
+                                </div>
+                            @endforelse
                             <div wire:loading.flex wire:target="prerequisiteSearch,attach_subject_id" class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                 <div class="flex items-center gap-2 text-sm text-gray-600">
                                     <x-loading class="loading-spinner text-primary" />
@@ -1365,20 +1364,20 @@ new class extends Component {
                     />
                     <div class="relative mt-2">
                         <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-50 overflow-auto">
-                        @forelse($this->filteredEquivalentSubjectOptions as $subject)
-                            <div class="select-none" wire:key="subject-equivalent-{{ $subject['id'] }}">
-                                <x-checkbox
-                                    label="{{ $subject['name'] }}"
-                                    wire:model.live="attach_subject_equivalent_id"
-                                    value="{{ $subject['id'] }}"
-                                    class="checkbox-primary checkbox-sm"
-                                />
-                            </div>
-                        @empty
-                            <div class="col-span-full text-center py-4 text-red-500">
-                                Chưa có môn học nào trong chương trình đào tạo này.
-                            </div>
-                        @endforelse
+                            @forelse($this->filteredEquivalentSubjectOptions as $subject)
+                                <div class="select-none" wire:key="subject-equivalent-{{ $subject['id'] }}">
+                                    <x-checkbox
+                                        label="{{ $subject['name'] }}"
+                                        wire:model.live="attach_subject_equivalent_id"
+                                        value="{{ $subject['id'] }}"
+                                        class="checkbox-primary checkbox-sm"
+                                    />
+                                </div>
+                            @empty
+                                <div class="col-span-full text-center py-4 text-red-500">
+                                    Chưa có môn học nào trong chương trình đào tạo này.
+                                </div>
+                            @endforelse
                             <div wire:loading.flex wire:target="equivalentSearch,attach_subject_id" class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                 <div class="flex items-center gap-2 text-sm text-gray-600">
                                     <x-loading class="loading-spinner text-primary" />
@@ -1405,7 +1404,7 @@ new class extends Component {
                         </div>
                     @endif
                 </div>
-{{--                </div>--}}
+                {{--                </div>--}}
                 <div class="md:col-span-2">
                     <x-textarea label="Ghi chú" wire:model.live.debounce.300ms="attach_notes" rows="3" />
                 </div>
@@ -1421,6 +1420,3 @@ new class extends Component {
     {{--end modal them mon hoc--}}
 
 </div>
-
-
-
