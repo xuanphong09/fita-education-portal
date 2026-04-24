@@ -162,6 +162,17 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     .tinymce-content th {
         @apply bg-gray-100 font-semibold text-left text-slate-900;
     }
+
+    .tinymce-content table[border="0"] th,
+    .tinymce-content table[border="0"] td,
+    .tinymce-content table[style*="border: none"] th,
+    .tinymce-content table[style*="border: none"] td,
+    .tinymce-content table[style*="border-style: hidden"] th,
+    .tinymce-content table[style*="border-style: hidden"] td,
+    .tinymce-content table[style*="border-width: 0"] th,
+    .tinymce-content table[style*="border-width: 0"] td {
+        @apply border-0;
+    }
 }
 
 .prose :where(p):not(:where([class~="not-prose"] *)) {
