@@ -34,13 +34,19 @@ class extends Component {
         if (!is_string($value)) {
             return false;
         }
+        $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $stripped = strip_tags($decoded, '<img><video><iframe>');
 
+//        $plainText = trim(preg_replace(
+//            '/\x{00A0}/u',
+//            ' ',
+//            strip_tags(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+//        ) ?? '');
         $plainText = trim(preg_replace(
             '/\x{00A0}/u',
             ' ',
-            strip_tags(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'))
+            $stripped
         ) ?? '');
-
         return $plainText !== '';
     }
 

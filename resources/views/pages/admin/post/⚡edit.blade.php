@@ -160,8 +160,23 @@ new class extends Component {
 
     private function hasMeaningfulEditorContent(?string $html): bool
     {
-        $plain = trim((string) preg_replace('/\x{00A0}/u', ' ', strip_tags(html_entity_decode((string) $html, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+//        $plain = trim((string) preg_replace('/\x{00A0}/u', ' ', strip_tags(html_entity_decode((string) $html, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
+//
+//        return $plain !== '';
+        if (empty($html)) {
+            return false;
+        }
 
+        // Giải mã HTML entities
+        $decoded = html_entity_decode((string) $html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        // Xóa các thẻ HTML nhưng GIỮ LẠI img, video, iframe
+        $stripped = strip_tags($decoded, '<img><video><iframe>');
+
+        // Xóa các ký tự khoảng trắng đặc biệt (như &nbsp;)
+        $plain = trim((string) preg_replace('/\x{00A0}/u', ' ', $stripped));
+
+        // Trả về true nếu vẫn còn chữ hoặc còn thẻ ảnh/video
         return $plain !== '';
     }
 
@@ -527,9 +542,9 @@ new class extends Component {
         // Xử lý ảnh ngoài cho nội dung bài viết
         $contentImageService = app(ContentImageService::class);
         $content_vi = $contentImageService->downloadAndReplaceExternalImages($this->content_vi);
-        $content_vi = $contentImageService->downloadDocuments($this->content_vi);
+        $content_vi = $contentImageService->downloadDocuments($content_vi);
         $content_en = $contentImageService->downloadAndReplaceExternalImages($this->content_en);
-        $content_en = $contentImageService->downloadDocuments($this->content_en);
+        $content_en = $contentImageService->downloadDocuments($content_en);
         $content_vi = $this->cleanEmptyHtmlLines($content_vi);
         $content_en = $this->cleanEmptyHtmlLines($content_en);
 
