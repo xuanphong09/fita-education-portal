@@ -51,8 +51,10 @@ Route::livewire('/{categorySlug}/{slug}', 'pages::client.posts.show')
 // ============================================================
 Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(function () {
 
-    // Dashboard — chỉ cần đăng nhập
-    Route::livewire('', 'pages::admin.dashboard')->name('admin.dashboard');
+    Route::middleware('permission:trang_quan_tri')->group(function () {
+        // Dashboard — chỉ cần đăng nhập
+        Route::livewire('', 'pages::admin.dashboard')->name('admin.dashboard');
+    });
 
     // ---- Cấu hình giao diện ----
     Route::middleware('permission:cai_dat_giao_dien')->group(function () {

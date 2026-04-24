@@ -159,7 +159,7 @@ new class extends Component {
                             'Ban Chủ Nhiệm Khoa' => 'badge-warning',
                             'Giảng viên' => 'badge-info',
                             'Sinh viên' => 'badge-success',
-                            default => 'badge-neutral text-black!'
+                            default => 'badge-gray-400 text-gray-700!',
                         };
                     @endphp
                     <x-badge :value="$role->display_name" class="{{ $color }} badge-md text-white font-semibold "/>

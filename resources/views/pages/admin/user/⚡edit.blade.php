@@ -441,9 +441,10 @@ new class extends Component {
                 ]);
 
                 // Gán role
-                if (!empty($this->selectedRoles)) {
-                    $user->assignRole($this->selectedRoles);
-                }
+//                if (!empty($this->selectedRoles)) {
+//                    $user->assignRole($this->selectedRoles);
+//                }
+                $user->syncRoles($this->selectedRoles ?? []);
 
                 /*
                 |--------------------------------------------------------------------------
