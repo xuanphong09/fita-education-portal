@@ -419,8 +419,32 @@ new class extends Component {
 
     protected function rules(): array
     {
-        return [
-            // Không áp dụng validate cho attach_semester_id ở đây vì validate chung, sẽ gọi trực tiếp ở nút Save
+        return $rules = [
+            'semester_no' => [
+                'required', 'integer', 'min:1', 'max:20',
+                Rule::unique('program_semesters', 'semester_no')
+                    ->ignore($this->editingSemesterId)
+                    ->where(fn($q) => $q->where('training_program_id', $this->programId)),
+            ],
+            'semester_total_credits' => ['required', 'integer', 'min:0', 'max:200'],
+            'attach_subject_id' => ['required', 'exists:subjects,id'],
+            'attach_type' => ['required', Rule::in(['required', 'elective', 'pcbb'])],
+            'attach_notes' => ['nullable', 'string'],
+            'attach_order' => ['required', 'integer', 'min:0', 'max:1000'],
+            'attach_subject_prerequisite_id' => ['array'],
+            'attach_subject_prerequisite_id.*' => ['integer', 'exists:subjects,id', 'different:attach_subject_id'],
+            'attach_subject_equivalent_id' => ['array'],
+            'attach_subject_equivalent_id.*' => [
+                'integer',
+                Rule::exists('subjects', 'id')->where(fn ($q) => $q->where('is_active', true)),
+                'distinct',
+                'different:attach_subject_id',
+                function ($attribute, $value, $fail) {
+                    if ($this->usedSubjectIds->contains((int) $value)) {
+                        $fail('Môn học tương đương phải nằm ngoài chương trình đào tạo hiện tại.');
+                    }
+                },
+            ],
         ];
     }
 
