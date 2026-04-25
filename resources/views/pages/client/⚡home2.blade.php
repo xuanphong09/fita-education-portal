@@ -551,7 +551,22 @@ class extends Component {
                             @endforelse
                         </div>
                     </x-tab>
-                    <x-tab name="tab-new-post" label="{{__('Latest News')}}">
+                    <x-tab name="tab-new-post">
+                        <x-slot:label>
+                            <span class="relative inline-flex items-center h-6">
+                                {{ __('Latest News') }}
+
+{{--                                <span class="absolute -top-0.5 -right-7 bg-amber-500 text-white text-[12px] font-bold px-1.5 py-1 flex items-center justify-center rounded-full shadow-sm leading-none">--}}
+{{--                                    Cập nhật--}}
+{{--                                </span>--}}
+                                @if($tabSelected !== 'tab-new-post')
+                                <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                </span>
+                                @endif
+                        </span>
+                        </x-slot:label>
                         <div class="flex flex-col gap-4">
                             @forelse($latestPosts->skip(1)->take(3) as $post)
                                 <div
