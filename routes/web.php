@@ -25,6 +25,7 @@ Route::livewire('/bai-viet', 'pages::client.posts.index')->name('client.posts.in
 Route::livewire('/giang-vien', 'pages::client.lecturers.index')->name('client.lecturers.index');
 Route::livewire('/giang-vien/{slug}', 'pages::client.lecturers.profile')->name('client.lecturers.profile');
 
+Route::livewire('/thu-vien-anh', 'pages::client.album.gallery')->name('client.album.gallery');
 
 // Auth
 Route::livewire('/login', 'pages::client.auth.login')->name('login')->middleware('guest');
