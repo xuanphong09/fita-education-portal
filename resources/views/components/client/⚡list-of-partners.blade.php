@@ -16,16 +16,14 @@ new class extends Component
 
     public function with(): array
     {
-        $images = Partner::query()
+        $partners = Partner::query()
             ->where('is_active', true)
+            ->whereNotNull('logo')
             ->orderBy('order')
-            ->pluck('logo')
-            ->filter()
-            ->values()
-            ->all();
+            ->get();
 
         return [
-            'images' => $images
+            'partners' => $partners
         ];
     }
 };
@@ -36,10 +34,11 @@ new class extends Component
     x-data="{
         swiper: null,
         init() {
-            // 1. KHỞI TẠO SWIPER (SLIDER LƯỚI)
+            // KHỞI TẠO SWIPER
             this.swiper = new Swiper(this.$refs.container, {
                 slidesPerView: 1,
                 spaceBetween: 20,
+                centerInsufficientSlides: true,
                 grid: {
                     rows: 1,
                     fill: 'row',
@@ -54,39 +53,39 @@ new class extends Component
                     1024: { slidesPerView: 6, spaceBetween: 30, grid: { rows: 1 } }
                 }
             });
-
-            // 2. KHỞI TẠO PHOTOSWIPE (LIGHTBOX ZOOM ẢNH)
-            const lightbox = new PhotoSwipeLightbox({
-                gallery: '#{{ $uuid }}',
-                children: 'a', // Chỉ định thẻ A là trigger
-                showHideAnimationType: 'fade',
-                pswpModule: PhotoSwipe
-            });
-
-            lightbox.init();
         }
     }"
 >
-    {{-- Lưu ý: Phải set chiều cao cố định (h-[500px]) để chế độ Grid hoạt động --}}
     <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-40! lg:h-50! pb-10!">
         <div class="swiper-wrapper">
-            @foreach($images as $image)
-                {{-- SWIPER SLIDE --}}
-                {{-- Chiều cao calc(...) là bắt buộc để chia đều 2 hàng --}}
-                <div class="swiper-slide h-full rounded-md overflow-hidden">
+            @foreach($partners as $partner)
+                {{-- SWIPER SLIDE: Thêm flex để căn giữa dọc & ngang --}}
+                <div class="swiper-slide h-full flex items-center justify-center rounded-md overflow-hidden">
 
-                    <img
-                        src="{{Storage::url($image) }}"
-                        class="w-full h-full object-contain transition-transform duration-500 group-hover/img:scale-110"
-                        onload="this.parentNode.setAttribute('data-pswp-width', this.naturalWidth); this.parentNode.setAttribute('data-pswp-height', this.naturalHeight)"
-                        loading="lazy"
-                        alt=""
-                    />
-                        {{-- Overlay đen mờ khi hover --}}
-                        <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/20 transition-all duration-300"></div>
+                    {{-- Kiểm tra nếu có URL thì bọc bằng <a>, không thì bọc bằng <div> --}}
+                    @if(!empty($partner->url))
+                        <a href="{{ $partner->url }}" target="_blank" class="relative w-full h-full flex items-center justify-center group/img cursor-pointer">
+                            @else
+                                <div class="relative w-full h-full flex items-center justify-center group/img">
+                                    @endif
 
+                                    <img
+                                        src="{{ Storage::url($partner->logo) }}"
+                                        class="w-[80%] h-[80%] object-contain transition-transform duration-500 group-hover/img:scale-110"
+                                        loading="lazy"
+                                        alt="Logo"
+                                    />
+
+                                    {{-- Overlay đen mờ khi hover (Tuỳ chọn) --}}
+                                    <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-all duration-300"></div>
+
+                                @if(!empty($partner->url))
+                        </a>
+                    @else
                 </div>
-            @endforeach
+                @endif
+
         </div>
+        @endforeach
     </div>
 </div>
