@@ -209,16 +209,6 @@ new class extends Component {
         $this->validateOnly($property);
     }
 
-    public function fillSeoEn(): void
-    {
-        if (empty($this->seo_title_en)) {
-            $this->seo_title_en = $this->title_en ?: $this->title_vi;
-        }
-        if (empty($this->seo_description_en)) {
-            $this->seo_description_en = $this->excerpt_en ?: $this->excerpt_vi;
-        }
-    }
-
     public function getCategoryOptionsProperty(): array
     {
         $categories = Category::query()
@@ -348,23 +338,6 @@ new class extends Component {
         ], now()->addMinutes(30));
 
         $this->dispatch('open-preview', url: route('admin.preview.post.new'));
-    }
-
-    public function saveAndPreview(): void
-    {
-        $this->enforceWriterDraftRules();
-
-        try {
-            $this->validate();
-            $this->validateLocalizedContent();
-            $this->ensureFeaturedLimit();
-        } catch (ValidationException $e) {
-            $this->error('Vui lòng kiểm tra lại thông tin đã nhập.');
-            throw $e;
-        }
-
-        $post = $this->persistPost();
-        $this->redirect(route('admin.preview.post', ['id' => $post->id, 'draft' => 0]));
     }
 
     private function submitPostForReview(Post $post, bool $isResubmitted): void

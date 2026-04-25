@@ -21,6 +21,8 @@ new class extends Component {
 
     public int $id;
     public string $selectedTab = 'tab-vi';
+    public ?int $author_id = null;
+
     // Song ngữ
     public string $title_vi    = '';
     public string $title_en    = '';
@@ -38,6 +40,7 @@ new class extends Component {
 
     // Trạng thái
     public string $status       = 'draft';
+    public string $currentStatus= 'draft';
     public ?string $published_at = null;
     public ?string $submitted_at = null;
     public ?string $reviewed_at = null;
@@ -101,6 +104,12 @@ new class extends Component {
         }
 
         abort_unless((int) $post->user_id === (int) auth()->id(), 403);
+    }
+
+    public function isAuthor(): bool
+    {
+        $userId = auth()->id();
+        return $userId !== null && (int) $this->author_id === (int) $userId;
     }
 
     protected function rules(): array
@@ -202,6 +211,7 @@ new class extends Component {
 
         if (! $hasVi && ! $hasEn) {
             $errors['title_vi'] = 'Cần có ít nhất một ngôn ngữ đầy đủ (tiêu đề + nội dung).';
+            $errors['title_en'] = 'Cần có ít nhất một ngôn ngữ đầy đủ (tiêu đề + nội dung).';
         }
 
         if (! empty($errors)) {
@@ -213,6 +223,7 @@ new class extends Component {
     {
         $this->id   = $id;
         $post       = Post::findOrFail($id);
+        $this->author_id = $post->user_id;
         $this->authorizePostAccess($post);
 
         $this->title_vi           = $post->getTranslation('title',           'vi', false) ?? '';
@@ -232,6 +243,7 @@ new class extends Component {
             $this->category_ids = [(int) $post->category_id];
         }
         $this->status             = $post->status;
+        $this->currentStatus      = $post->status;
         $this->readOnlyPublished  = $post->status === 'published' && ! $this->canReview();
         $this->submitted_at       = $post->submitted_at?->format('d/m/Y H:i');
         $this->reviewed_at        = $post->reviewed_at?->format('d/m/Y H:i');
@@ -412,7 +424,7 @@ new class extends Component {
         $this->save();
 
         $post->refresh();
-        $isResubmitted = $post->status === Post::APPROVAL_REJECTED;
+        $isResubmitted = $post->status === Post::APPROVAL_REJECTED || $this->currentStatus === Post::APPROVAL_PENDING;
 
         $post->update([
             'status' => Post::APPROVAL_PENDING,
@@ -423,6 +435,7 @@ new class extends Component {
         ]);
 
         $this->status = Post::APPROVAL_PENDING;
+        $this->currentStatus = Post::APPROVAL_PENDING;
         $this->submitted_at = now()->format('d/m/Y H:i');
         $this->reviewed_at = null;
         $this->rejection_reason = null;
@@ -454,6 +467,7 @@ new class extends Component {
         ]);
 
         $this->status = 'published';
+        $this->currentStatus = 'published';
         $this->reviewed_at = now()->format('d/m/Y H:i');
         $this->rejection_reason = null;
 
@@ -487,6 +501,7 @@ new class extends Component {
         ]);
 
         $this->status = Post::APPROVAL_REJECTED;
+        $this->currentStatus = Post::APPROVAL_REJECTED;
         $this->published_at = null;
         $this->reviewed_at = now()->format('d/m/Y H:i');
         $this->rejection_reason = $this->reviewNote;
@@ -585,7 +600,7 @@ new class extends Component {
         ]);
 
         $post->categories()->sync($this->category_ids);
-
+        $this->currentStatus = $nextStatus;
         $this->status = $nextStatus;
         $this->published_at = $nextPublishedAt ? Carbon::parse($nextPublishedAt)->format('Y-m-d\\TH:i') : null;
 
@@ -860,29 +875,55 @@ new class extends Component {
 
             {{-- Hành động --}}
             <x-card title="Hành động" shadow separator class="p-3!">
-                @if($readOnlyPublished)
-                    <x-button label="Chỉ xem (không có quyền lưu)" class="bg-gray-400 text-white w-full my-1" disabled/>
+                {{-- 1. TRƯỜNG HỢP: NGƯỜI DUYỆT BÀI --}}
+                @if($this->canReview())
+                    @if($currentStatus === \App\Models\Post::APPROVAL_PENDING)
+{{--                        <x-button label="Đang chờ duyệt" class="bg-warning text-white w-full my-1" disabled/>--}}
+                        <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                    @elseif($currentStatus === 'published')
+                        <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                        <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                    @else
+                        <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                    @endif
+
+                    {{-- 2. TRƯỜNG HỢP: CHÍNH TÁC GIẢ BÀI VIẾT --}}
+                @elseif($this->isAuthor())
+                    @if($currentStatus === 'published')
+                        <x-button label="Chỉ xem (Đã xuất bản)" class="bg-gray-400 text-white w-full my-1" disabled/>
+                        <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                    @elseif($currentStatus === \App\Models\Post::APPROVAL_PENDING)
+                        <x-button label="Đã gửi duyệt (Đang chờ)" class="bg-gray-400 text-white w-full my-1" disabled/>
+                        <x-button
+                            :label="$currentStatus === \App\Models\Post::APPROVAL_PENDING ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'"
+                            class="bg-success text-white w-full my-1"
+                            wire:click="submitForReview"
+                            spinner="submitForReview"
+                        />
+                    @else
+                        {{-- Nháp hoặc bị từ chối --}}
+                        <x-button label="Lưu bản nháp" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                        <x-button
+                            :label="$currentStatus === \App\Models\Post::APPROVAL_REJECTED ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'"
+                            class="bg-success text-white w-full my-1"
+                            wire:click="submitForReview"
+                            spinner="submitForReview"
+                        />
+                    @endif
+
+                    {{-- 3. TRƯỜNG HỢP: NGƯỜI XEM BÌNH THƯỜNG (Không phải tác giả, không có quyền duyệt) --}}
                 @else
-                    <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1"
-                              wire:click="save" spinner="save"/>
+                    <x-button label="Chỉ xem (Không có quyền sửa)" class="bg-gray-400 text-white w-full my-1" disabled/>
+                    @if($currentStatus === 'published')
+                        <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                    @endif
                 @endif
 
-                @if(!$this->canReview() && $status === \App\Models\Post::APPROVAL_PENDING || $status === \App\Models\Post::APPROVAL_REJECTED)
-                    <x-button
-                        :label="$status === \App\Models\Post::APPROVAL_REJECTED ? 'Gửi duyệt lại' : 'Gửi duyệt bài viết'"
-                        class="bg-success text-white w-full my-1"
-                        wire:click="submitForReview"
-                        spinner="submitForReview"
-                    />
+                @if($currentStatus !== 'published' && $this->isAuthor() || $this->canReview())
+                    <x-button label="Xem trước" class="bg-warning text-white w-full my-1" wire:click="previewDraft" spinner="previewDraft"/>
                 @endif
-                @if($status === 'published')
-                    <x-button label="Xem bài viết" class="bg-info text-white w-full my-1"
-                          link="{{$url}}" external="true"/>
-                @endif
-                <x-button label="Xem trước" class="bg-warning text-white w-full my-1"
-                          wire:click="previewDraft" spinner="previewDraft"/>
             </x-card>
-            @if($status === \App\Models\Post::APPROVAL_PENDING)
+            @if($currentStatus === \App\Models\Post::APPROVAL_PENDING || $currentStatus === \App\Models\Post::APPROVAL_REJECTED || $currentStatus === 'published')
                 <x-card title="Duyệt bài viết" shadow class="p-3!">
                 @php
                     $approvalMap = [
@@ -890,10 +931,10 @@ new class extends Component {
                         \App\Models\Post::APPROVAL_REJECTED => ['label' => 'Bị từ chối', 'class' => 'badge-error'],
                         'published' => ['label' => 'Đã duyệt', 'class' => 'badge-success'],
                     ];
-                    $approval = $approvalMap[$status] ?? null;
+                    $approval = $approvalMap[$currentStatus] ?? null;
                 @endphp
 
-                @if($approval)
+                @if($approval && $reviewed_at)
                     <x-badge :value="$approval['label']" class="{{ $approval['class'] }} text-white font-semibold"/>
                 @else
                     <span class="text-md text-gray-500">Chưa gửi duyệt</span>
@@ -913,7 +954,7 @@ new class extends Component {
                     </div>
                 @endif
 
-                @if($this->canReview())
+                @if($this->canReview() && $currentStatus === \App\Models\Post::APPROVAL_PENDING)
                     <div class="mt-3 space-y-2">
                         <x-input
                             label="Lên lịch đăng (tùy chọn)"
@@ -943,7 +984,7 @@ new class extends Component {
                          placeholder="thong-bao-tuyen-sinh-2025"
                     required
                 />
-                @if($this->canReview())
+                @if($this->canReview() && $this->isAuthor() || $currentStatus === 'published' || $currentStatus === 'archived')
                     <x-select label="Trạng thái" wire:model.live="status"
                               :options="$statusOptions"
                               option-value="id" option-label="name"
@@ -1007,6 +1048,7 @@ new class extends Component {
                                 <img src="{{ Storage::url($currentThumbnail) }}" alt="Current thumbnail"
                                      class="size-40 rounded object-cover ring-1 ring-gray-200"/>
                             </div>
+                            @if($currentStatus !== 'published' && $this->isAuthor() || $this->canReview())
                             <x-button
                                 label="Xóa ảnh hiện tại"
                                 icon="o-trash"
@@ -1014,6 +1056,7 @@ new class extends Component {
                                 wire:click="removeThumbnail"
                                 spinner="removeThumbnail"
                             />
+                            @endif
                         @endif
                     </div>
                 </div>
@@ -1046,28 +1089,27 @@ new class extends Component {
                     wire:model="show_related_posts"
                 />
             </x-card>
-            {{-- Thông tin --}}
-{{--            <x-card title="Thông tin" shadow class="p-3!">--}}
-{{--                @php $post = App\Models\Post::find($id); @endphp--}}
-{{--                <div class="text-md space-y-2 text-gray-600">--}}
-{{--                    <div class="flex justify-between">--}}
-{{--                        <span>Lượt xem:</span>--}}
-{{--                        <span class="font-medium">{{ number_format($post?->views ?? 0) }}</span>--}}
-{{--                    </div>--}}
-{{--                    <div class="flex justify-between">--}}
-{{--                        <span>Tác giả:</span>--}}
-{{--                        <span class="font-medium truncate max-w-24">{{ $post?->user?->name ?? '—' }}</span>--}}
-{{--                    </div>--}}
-{{--                    <div class="flex justify-between">--}}
-{{--                        <span>Ngày tạo:</span>--}}
-{{--                        <span class="font-medium">{{ $post?->created_at?->format('d/m/Y') }}</span>--}}
-{{--                    </div>--}}
-{{--                    <div class="flex justify-between">--}}
-{{--                        <span>Cập nhật:</span>--}}
-{{--                        <span class="font-medium">{{ $post?->updated_at?->format('d/m/Y') }}</span>--}}
-{{--                    </div>--}}
-{{--                </div>--}}
-{{--            </x-card>--}}
+            <x-card title="Thông tin" shadow class="p-3!">
+                @php $post = App\Models\Post::find($id); @endphp
+                <div class="text-md space-y-2 text-gray-600">
+                    <div class="flex justify-between">
+                        <span>Lượt xem:</span>
+                        <span class="font-medium">{{ number_format($post?->views ?? 0) }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Tác giả:</span>
+                        <span class="font-medium truncate">{{ $post?->user?->name ?? '—' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Ngày tạo:</span>
+                        <span class="font-medium">{{ $post?->created_at?->format('H:i d/m/Y') }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span>Cập nhật:</span>
+                        <span class="font-medium">{{ $post?->updated_at?->format('H:i d/m/Y') }}</span>
+                    </div>
+                </div>
+            </x-card>
         </div>
     </div>
 </div>

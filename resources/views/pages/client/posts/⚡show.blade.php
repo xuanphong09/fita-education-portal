@@ -52,12 +52,12 @@ class extends Component {
 
     protected function isVisibleInLocale(Post $post, string $locale): bool
     {
-        if ($locale !== 'en') {
-            return true;
-        }
+//        if ($locale !== 'en') {
+//            return true;
+//        }
 
-        return $this->hasMeaningfulTranslation($post, 'title', 'en')
-            && $this->hasMeaningfulTranslation($post, 'content', 'en');
+        return $this->hasMeaningfulTranslation($post, 'title', $locale)
+            && $this->hasMeaningfulTranslation($post, 'content', $locale);
     }
 
     public function mount(string $categorySlug, string $slug)
