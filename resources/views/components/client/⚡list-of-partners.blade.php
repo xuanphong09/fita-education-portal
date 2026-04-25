@@ -77,7 +77,7 @@ new class extends Component
                                     />
 
                                     {{-- Overlay đen mờ khi hover (Tuỳ chọn) --}}
-                                    <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-all duration-300"></div>
+{{--                                    <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-all duration-300"></div>--}}
 
                                 @if(!empty($partner->url))
                         </a>
