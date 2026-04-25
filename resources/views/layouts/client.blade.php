@@ -609,7 +609,7 @@
         {{-- end breadcrumb --}}
 
         {{-- start slot content --}}
-        <div class="pb-10 flex-1">
+        <div class="flex-1">
             {{ $slot }}
         </div>
         {{-- end slot content --}}
