@@ -8,7 +8,7 @@ return [
     ],
     'temporary_file_upload' => [
         'disk' => null,
-        'rules' => ['required', 'file', 'max:30720'],
+        'rules' => ['file', 'max:30720'],
     ],
 ];
 
