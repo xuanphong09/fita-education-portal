@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\User;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -21,12 +22,13 @@ new class extends Component {
     public string $filterFeatured = '';
     public string $filterLanguage = '';
     public bool $pendingOnlyMode = false;
+    public ?int $filterAuthor = null;
 
     public function mount(): void
     {
         $this->pendingOnlyMode = request()->routeIs('admin.post.pending');
 
-        if ($this->pendingOnlyMode && ! $this->canReview()) {
+        if ($this->pendingOnlyMode && !$this->canReview()) {
             abort(403);
         }
 
@@ -50,9 +52,9 @@ new class extends Component {
         return Post::query()
             ->with(['categories', 'user'])
             ->when(
-                ! $this->canReview(),
-                fn ($q) => $q->where('user_id', auth()->id()),
-                fn ($q) => $q->where(function ($inner) {
+                !$this->canReview(),
+                fn($q) => $q->where('user_id', auth()->id()),
+                fn($q) => $q->where(function ($inner) {
                     $inner->where('status', '!=', 'draft')
                         ->orWhere('user_id', auth()->id());
                 })
@@ -62,8 +64,25 @@ new class extends Component {
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->filterCategory, fn($q) => $q->whereHas('categories', fn($cq) => $cq->where('categories.id', $this->filterCategory)))
             ->when($this->filterFeatured !== '', fn($q) => $q->where('is_featured', $this->filterFeatured === '1'))
+            ->when($this->filterAuthor && $this->canReview(), fn($q) => $q->where('user_id', $this->filterAuthor))
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
+    }
+
+    public function getAuthorsProperty()
+    {
+        if (!$this->canReview()) {
+            return [];
+        }
+
+        return User::query()
+            ->whereHas('posts') // Chỉ lấy những user có bài viết
+            ->orderBy('name')
+            ->get()
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+            ])->toArray();
     }
 
     protected function applyLanguageFilter($query, string $locale): void
@@ -142,7 +161,10 @@ new class extends Component {
     {
         $this->resetPage();
     }
-
+    public function updatedFilterAuthor(): void
+    {
+        $this->resetPage();
+    }
     public function updatedFilterCategory(): void
     {
         $this->resetPage();
@@ -169,6 +191,7 @@ new class extends Component {
         $this->filterStatus = '';
         $this->filterCategory = null;
         $this->filterLanguage = '';
+        $this->filterAuthor = null;
         $this->filterFeatured = '';
         if ($this->pendingOnlyMode) {
             $this->filterStatus = Post::APPROVAL_PENDING;
@@ -182,7 +205,8 @@ new class extends Component {
             || !is_null($this->filterCategory)
             || $this->filterStatus !== ''
             || $this->filterFeatured !== ''
-            || $this->filterLanguage !== '';
+            || $this->filterLanguage !== ''
+            || !is_null($this->filterAuthor);
     }
 
     public function canDeletePost(Post $post): bool
@@ -191,14 +215,14 @@ new class extends Component {
             return true;
         }
 
-        return $post->status === 'draft' && (int) $post->user_id === (int) auth()->id();
+        return $post->status === 'draft' && (int)$post->user_id === (int)auth()->id();
     }
 
     public function delete(int $id): void
     {
         $post = Post::findOrFail($id);
 
-        if (! $this->canDeletePost($post)) {
+        if (!$this->canDeletePost($post)) {
             $this->error('Bạn chỉ có thể xóa bài nháp của chính mình.');
             return;
         }
@@ -218,21 +242,21 @@ new class extends Component {
     {
         $post = Post::findOrFail($id);
 
-        if (! $this->canDeletePost($post)) {
+        if (!$this->canDeletePost($post)) {
             $this->error('Bạn không có quyền xóa bài viết này.');
             return;
         }
 
-        if ($post->thumbnail) {
-            Storage::disk('public')->delete($post->thumbnail);
-        }
+//        if ($post->thumbnail) {
+//            Storage::disk('public')->delete($post->thumbnail);
+//        }
         $post->delete();
         $this->success('Đã xóa bài viết thành công!');
     }
 
     public function toggleFeatured(int $id): void
     {
-        if (! $this->canReview()) {
+        if (!$this->canReview()) {
             $this->error('Bạn không có quyền thay đổi trạng thái nổi bật.');
             return;
         }
@@ -275,7 +299,8 @@ new class extends Component {
         <span>{{ $pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết' }}</span>
     </x-slot:breadcrumb>
 
-    <x-header :title="$pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết'" class="pb-3 mb-5! border-b border-gray-300">
+    <x-header :title="$pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết'"
+              class="pb-3 mb-5! border-b border-gray-300">
         <x-slot:middle class="justify-end!">
             <x-input
                 icon="o-magnifying-glass"
@@ -286,9 +311,9 @@ new class extends Component {
             />
         </x-slot:middle>
         <x-slot:actions>
-            @if($this->canReview())
-                <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.post.trash') }}"/>
-            @endif
+            {{--            @if($this->canReview())--}}
+            <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.post.trash') }}"/>
+            {{--            @endif--}}
             <x-button icon="o-plus" class="btn-primary text-white" label="Tạo bài viết"
                       link="{{ route('admin.post.create') }}"/>
         </x-slot:actions>
@@ -344,6 +369,17 @@ new class extends Component {
             option-label="name"
             class="select-md w-48"
         />
+        @if($this->canReview())
+            <x-select
+                wire:model.live="filterAuthor"
+                placeholder="Tất cả tác giả"
+                placeholder-value=""
+                :options="$this->authors"
+                option-value="id"
+                option-label="name"
+                class="select-md w-48"
+            />
+        @endif
         @if($this->hasActiveFilters)
             <x-button
                 label="Xóa bộ lọc"
@@ -443,8 +479,8 @@ new class extends Component {
 
             @scope('cell_actions', $post)
             <div class="flex gap-1">
-            <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa"
-                      link="{{ route('admin.post.edit', $post->id) }}"/>
+                <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa"
+                          link="{{ route('admin.post.edit', $post->id) }}"/>
 
                 @if($this->canReview() && $post->status === 'published')
                     <x-button

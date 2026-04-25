@@ -78,6 +78,11 @@ class User extends Authenticatable
         return $this->hasOne(Lecturer::class);
     }
 
+    public function posts()
+    {
+        return $this->hasMany(Post::class, 'user_id', 'id');
+    }
+
     public function getUserTypeLabelAttribute()
     {
         return match($this->user_type) {
