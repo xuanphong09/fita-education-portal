@@ -286,7 +286,7 @@ class extends Component {
         <div class="w-[90%] lg:w-330 mx-auto">
             <div class="text-center mb-12">
                 {{--                <p class="text-fita font-semibold text-[14px] lg:text-[16px] uppercase tracking-wide mb-2">{{ __('Distinguishing features') }}</p>--}}
-                <h2 class="text-[28px] lg:text-[36px] font-bold text-fita  font-barlow uppercase">{{ __('Why choose us?') }}</h2>
+{{--                <h2 class="text-[28px] lg:text-[36px] font-bold text-fita  font-barlow uppercase">{{ __('Why choose us?') }}</h2>--}}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
