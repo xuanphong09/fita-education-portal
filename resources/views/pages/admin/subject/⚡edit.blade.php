@@ -99,7 +99,7 @@ new class extends Component {
                         $fail('Định dạng nội dung file không hợp lệ. Chỉ chấp nhận PDF.');
                     }
                 },
-                'max:10240',
+                'max:30720',
             ],
         ];
     }
@@ -117,7 +117,7 @@ new class extends Component {
         'credits_practice.regex' => 'Tín chỉ thực hành chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'syllabus_file.mimes' => 'Đề cương môn học chỉ hỗ trợ định dạng PDF.',
         'syllabus_file.mimetypes' => 'Nội dung file không đúng định dạng PDF hợp lệ.',
-        'syllabus_file.max' => 'Đề cương môn học không được vượt quá 10MB.',
+        'syllabus_file.max' => 'Đề cương môn học không được vượt quá 30MB.',
     ];
 
     protected function allowedSyllabusMimeTypes(): array
@@ -563,7 +563,7 @@ new class extends Component {
                         label="Đề cương môn học (PDF)"
                         wire:model.live="syllabus_file"
                         accept=".pdf,application/pdf"
-                        hint="Tối đa 10MB"
+                        hint="Tối đa 30MB"
                     />
                 </div>
 
