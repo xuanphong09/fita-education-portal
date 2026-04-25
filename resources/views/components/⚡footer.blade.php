@@ -75,7 +75,7 @@ new class extends Component {
                     @foreach($pageData['quick_links']??[] as $index => $item)
                         @if(!empty(trim($item['name'])) && !empty(trim($item['url'])))
                             <li class="hover:scale-x-105">
-                                <a href="{{$item['url']}}" class="flex items-center hover:underline" wire:navigate>
+                                <a href="{{$item['url']}}" class="flex items-center" wire:navigate>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16" fill="none"
                                          stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
                                         <path
@@ -94,7 +94,7 @@ new class extends Component {
                     @foreach($pageData['socials']??[] as $index => $item)
                         @if(!empty(trim($item['name'])) && !empty(trim($item['url'])) && !empty(trim($item['icon'])))
                             <li class="hover:scale-x-105">
-                                <a href="{{$item['url']}}" class="flex items-center gap-2 hover:underline" target="_blank">
+                                <a href="{{$item['url']}}" class="flex items-center gap-2" target="_blank">
                                     @switch($item['icon'])
                                         @case('facebook')
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
