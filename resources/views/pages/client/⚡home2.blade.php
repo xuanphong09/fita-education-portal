@@ -127,6 +127,7 @@ class extends Component {
 
         $featuredPosts = (clone $baseQuery)
             ->where('is_featured', true)
+            ->latest('published_at')
             ->limit($locale === 'en' ? 20 : 4)
             ->get()
             ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
@@ -135,6 +136,7 @@ class extends Component {
 
         $latestPosts = (clone $baseQuery)
             ->when($featuredPosts->isNotEmpty(), fn($q) => $q->whereNotIn('id', $featuredPosts->pluck('id')))
+            ->latest('published_at')
             ->limit($locale === 'en' ? 24 : 4)
             ->get()
             ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
