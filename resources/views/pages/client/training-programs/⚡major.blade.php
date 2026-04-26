@@ -1584,59 +1584,65 @@ class extends Component {
             @endif
         </div>
     </div>
+    <div id="mary-global-tooltip" class="fixed z-[99999] pointer-events-none hidden">
+        <div class="relative bg-black text-white text-[13px] font-medium px-3 py-1.5 rounded-[6px] shadow-lg">
+            <span id="mary-tooltip-text"></span>
+            <div class="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-3 h-3 bg-black rotate-45 rounded-[1px]"></div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener('livewire:navigated', () => {
+            // Sử dụng cờ trên document.body để đảm bảo chỉ đăng ký sự kiện 1 lần duy nhất dù dùng SPA
+            if (!document.body.dataset.maryTooltipBound) {
+                document.body.dataset.maryTooltipBound = 'true';
 
-            if (window.maryGlobalTooltipInitialized) return;
-            window.maryGlobalTooltipInitialized = true;
+                // Lắng nghe di chuột vào nút
+                document.body.addEventListener('mouseover', (e) => {
+                    const targetSvg = e.target.closest('svg');
+                    if (!targetSvg) return;
 
-            const globalTooltip = document.createElement('div');
-            globalTooltip.id = 'mary-global-tooltip';
+                    const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
 
-            // XÓA BỎ HẾT HIỆU ỨNG (transition, scale, opacity). Chỉ dùng 'hidden' để ẩn mặc định.
-            globalTooltip.className = 'fixed z-[99999] pointer-events-none hidden';
-            globalTooltip.style.left = '-9999px';
-            globalTooltip.style.top = '-9999px';
-            document.body.appendChild(globalTooltip);
+                    if (clickAttr.includes('toggleExpand')) {
+                        const rect = targetSvg.getBoundingClientRect();
+                        const isClosed = targetSvg.className.baseVal && targetSvg.className.baseVal.includes('rotate');
 
-            document.body.addEventListener('mouseover', (e) => {
-                const targetSvg = e.target.closest('svg');
-                if (!targetSvg) return;
+                        // Lấy tooltip và text ra để thao tác
+                        const tooltipElement = document.getElementById('mary-global-tooltip');
+                        const textElement = document.getElementById('mary-tooltip-text');
 
-                const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
+                        if (tooltipElement && textElement) {
+                            // Đổi chữ
+                            textElement.textContent = isClosed ? 'Các học phần tương đương' : 'Thu gọn';
 
-                if (clickAttr.includes('toggleExpand')) {
-                    const rect = targetSvg.getBoundingClientRect();
-                    const isClosed = targetSvg.className.baseVal && targetSvg.className.baseVal.includes('rotate');
-                    const textContent = isClosed ? 'Các học phần tương đương' : 'Thu gọn';
+                            // Gắn tọa độ
+                            tooltipElement.style.left = `${rect.left + (rect.width / 2)}px`;
+                            tooltipElement.style.top = `${rect.top - 10}px`;
+                            tooltipElement.style.transform = 'translate(-50%, -100%)';
 
-                    globalTooltip.innerHTML = `
-                        <div class="relative bg-black text-white text-[13px] font-medium px-3 py-1.5 rounded-[6px] shadow-lg">
-                            ${textContent}
-                            <div class="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-3 h-3 bg-black rotate-45 rounded-[1px]"></div>
-                        </div>
-                    `;
+                            // Hiển thị lập tức
+                            tooltipElement.classList.remove('hidden');
+                        }
+                    }
+                });
 
-                    globalTooltip.style.left = `${rect.left + (rect.width / 2)}px`;
-                    globalTooltip.style.top = `${rect.top - 10}px`;
-                    globalTooltip.style.transform = 'translate(-50%, -100%)';
+                // Lắng nghe đưa chuột ra khỏi nút
+                document.body.addEventListener('mouseout', (e) => {
+                    const targetSvg = e.target.closest('svg');
+                    if (!targetSvg) return;
 
-                    // Xóa 'hidden' -> Hiện lên LẬP TỨC
-                    globalTooltip.classList.remove('hidden');
-                }
-            });
-
-            document.body.addEventListener('mouseout', (e) => {
-                const targetSvg = e.target.closest('svg');
-                if (!targetSvg) return;
-
-                const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
-                if (clickAttr.includes('toggleExpand')) {
-                    // Thêm 'hidden' -> Ẩn đi LẬP TỨC (không cần setTimeout chờ đợi nữa)
-                    globalTooltip.classList.add('hidden');
-                    globalTooltip.style.left = '-9999px';
-                }
-            });
+                    const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
+                    if (clickAttr.includes('toggleExpand')) {
+                        const tooltipElement = document.getElementById('mary-global-tooltip');
+                        if (tooltipElement) {
+                            // Ẩn lập tức
+                            tooltipElement.classList.add('hidden');
+                            tooltipElement.style.left = '-9999px';
+                        }
+                    }
+                });
+            }
         });
     </script>
 </div>
