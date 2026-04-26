@@ -471,6 +471,24 @@ select.select:focus,
 .modalDisplaySemesterTimeline div.modal-box{
     @apply xl:w-300 lg:w-250 max-w-[85%] max-h-screen py-4
 }
+td .cursor-pointer[class*="rotate"] {
+    background-color: #0c83d8;
+}
+
+td .cursor-pointer[class*="rotate"]  path {
+    color: white !important;
+    stroke-width: 2.5;
+}
+
+/* chưa expand */
+td .cursor-pointer:not([class*="rotate"]) {
+    background-color: #0c83d8;
+}
+
+td .cursor-pointer:not([class*="rotate"])   path {
+    color: white !important;
+    stroke-width: 2.5;
+}
 
 @keyframes modal-enter {
     0% {

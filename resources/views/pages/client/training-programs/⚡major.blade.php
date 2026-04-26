@@ -1584,5 +1584,60 @@ class extends Component {
             @endif
         </div>
     </div>
+    <script>
+        document.addEventListener('livewire:navigated', () => {
+
+            if (window.maryGlobalTooltipInitialized) return;
+            window.maryGlobalTooltipInitialized = true;
+
+            const globalTooltip = document.createElement('div');
+            globalTooltip.id = 'mary-global-tooltip';
+
+            // XÓA BỎ HẾT HIỆU ỨNG (transition, scale, opacity). Chỉ dùng 'hidden' để ẩn mặc định.
+            globalTooltip.className = 'fixed z-[99999] pointer-events-none hidden';
+            globalTooltip.style.left = '-9999px';
+            globalTooltip.style.top = '-9999px';
+            document.body.appendChild(globalTooltip);
+
+            document.body.addEventListener('mouseover', (e) => {
+                const targetSvg = e.target.closest('svg');
+                if (!targetSvg) return;
+
+                const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
+
+                if (clickAttr.includes('toggleExpand')) {
+                    const rect = targetSvg.getBoundingClientRect();
+                    const isClosed = targetSvg.className.baseVal && targetSvg.className.baseVal.includes('rotate');
+                    const textContent = isClosed ? 'Các học phần tương đương' : 'Thu gọn';
+
+                    globalTooltip.innerHTML = `
+                        <div class="relative bg-black text-white text-[13px] font-medium px-3 py-1.5 rounded-[6px] shadow-lg">
+                            ${textContent}
+                            <div class="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-3 h-3 bg-black rotate-45 rounded-[1px]"></div>
+                        </div>
+                    `;
+
+                    globalTooltip.style.left = `${rect.left + (rect.width / 2)}px`;
+                    globalTooltip.style.top = `${rect.top - 10}px`;
+                    globalTooltip.style.transform = 'translate(-50%, -100%)';
+
+                    // Xóa 'hidden' -> Hiện lên LẬP TỨC
+                    globalTooltip.classList.remove('hidden');
+                }
+            });
+
+            document.body.addEventListener('mouseout', (e) => {
+                const targetSvg = e.target.closest('svg');
+                if (!targetSvg) return;
+
+                const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
+                if (clickAttr.includes('toggleExpand')) {
+                    // Thêm 'hidden' -> Ẩn đi LẬP TỨC (không cần setTimeout chờ đợi nữa)
+                    globalTooltip.classList.add('hidden');
+                    globalTooltip.style.left = '-9999px';
+                }
+            });
+        });
+    </script>
 </div>
 
