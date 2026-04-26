@@ -346,9 +346,14 @@ class extends Component {
                                         />
                                     </template>
                                     <template x-if="!current || !current.thumbnail">
-                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">
-                                            <x-icon name="o-photo" class="w-16 h-16 text-white opacity-50" />
-                                        </div>
+{{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
+{{--                                            <x-icon name="o-photo" class="w-16 h-16 text-white opacity-50" />--}}
+{{--                                        </div>--}}
+                                        <img
+                                            src="{{ asset('assets/images/noti-news.png') }}"
+                                            alt="No image"
+                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
                                     </template>
                                 </div>
 
@@ -436,9 +441,14 @@ class extends Component {
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
                                     @else
-                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">
-                                            <x-icon name="o-photo" class="w-10 h-10 text-white opacity-50" />
-                                        </div>
+                                        <img
+                                            src="{{ asset('assets/images/noti-news.png') }}"
+                                            alt="No image"
+                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+{{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
+{{--                                            <x-icon name="o-photo" class="w-10 h-10 text-white opacity-50" />--}}
+{{--                                        </div>--}}
                                     @endif
                                 </div>
 
