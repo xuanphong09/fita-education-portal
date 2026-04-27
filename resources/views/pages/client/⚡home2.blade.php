@@ -435,6 +435,10 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No featured posts found.') }}</p>
                             @endforelse
                         </div>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
+                                  icon-right="o-arrow-right"
+                                  class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4">
+                        </x-button>
                     </x-tab>
                     <x-tab name="tab-new-post">
                         <x-slot:label>
@@ -485,6 +489,10 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No latest posts found.') }}</p>
                             @endforelse
                         </div>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
+                                  icon-right="o-arrow-right"
+                                  class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4">
+                        </x-button>
                     </x-tab>
                     <x-tab name="tab-notification-post">
                         <x-slot:label>
@@ -531,11 +539,16 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No announcement posts found.') }}</p>
                             @endforelse
                         </div>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}"
+                                  icon-right="o-arrow-right"
+                                  class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4">
+                        </x-button>
                     </x-tab>
                 </x-tabs>
-                <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
-                          icon-right="o-arrow-right"
-                          class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-105"></x-button>
+{{--                <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"--}}
+{{--                          icon-right="o-arrow-right"--}}
+{{--                          class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-105">--}}
+{{--                </x-button>--}}
             </div>
         </div>
     </div>
