@@ -65,6 +65,101 @@
                 ->filter(fn($item) => !empty($item['name']) && (!empty($item['url']) || !empty($item['children'])))
                 ->values();
         @endphp
+        @php
+            $headerPage = \App\Models\Page::query()->where('slug', 'dau-trang')->first();
+            $rawHeaderData = [];
+
+            if ($headerPage && $headerPage->content_data) {
+                $rawHeaderData = $headerPage->getTranslation('content_data', app()->getLocale(), false)
+                    ?: $headerPage->getTranslation('content_data', 'vi', false)
+                    ?: $headerPage->getTranslation('content_data', 'en', false)
+                    ?: [];
+            }
+
+            $headerMenuItems = collect(is_array($rawHeaderData) ? ($rawHeaderData['menu_items'] ?? []) : [])
+                ->map(function ($item) {
+                    $children = collect($item['children'] ?? [])
+                        ->map(function ($child) {
+                            $grandChildren = collect($child['children'] ?? [])
+                                ->filter(fn($grand) => !empty(trim($grand['name'] ?? '')) && !empty(trim($grand['url'] ?? '')))
+                                ->map(fn($grand) => [
+                                    'id' => $grand['id'] ?? null,
+                                    'name' => trim((string) ($grand['name'] ?? '')),
+                                    'url' => trim((string) ($grand['url'] ?? '')),
+                                ])
+                                ->values()
+                                ->all();
+
+                            return [
+                                'id' => $child['id'] ?? null,
+                                'name' => trim((string) ($child['name'] ?? '')),
+                                'url' => trim((string) ($child['url'] ?? '')),
+                                'children' => $grandChildren,
+                            ];
+                        })
+                        ->filter(fn($child) => !empty($child['name']) && (!empty($child['url']) || !empty($child['children'])))
+                        ->values()
+                        ->all();
+
+                    return [
+                        'id' => $item['id'] ?? null,
+                        'name' => trim((string) ($item['name'] ?? '')),
+                        'url' => trim((string) ($item['url'] ?? '')),
+                        'children' => $children,
+                    ];
+                })
+                ->filter(fn($item) => !empty($item['name']) && (!empty($item['url']) || !empty($item['children'])))
+                ->values();
+
+            $useDynamicHeader = $headerMenuItems->isNotEmpty();
+
+            $isAbsoluteUrl = fn (?string $url): bool => filled($url) && preg_match('/^(https?:)?\/\//i', trim($url)) === 1;
+
+            $isAbsoluteExternalUrl = function (?string $url) use ($isAbsoluteUrl): bool {
+                if (!$isAbsoluteUrl($url)) {
+                    return false;
+                }
+
+                $normalizedUrl = trim((string) $url);
+
+                // Xử lý link bắt đầu bằng // (protocol-relative)
+                if (str_starts_with($normalizedUrl, '//')) {
+                    $normalizedUrl = request()->getScheme() . ':' . $normalizedUrl;
+                }
+
+                $targetHost = parse_url($normalizedUrl, PHP_URL_HOST);
+                $targetPort = parse_url($normalizedUrl, PHP_URL_PORT);
+
+                // Nếu URL không ghi rõ port, tự suy luận port mặc định dựa trên giao thức
+                if (!$targetPort) {
+                    $scheme = parse_url($normalizedUrl, PHP_URL_SCHEME);
+                    $targetPort = ($scheme === 'https') ? 443 : 80;
+                }
+
+                if (!filled($targetHost)) {
+                    return true;
+                }
+
+                $currentHost = request()->getHost();
+                $currentPort = request()->getPort();
+
+                // Link là External nếu Tên miền khác nhau HOẶC Cổng (Port) khác nhau
+                return (strcasecmp((string) $targetHost, $currentHost) !== 0) || ($targetPort !== $currentPort);
+            };
+
+            $trainingMajors = collect();
+
+            if (!$useDynamicHeader) {
+                $trainingMajors = \App\Models\Major::query()
+                    ->whereHas('trainingPrograms', function ($query) {
+                        $query->where('status', 'published')
+                            ->whereNotNull('published_at')
+                            ->where('published_at', '<=', now());
+                    })
+                    ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+                    ->get(['id', 'name', 'slug']);
+            }
+        @endphp
 
         {{-- Bên trái: Tên trường --}}
         <div class="
@@ -120,7 +215,11 @@
                             class="client-top-menu-level-2 cursor-pointer before:absolute before:-top-3 before:left-0 before:w-full before:h-3 dropdown-content mt-1.5 w-64 bg-base-100 shadow-lg border border-gray-300 rounded-b-md text-gray-700">
                             @foreach($topMenuItem['children'] as $topChild)
                                 <li>
-                                    <a href="{{ $topChild['url'] }}" class="block px-4 py-2 hover:bg-gray-100">
+{{--                                    <a href="{{ $topChild['url'] }}" class="block px-4 py-2 hover:bg-gray-100">--}}
+{{--                                        {{ $topChild['name'] }}--}}
+{{--                                    </a>--}}
+                                    <a href="{{ $topChild['url'] }}" class="block px-4 py-2 hover:bg-gray-100"
+                                       @if($isAbsoluteExternalUrl($topChild['url'])) target="_blank" @else wire:navigate @endif>
                                         {{ $topChild['name'] }}
                                     </a>
                                 </li>
@@ -128,7 +227,11 @@
                         </ul>
                     </div>
                 @else
-                    <a href="{{ $topMenuItem['url'] }}" class="hidden md:block font-normal text-slate-200 hover:text-white hover:font-semibold">
+{{--                    <a href="{{ $topMenuItem['url'] }}" class="hidden md:block font-normal text-slate-200 hover:text-white hover:font-semibold">--}}
+{{--                        {{ $topMenuItem['name'] }}--}}
+{{--                    </a>--}}
+                    <a href="{{ $topMenuItem['url'] }}" class="hidden md:block font-normal text-slate-200 hover:text-white hover:font-semibold"
+                       @if($isAbsoluteExternalUrl($topMenuItem['url'])) target="_blank" @else wire:navigate @endif>
                         {{ $topMenuItem['name'] }}
                     </a>
                 @endif
@@ -206,94 +309,26 @@
 
                     </ul>
                 </div>
+            @else
+                <span class="separator text-[18px] mx-2 text-white">|</span>
+                <x-button
+                    link="{{route('login')}}"
+                    class="btn btn-ghost btn-sm
+                       bg-transparent border-0 shadow-none
+                       hover:bg-transparent hover:border-0 hover:shadow-none
+                       focus:bg-transparent focus:border-0 focus:shadow-none focus:outline-none
+                       active:bg-transparent active:border-0 active:shadow-none
+                       transition-none w-6 h-6 p-0 z-100"
+                    tooltipLeft="{{__('Login')}}"
+                >
+                    <img src="{{asset('assets/images/login.png')}}" alt="login" class="w-6 h-6 inline-block">
+                </x-button>
             @endauth
+
         </div>
     </div>
     {{-- start end nav bar--}}
     {{-- start bottom nav bar--}}
-    @php
-        $headerPage = \App\Models\Page::query()->where('slug', 'dau-trang')->first();
-        $rawHeaderData = [];
-
-        if ($headerPage && $headerPage->content_data) {
-            $rawHeaderData = $headerPage->getTranslation('content_data', app()->getLocale(), false)
-                ?: $headerPage->getTranslation('content_data', 'vi', false)
-                ?: $headerPage->getTranslation('content_data', 'en', false)
-                ?: [];
-        }
-
-        $headerMenuItems = collect(is_array($rawHeaderData) ? ($rawHeaderData['menu_items'] ?? []) : [])
-            ->map(function ($item) {
-                $children = collect($item['children'] ?? [])
-                    ->map(function ($child) {
-                        $grandChildren = collect($child['children'] ?? [])
-                            ->filter(fn($grand) => !empty(trim($grand['name'] ?? '')) && !empty(trim($grand['url'] ?? '')))
-                            ->map(fn($grand) => [
-                                'id' => $grand['id'] ?? null,
-                                'name' => trim((string) ($grand['name'] ?? '')),
-                                'url' => trim((string) ($grand['url'] ?? '')),
-                            ])
-                            ->values()
-                            ->all();
-
-                        return [
-                            'id' => $child['id'] ?? null,
-                            'name' => trim((string) ($child['name'] ?? '')),
-                            'url' => trim((string) ($child['url'] ?? '')),
-                            'children' => $grandChildren,
-                        ];
-                    })
-                    ->filter(fn($child) => !empty($child['name']) && (!empty($child['url']) || !empty($child['children'])))
-                    ->values()
-                    ->all();
-
-                return [
-                    'id' => $item['id'] ?? null,
-                    'name' => trim((string) ($item['name'] ?? '')),
-                    'url' => trim((string) ($item['url'] ?? '')),
-                    'children' => $children,
-                ];
-            })
-            ->filter(fn($item) => !empty($item['name']) && (!empty($item['url']) || !empty($item['children'])))
-            ->values();
-
-        $useDynamicHeader = $headerMenuItems->isNotEmpty();
-
-        $isAbsoluteUrl = fn (?string $url): bool => filled($url) && preg_match('/^(https?:)?\/\//i', trim($url)) === 1;
-        $isAbsoluteExternalUrl = function (?string $url) use ($isAbsoluteUrl): bool {
-            if (!$isAbsoluteUrl($url)) {
-                return false;
-            }
-
-            $normalizedUrl = trim((string) $url);
-
-            // parse_url() needs a scheme for protocol-relative links like //example.com
-            if (str_starts_with($normalizedUrl, '//')) {
-                $normalizedUrl = request()->getScheme() . ':' . $normalizedUrl;
-            }
-
-            $targetHost = parse_url($normalizedUrl, PHP_URL_HOST);
-
-            if (!filled($targetHost)) {
-                return true;
-            }
-
-            return strcasecmp((string) $targetHost, request()->getHost()) !== 0;
-        };
-
-        $trainingMajors = collect();
-
-        if (!$useDynamicHeader) {
-            $trainingMajors = \App\Models\Major::query()
-                ->whereHas('trainingPrograms', function ($query) {
-                    $query->where('status', 'published')
-                        ->whereNotNull('published_at')
-                        ->where('published_at', '<=', now());
-                })
-                ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
-                ->get(['id', 'name', 'slug']);
-        }
-    @endphp
 
     <x-nav full-width class="bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none transition-all duration-300"
            x-data="{
@@ -329,6 +364,7 @@
                                 tabindex="0"
                                 :link="!str_starts_with($item['url'], '#') ? $item['url'] : ''"
                                 :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
+                                :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
                                 class="relative px-3 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow group-hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 group-hover:before:w-full after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                 responsive
                                 x-data="{ isScrolled: false }"
@@ -345,6 +381,7 @@
                                             <div class="dropdown dropdown-hover dropdown-right w-full p-0! auto-flip">
                                                 <x-button
                                                     :link="!str_starts_with($child['url'], '#') ? $child['url'] : ''"
+                                                    :target="$isAbsoluteExternalUrl($child['url']) ? '_blank' : null"
                                                     :no-wire-navigate="$isAbsoluteExternalUrl($child['url'])"
                                                     class="btn-ghost text-black text-[15px] w-full py-4 px-5 border-transparent font-medium rounded-none flex justify-between hover:bg-fita hover:text-white focus:bg-fita focus:text-white active:bg-fita active:text-white whitespace-nowrap after:content-[''] after:ml-2 after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                                     label="{{ $child['name'] }}"
@@ -358,6 +395,7 @@
                                                                 label="{{ $grand['name'] }}"
                                                                 link="{{ $grand['url'] }}"
                                                                 :no-wire-navigate="$isAbsoluteExternalUrl($grand['url'])"
+                                                                :target="$isAbsoluteExternalUrl($grand['url']) ? '_blank' : null"
                                                             />
                                                         </li>
                                                     @endforeach
@@ -369,6 +407,7 @@
                                                 label="{{ $child['name'] }}"
                                                 link="{{ $child['url'] }}"
                                                 :no-wire-navigate="$isAbsoluteExternalUrl($child['url'])"
+                                                :target="$isAbsoluteExternalUrl($child['url']) ? '_blank' : null"
                                             />
                                         @endif
                                     </li>
@@ -379,6 +418,7 @@
                         <x-button
                             link="{{ $item['url'] }}"
                             :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
+                            :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
                             class="relative px-3 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 hover:before:w-full"
                             responsive
                             x-data="{ isScrolled: false }"
@@ -478,7 +518,7 @@
 {{-- start main layout --}}
 <x-main with-nav full-width>
 
-    <x-slot:sidebar drawer="main-drawer" collapsible class="client-menu bg-base-100 lg:bg-inherit lg:hidden pt-26 h-full! text-[15px] font-medium"
+    <x-slot:sidebar drawer="main-drawer" collapsible class="client-menu z-[9999] bg-base-100 lg:bg-inherit lg:hidden pt-26 h-full! text-[15px] font-medium"
                     collapsible
                     x-data="{ isScrolled: false }"
                     @scroll.window="isScrolled = (window.pageYOffset > 50)"

@@ -17,6 +17,7 @@ class Student extends Model
         'major_id',
         'date_of_birth',
         'phone',
+        'program_major_id'
     ];
 
     protected function casts(): array
@@ -34,6 +35,10 @@ class Student extends Model
     public function major():BelongsTo
     {
         return $this->belongsTo(Major::class, 'major_id');
+    }
+    public function programMajor():BelongsTo
+    {
+        return $this->belongsTo(ProgramMajor::class, 'program_major_id');
     }
 
     public function intake():BelongsTo

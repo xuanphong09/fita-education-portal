@@ -267,5 +267,12 @@
     "Download file": "Tải file",
     "If preview does not load, please use the download button.": "Nếu bản xem trước không xem được, vui lòng sử dụng nút tải xuống",
     "This file type is not supported for inline preview in browser.": "Loại tệp này không được hỗ trợ xem trực tiếp trong trình duyệt.",
-    "Please use the download button above.": "Vui lòng sử dụng nút tải xuống ở trên."
+    "Please use the download button above.": "Vui lòng sử dụng nút tải xuống ở trên.",
+    "Selected specialized is invalid.": "Chuyên ngành đã chọn không hợp lệ.",
+    "Specialized is required.": "Chuyên ngành là bắt buộc.",
+     "Intake is required.": "Khóa là bắt buộc.",
+     "Major is required.": "Ngành là bắt buộc.",
+     "Specialization is required.": "Chuyên ngành/Hướng chuyên sâu là bắt buộc.",
+    "Class name is required.": "Lớp là bắt buộc.",
+    "You have completed setting up your personal information. Welcome to the system!": "Bạn đã hoàn tất thiết lập thông tin cá nhân. Chào mừng bạn đến với hệ thống!"
 }

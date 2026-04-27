@@ -6,6 +6,7 @@ use App\Models\Subject;
 use App\Models\TrainingProgram;
 use App\Models\Intake;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -40,6 +41,7 @@ class extends Component {
     public array $expanded = [];
     public bool $showSemesterTimelineModal = true;
     public bool $pendingOpenSemesterTimelineModal = true;
+    public ?string $canonicalRedirectUrl = null;
 
     #[Computed]
     public function majorLabel(): string
@@ -70,11 +72,52 @@ class extends Component {
 
     public function mount(): void
     {
+        $user = Auth::user();
+        $shouldRedirectToCanonical = false;
+
+        if ($user?->student && !$this->selectedMajorSlug) {
+            $user->loadMissing('student.major.programMajor', 'student.programMajor');
+
+            $student = $user->student;
+
+            if (!$this->intakeId && $student?->intake_id) {
+                $this->intakeId = (int) $student->intake_id;
+            }
+
+            if (!$this->programMajorSlug) {
+                $this->programMajorSlug = (string) (
+                    $student?->major?->programMajor?->slug
+                    ?: $student?->programMajor?->slug
+                    ?: ''
+                );
+            }
+
+            if ($student?->major?->slug) {
+                $this->selectedMajorSlug = (string) $student->major->slug;
+                $shouldRedirectToCanonical = true;
+            }
+        }
+
         if ($this->selectedMajorSlug) {
             $selectedMajor = Major::query()->where('slug', $this->selectedMajorSlug)->first();
             if ($selectedMajor) {
                 $this->major = $selectedMajor;
                 $this->programMajorSlug = $selectedMajor->programMajor?->slug;
+                $params = array_filter([
+                    'chuyen-nganh' => (string) $selectedMajor->slug,
+                    'nganh' => $selectedMajor->programMajor?->slug,
+                    'khoa' => $this->intakeId,
+                    'hoc-ky' => $this->semesterNo,
+                    'kieu' => $this->viewMode !== 'semester' ? $this->viewMode : null,
+                    'tim' => trim($this->search) !== '' ? $this->search : null,
+                    'loai' => $this->typeFilter !== '' ? $this->typeFilter : null,
+                ], fn ($value) => $value !== null);
+
+                $this->canonicalRedirectUrl = route('client.training-programs.major', $params);
+
+                if ($shouldRedirectToCanonical) {
+                    $this->redirectToCanonicalMajorUrl($selectedMajor);
+                }
             }
         }
     }

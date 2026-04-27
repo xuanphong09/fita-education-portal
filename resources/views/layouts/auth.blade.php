@@ -10,7 +10,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
-    <link rel="icon" type="image/x-icon" href="{{ asset('assets/images/login.png') }}">
+    <link rel="icon" type="image/x-icon" href="{{ asset('assets/images/LogoKhoaCNTT.png') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     @livewireStyles
 </head>
