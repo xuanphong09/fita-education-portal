@@ -58,7 +58,7 @@ new class extends Component
     }"
 >
     {{-- THÊM wire:ignore VÀO ĐÂY ĐỂ TRÁNH XUNG ĐỘT DOM VỚI LIVEWIRE --}}
-    <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-40! lg:h-50! pb-10!" wire:ignore>
+    <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-40! lg:h-50!" wire:ignore>
         <div class="swiper-wrapper">
             @foreach($partners as $partner)
                 <div class="swiper-slide h-full flex items-center justify-center rounded-md overflow-hidden">
