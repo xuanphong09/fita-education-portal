@@ -313,6 +313,14 @@ new class extends Component {
         $this->success('Đã thêm menu mới thành công.');
     }
 
+    public function updatedSelectedSectionByLocaleVi($value): void
+    {
+        if (in_array($value, ['main_menu', 'top_sub_menu'], true)) {
+            // Keep EN section in sync with VI selector (UI currently exposes one selector).
+            $this->selectedSectionByLocale['en'] = $value;
+        }
+    }
+
     public function removeMenuItem($locale, $id)
     {
         $this->dispatch('modal:confirm', [
@@ -653,6 +661,7 @@ new class extends Component {
                              sortable: null,
                              initSortable() {
                                  if (this.sortable) this.sortable.destroy();
+                                 if (!this.$refs.menuList) return;
                                  this.sortable = new Sortable(this.$refs.menuList, {
                                      animation: 150,
                                      handle: '.drag-menu-handle',
@@ -672,6 +681,7 @@ new class extends Component {
                                  sortableTop: null,
                                  initTopSortable() {
                                      if (this.sortableTop) this.sortableTop.destroy();
+                                     if (!this.$refs.topMenuListVi) return;
                                      this.sortableTop = new Sortable(this.$refs.topMenuListVi, {
                                          animation: 150,
                                          handle: '.drag-top-menu-handle-vi',
@@ -777,22 +787,23 @@ new class extends Component {
                         @if($selectedSectionVi === 'main_menu')
                             <div class="border border-gray-300 rounded-lg bg-white shadow-sm p-3"
                                  x-data="{
-                                 sortableTop: null,
-                                 initTopSortable() {
-                                     if (this.sortableTop) this.sortableTop.destroy();
-                                     this.sortableTop = new Sortable(this.$refs.topMenuListVi, {
+                                 sortableMainVi: null,
+                                 initMainSortable() {
+                                     if (this.sortableMainVi) this.sortableMainVi.destroy();
+                                     if (!this.$refs.menuList) return;
+                                     this.sortableMainVi = new Sortable(this.$refs.menuList, {
                                          animation: 150,
-                                         handle: '.drag-top-menu-handle-vi',
+                                         handle: '.drag-menu-handle',
                                          onEnd: () => {
-                                             let order = Array.from(this.$refs.topMenuListVi.children)
+                                             let order = Array.from(this.$refs.menuList.children)
                                                  .map(el => el.dataset.id)
                                                  .filter(Boolean);
-                                             $wire.updateTopMenuOrder('vi', order);
+                                             $wire.updateMenuOrder('vi', order);
                                          }
                                      });
                                  }
                              }"
-                                 x-init="$nextTick(() => initTopSortable())">
+                                 x-init="$nextTick(() => initMainSortable())">
                                 <div class="flex items-center justify-between mb-2">
                                     <p class="font-semibold text-sm">Thanh menu chính</p>
                                     <x-button icon="o-plus" label="Thêm menu" class="btn-sm bg-emerald-600 text-white"
@@ -1023,6 +1034,7 @@ new class extends Component {
                              sortable: null,
                              initSortable() {
                                  if (this.sortable) this.sortable.destroy();
+                                 if (!this.$refs.menuListEn) return;
                                  this.sortable = new Sortable(this.$refs.menuListEn, {
                                      animation: 150,
                                      handle: '.drag-menu-handle-en',
@@ -1042,6 +1054,7 @@ new class extends Component {
                                  sortableTop: null,
                                  initTopSortable() {
                                      if (this.sortableTop) this.sortableTop.destroy();
+                                     if (!this.$refs.topMenuListEn) return;
                                      this.sortableTop = new Sortable(this.$refs.topMenuListEn, {
                                          animation: 150,
                                          handle: '.drag-top-menu-handle-en',
@@ -1150,6 +1163,7 @@ new class extends Component {
                                  sortableTop: null,
                                  initTopSortable() {
                                      if (this.sortableTop) this.sortableTop.destroy();
+                                     if (!this.$refs.menuListEn) return;
                                      this.sortableTop = new Sortable(this.$refs.menuListEn, {
                                          animation: 150,
                                          handle: '.drag-menu-handle-en',
@@ -1301,7 +1315,7 @@ new class extends Component {
                                                                              required
                                                                          />
                                                                      </div>
-                                                                    @if(empty(!$child['children'] ?? []))
+                                                                    @if(!empty($child['children'] ?? []))
                                                                     <div class="mt-3 border-t pt-3 pl-3">
                                                                          <div
                                                                              class="flex justify-between items-center mb-2">

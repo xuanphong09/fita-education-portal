@@ -319,9 +319,14 @@ class extends Component {
                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                         @else
-                                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-fita to-fita2">
-                                                <x-icon name="o-photo" class="w-12 h-12 text-white opacity-50" />
-                                            </div>
+{{--                                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-fita to-fita2">--}}
+{{--                                                <x-icon name="o-photo" class="w-12 h-12 text-white opacity-50" />--}}
+{{--                                            </div>--}}
+                                            <img
+                                                src="{{ asset('assets/images/noti-news.png') }}"
+                                                alt="{{ $related->getTranslation('title', app()->getLocale()) }}"
+                                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            />
                                         @endif
                                     </div>
                                     <div class="py-3 px-2 lg:h-24">
@@ -357,9 +362,14 @@ class extends Component {
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
                                     @else
-                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">
-                                            <x-icon name="o-photo" class="w-6 h-6 text-white opacity-50" />
-                                        </div>
+{{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
+{{--                                            <x-icon name="o-photo" class="w-6 h-6 text-white opacity-50" />--}}
+{{--                                        </div>--}}
+                                        <img
+                                            src="{{ asset('assets/images/noti-news.png') }}"
+                                            alt="{{ $related->getTranslation('title', app()->getLocale()) }}"
+                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
                                     @endif
                                 </div>
                                 <div class="flex-1">

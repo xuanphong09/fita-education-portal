@@ -274,5 +274,12 @@
      "Major is required.": "Ngành là bắt buộc.",
      "Specialization is required.": "Chuyên ngành/Hướng chuyên sâu là bắt buộc.",
     "Class name is required.": "Lớp là bắt buộc.",
-    "You have completed setting up your personal information. Welcome to the system!": "Bạn đã hoàn tất thiết lập thông tin cá nhân. Chào mừng bạn đến với hệ thống!"
+    "You have completed setting up your personal information. Welcome to the system!": "Bạn đã hoàn tất thiết lập thông tin cá nhân. Chào mừng bạn đến với hệ thống!",
+    "Notification": "Thông báo",
+    "No announcement posts found.": "Không tìm thấy bài viết thông báo nào.",
+    "No latest posts found.": "Không tìm thấy bài viết mới nào.",
+    "No featured posts found.": "Không tìm thấy bài viết nổi bật nào.",
+    "No posts available.": "Không có bài viết nào.",
+    "Useful links": "Liên kết hữu ích",
+    "Inspection certificate": "Chứng nhận kiểm định"
 }

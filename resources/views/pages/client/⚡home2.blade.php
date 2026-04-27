@@ -135,6 +135,21 @@ class extends Component {
             ->values();
 
         $latestPosts = (clone $baseQuery)
+            ->whereHas('categories', function ($query) {
+                $query->where('categories.slug', 'tin-tuc');
+            })
+            ->when($featuredPosts->isNotEmpty(), fn($q) => $q->whereNotIn('id', $featuredPosts->pluck('id')))
+            ->latest('published_at')
+            ->limit($locale === 'en' ? 24 : 4)
+            ->get()
+            ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
+            ->take(4)
+            ->values();
+
+        $notificationPosts = (clone $baseQuery)
+            ->whereHas('categories', function ($query) {
+                $query->where('categories.slug', 'thong-bao');
+            })
             ->when($featuredPosts->isNotEmpty(), fn($q) => $q->whereNotIn('id', $featuredPosts->pluck('id')))
             ->latest('published_at')
             ->limit($locale === 'en' ? 24 : 4)
@@ -223,6 +238,7 @@ class extends Component {
             'slides' => $slides,
             'featuredPosts' => $featuredPosts,
             'latestPosts' => $latestPosts,
+            'notificationPosts' => $notificationPosts,
             'images' => $images,
             'counterStats' => $counterStats,
             'configBanner' => $configBanner,
@@ -283,12 +299,252 @@ class extends Component {
         @endscope
     </x-carousel>
 
+    <div>
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
+            {{__('News and events')}}
+        </h1>
+        <div class="relative flex flex-col lg:flex-row w-[90%] lg:w-330 mx-auto gap-10">
+            <div class="lg:w-[50%] w-full relative h-60 lg:h-140">
+                @php
+                    $leftHighlightPost = $tabSelected === 'tab-feature-post'
+                        ? $featuredPosts->first()
+                        : ($tabSelected === 'tab-new-post' ? $latestPosts->first(): $notificationPosts->first());
+
+                    // Avoid disk I/O checks in view; let browser handle missing image fallback.
+                    $leftHighlightImage = $leftHighlightPost?->thumbnail
+                        ? Storage::url($leftHighlightPost->thumbnail)
+                        : null;
+                @endphp
+
+                @if($leftHighlightPost)
+                    <a
+                        href="{{ $leftHighlightPost->client_url }}"
+                        wire:navigate
+                        class="group relative block h-full overflow-hidden border border-base-300 bg-slate-900 rounded-2xl"
+                    >
+                        @if($leftHighlightImage)
+                            <img
+                                src="{{ $leftHighlightImage }}"
+                                alt="{{ $leftHighlightPost->getTranslation('title', app()->getLocale()) }}"
+                                loading="eager"
+                                fetchpriority="high"
+                                decoding="async"
+                                width="1280"
+                                height="720"
+                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                onerror="this.onerror=null;this.src='{{ asset('assets/images/noti-news.png') }}'"
+                            >
+                        @else
+                            <img
+                                src="{{ asset('assets/images/noti-news.png') }}"
+                                alt="No image"
+                                loading="eager"
+                                fetchpriority="high"
+                                decoding="async"
+                                width="1280"
+                                height="720"
+                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                            >
+                        @endif
+
+                        <div
+                            class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
+                            <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold">
+                                {{ $leftHighlightPost->published_at?->isoFormat('DD') }}
+                            </div>
+                            <div class="text-[18px]/[30px] lg:text-[24px]/[26px] font-bold mt-0 lg:mt-3">
+                                {{ app()->getLocale() === 'vi'
+                                    ? 'tháng ' . $leftHighlightPost->published_at?->isoFormat('M')
+                                    : $leftHighlightPost->published_at?->isoFormat('MMMM') }}
+                            </div>
+                        </div>
+
+                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+
+                        <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+                            <h3 class="line-clamp-2 text-[18px]/[20px] lg:text-[20px]/[24px] font-bold">
+                                {{ $leftHighlightPost->getTranslation('title', app()->getLocale()) }}
+                            </h3>
+                            <p class="mt-3 line-clamp-2 text-[16px]/[18px] lg:text-[18px]/[22px] text-white/90">
+                                {{ $leftHighlightPost->getExcerptOrAuto(app()->getLocale(), 170) }}
+                            </p>
+                        </div>
+                    </a>
+                @else
+                    <div
+                        class="flex h-140 items-center justify-center rounded-xl border border-dashed border-base-300 bg-base-100 text-base-content/60">
+                        {{ __('No posts available') }}
+                    </div>
+                @endif
+
+                <div wire:loading.flex wire:target="tabSelected"
+                     class="absolute inset-0 z-30 items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                    <x-loading class="text-primary loading-lg"/>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-[50%]">
+                <x-tabs
+                    wire:model.live="tabSelected"
+                    active-class="text-fita! border-b-4 border-fita font-semibold"
+                    label-class="font-semibold text-[20px] text-gray-700 px-4 pb-1 whitespace-nowrap font-barlow"
+                    label-div-class="border-b-[length:var(--border)] border-b-base-content/10 flex overflow-x-auto"
+                >
+                    <x-tab name="tab-feature-post" icon="">
+                        <x-slot:label>
+                            <span class="relative inline-flex items-center h-6">
+                                {{ __('Featured News') }}
+                                @if($tabSelected !== 'tab-feature-post')
+                                    <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                </span>
+                                @endif
+                        </span>
+                        </x-slot:label>
+                        <div class="flex flex-col gap-4">
+                            @forelse($featuredPosts->skip(1)->take(3) as $post)
+                                <div
+                                    class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
+                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
+                                        @if($post->thumbnail)
+                                            <img src="{{ Storage::url($post->thumbnail) }}"
+                                                 class="w-full h-full object-cover"
+                                                 alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
+                                                 loading="lazy" decoding="async">
+                                        @else
+                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                                 class="w-full h-full object-cover" alt="No image" loading="lazy"
+                                                 decoding="async">
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 font-barlow">
+                                        <a href="{{ $post->client_url }}" wire:navigate
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                            {{ $post->getTranslation('title', app()->getLocale()) }}
+                                        </a>
+                                        <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
+                                            {{ $post->getExcerptOrAuto(app()->getLocale(), 160) }}
+                                        </p>
+                                        <p class="mt-3 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal text-gray-500">
+                                            {{ $post->published_at?->isoFormat(app()->getLocale() === 'vi' ? 'DD [tháng] MM YYYY' : 'DD MMMM YYYY') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-gray-500">{{ __('No featured posts found.') }}</p>
+                            @endforelse
+                        </div>
+                    </x-tab>
+                    <x-tab name="tab-new-post">
+                        <x-slot:label>
+                            <span class="relative inline-flex items-center h-6">
+                                {{ __('Latest News') }}
+
+{{--                                <span class="absolute -top-0.5 -right-7 bg-amber-500 text-white text-[12px] font-bold px-1.5 py-1 flex items-center justify-center rounded-full shadow-sm leading-none">--}}
+{{--                                    Cập nhật--}}
+{{--                                </span>--}}
+                                @if($tabSelected !== 'tab-new-post')
+                                <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                </span>
+                                @endif
+                        </span>
+                        </x-slot:label>
+                        <div class="flex flex-col gap-4">
+                            @forelse($latestPosts->skip(1)->take(3) as $post)
+                                <div
+                                    class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
+                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
+                                        @if($post->thumbnail)
+                                            <img src="{{ Storage::url($post->thumbnail) }}"
+                                                 class="w-full h-full object-cover"
+                                                 alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
+                                                 loading="lazy" decoding="async">
+                                        @else
+                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                                 class="w-full h-full object-cover" alt="No image" loading="lazy"
+                                                 decoding="async">
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 font-barlow">
+                                        <a href="{{ $post->client_url }}" wire:navigate
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                            {{ $post->getTranslation('title', app()->getLocale()) }}
+                                        </a>
+                                        <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
+                                            {{ $post->getExcerptOrAuto(app()->getLocale(), 160) }}
+                                        </p>
+                                        <p class="mt-3 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal text-gray-500">
+                                            {{ $post->published_at?->isoFormat(app()->getLocale() === 'vi' ? 'DD [tháng] MM YYYY' : 'DD MMMM YYYY') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-gray-500">{{ __('No latest posts found.') }}</p>
+                            @endforelse
+                        </div>
+                    </x-tab>
+                    <x-tab name="tab-notification-post">
+                        <x-slot:label>
+                            <span class="relative inline-flex items-center h-6">
+                                {{ __('Notification') }}
+                                @if($tabSelected !== 'tab-notification-post')
+                                    <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                                </span>
+                                @endif
+                        </span>
+                        </x-slot:label>
+                        <div class="flex flex-col gap-4">
+                            @forelse($notificationPosts->skip(1)->take(3) as $post)
+                                <div
+                                    class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
+                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
+                                        @if($post->thumbnail)
+                                            <img src="{{ Storage::url($post->thumbnail) }}"
+                                                 class="w-full h-full object-cover"
+                                                 alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
+                                                 loading="lazy" decoding="async">
+                                        @else
+                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                                 class="w-full h-full object-cover" alt="No image" loading="lazy"
+                                                 decoding="async">
+                                        @endif
+                                    </div>
+                                    <div class="flex-1 font-barlow">
+                                        <a href="{{ $post->client_url }}" wire:navigate
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                            {{ $post->getTranslation('title', app()->getLocale()) }}
+                                        </a>
+                                        <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
+                                            {{ $post->getExcerptOrAuto(app()->getLocale(), 160) }}
+                                        </p>
+                                        <p class="mt-3 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal text-gray-500">
+                                            {{ $post->published_at?->isoFormat(app()->getLocale() === 'vi' ? 'DD [tháng] MM YYYY' : 'DD MMMM YYYY') }}
+                                        </p>
+                                    </div>
+                                </div>
+                            @empty
+                                <p class="text-gray-500">{{ __('No announcement posts found.') }}</p>
+                            @endforelse
+                        </div>
+                    </x-tab>
+                </x-tabs>
+                <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
+                          icon-right="o-arrow-right"
+                          class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-105"></x-button>
+            </div>
+        </div>
+    </div>
     {{-- Why Choose Us Section --}}
     <section class="py-12 lg:py-16 bg-linear-to-b from-blue-50 to-blue-100">
         <div class="w-[90%] lg:w-330 mx-auto">
             <div class="text-center mb-12">
                 {{--                <p class="text-fita font-semibold text-[14px] lg:text-[16px] uppercase tracking-wide mb-2">{{ __('Distinguishing features') }}</p>--}}
-{{--                <h2 class="text-[28px] lg:text-[36px] font-bold text-fita  font-barlow uppercase">{{ __('Why choose us?') }}</h2>--}}
+                {{--                <h2 class="text-[28px] lg:text-[36px] font-bold text-fita  font-barlow uppercase">{{ __('Why choose us?') }}</h2>--}}
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
@@ -426,190 +682,6 @@ class extends Component {
             </div>
         </div>
     </section>
-
-    <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
-            {{__('News and events')}}
-        </h1>
-        <div class="relative flex flex-col lg:flex-row w-[90%] lg:w-330 mx-auto gap-10">
-            <div class="lg:w-[50%] w-full relative h-60 lg:h-140">
-                @php
-                    $leftHighlightPost = $tabSelected === 'tab-feature-post'
-                        ? $featuredPosts->first()
-                        : $latestPosts->first();
-
-                    // Avoid disk I/O checks in view; let browser handle missing image fallback.
-                    $leftHighlightImage = $leftHighlightPost?->thumbnail
-                        ? Storage::url($leftHighlightPost->thumbnail)
-                        : null;
-                @endphp
-
-                @if($leftHighlightPost)
-                    <a
-                        href="{{ $leftHighlightPost->client_url }}"
-                        wire:navigate
-                        class="group relative block h-full overflow-hidden border border-base-300 bg-slate-900 rounded-2xl"
-                    >
-                        @if($leftHighlightImage)
-                            <img
-                                src="{{ $leftHighlightImage }}"
-                                alt="{{ $leftHighlightPost->getTranslation('title', app()->getLocale()) }}"
-                                loading="eager"
-                                fetchpriority="high"
-                                decoding="async"
-                                width="1280"
-                                height="720"
-                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                onerror="this.onerror=null;this.src='{{ asset('assets/images/noti-news.png') }}'"
-                            >
-                        @else
-                            <img
-                                src="{{ asset('assets/images/noti-news.png') }}"
-                                alt="No image"
-                                loading="eager"
-                                fetchpriority="high"
-                                decoding="async"
-                                width="1280"
-                                height="720"
-                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            >
-                        @endif
-
-                        <div
-                            class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
-                            <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold">
-                                {{ $leftHighlightPost->published_at?->isoFormat('DD') }}
-                            </div>
-                            <div class="text-[18px]/[30px] lg:text-[24px]/[26px] font-bold mt-0 lg:mt-3">
-                                {{ app()->getLocale() === 'vi'
-                                    ? 'tháng ' . $leftHighlightPost->published_at?->isoFormat('M')
-                                    : $leftHighlightPost->published_at?->isoFormat('MMMM') }}
-                            </div>
-                        </div>
-
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-
-                        <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
-                            <h3 class="line-clamp-2 text-[18px]/[20px] lg:text-[20px]/[24px] font-bold">
-                                {{ $leftHighlightPost->getTranslation('title', app()->getLocale()) }}
-                            </h3>
-                            <p class="mt-3 line-clamp-2 text-[16px]/[18px] lg:text-[18px]/[22px] text-white/90">
-                                {{ $leftHighlightPost->getExcerptOrAuto(app()->getLocale(), 170) }}
-                            </p>
-                        </div>
-                    </a>
-                @else
-                    <div
-                        class="flex h-140 items-center justify-center rounded-xl border border-dashed border-base-300 bg-base-100 text-base-content/60">
-                        {{ __('No posts available') }}
-                    </div>
-                @endif
-
-                <div wire:loading.flex wire:target="tabSelected"
-                     class="absolute inset-0 z-30 items-center justify-center bg-white/60 backdrop-blur-[1px]">
-                    <x-loading class="text-primary loading-lg"/>
-                </div>
-            </div>
-
-            <div class="w-full lg:w-[50%]">
-                <x-tabs
-                    wire:model.live="tabSelected"
-                    active-class="text-fita! border-b-4 border-fita font-semibold"
-                    label-class="font-semibold text-[20px] text-gray-700 px-4 pb-1 whitespace-nowrap font-barlow"
-                    label-div-class="border-b-[length:var(--border)] border-b-base-content/10 flex overflow-x-auto"
-                >
-                    <x-tab name="tab-feature-post" label="{{__('Featured News')}}" icon="">
-                        <div class="flex flex-col gap-4">
-                            @forelse($featuredPosts->skip(1)->take(3) as $post)
-                                <div
-                                    class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
-                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
-                                        @if($post->thumbnail)
-                                            <img src="{{ Storage::url($post->thumbnail) }}"
-                                                 class="w-full h-full object-cover"
-                                                 alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
-                                                 loading="lazy" decoding="async">
-                                        @else
-                                            <img src="{{ asset('assets/images/noti-news.png') }}"
-                                                 class="w-full h-full object-cover" alt="No image" loading="lazy"
-                                                 decoding="async">
-                                        @endif
-                                    </div>
-                                    <div class="flex-1 font-barlow">
-                                        <a href="{{ $post->client_url }}" wire:navigate
-                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
-                                            {{ $post->getTranslation('title', app()->getLocale()) }}
-                                        </a>
-                                        <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
-                                            {{ $post->getExcerptOrAuto(app()->getLocale(), 160) }}
-                                        </p>
-                                        <p class="mt-3 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal text-gray-500">
-                                            {{ $post->published_at?->isoFormat(app()->getLocale() === 'vi' ? 'DD [tháng] MM YYYY' : 'DD MMMM YYYY') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-gray-500">{{ __('No featured posts') }}</p>
-                            @endforelse
-                        </div>
-                    </x-tab>
-                    <x-tab name="tab-new-post">
-                        <x-slot:label>
-                            <span class="relative inline-flex items-center h-6">
-                                {{ __('Latest News') }}
-
-{{--                                <span class="absolute -top-0.5 -right-7 bg-amber-500 text-white text-[12px] font-bold px-1.5 py-1 flex items-center justify-center rounded-full shadow-sm leading-none">--}}
-{{--                                    Cập nhật--}}
-{{--                                </span>--}}
-                                @if($tabSelected !== 'tab-new-post')
-                                <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                                </span>
-                                @endif
-                        </span>
-                        </x-slot:label>
-                        <div class="flex flex-col gap-4">
-                            @forelse($latestPosts->skip(1)->take(3) as $post)
-                                <div
-                                    class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
-                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
-                                        @if($post->thumbnail)
-                                            <img src="{{ Storage::url($post->thumbnail) }}"
-                                                 class="w-full h-full object-cover"
-                                                 alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
-                                                 loading="lazy" decoding="async">
-                                        @else
-                                            <img src="{{ asset('assets/images/noti-news.png') }}"
-                                                 class="w-full h-full object-cover" alt="No image" loading="lazy"
-                                                 decoding="async">
-                                        @endif
-                                    </div>
-                                    <div class="flex-1 font-barlow">
-                                        <a href="{{ $post->client_url }}" wire:navigate
-                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
-                                            {{ $post->getTranslation('title', app()->getLocale()) }}
-                                        </a>
-                                        <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
-                                            {{ $post->getExcerptOrAuto(app()->getLocale(), 160) }}
-                                        </p>
-                                        <p class="mt-3 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal text-gray-500">
-                                            {{ $post->published_at?->isoFormat(app()->getLocale() === 'vi' ? 'DD [tháng] MM YYYY' : 'DD MMMM YYYY') }}
-                                        </p>
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-gray-500">{{ __('No latest posts') }}</p>
-                            @endforelse
-                        </div>
-                    </x-tab>
-                </x-tabs>
-                <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
-                          icon-right="o-arrow-right"
-                          class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-105"></x-button>
-            </div>
-        </div>
-    </div>
     <section class="mt-8 lg:mt-10 bg-slate-200/40 pt-15 ">
         <div class="mx-auto w-[90%] lg:w-330 ">
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-15">
@@ -662,17 +734,16 @@ class extends Component {
         </div>
     </section>
     <div>
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
+            {{__('List of partners')}}
+        </h1>
+        <livewire:client.list-of-partners/>
+    </div>
+    <div>
         <h1 class="mt-10 uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center lg:mt-15 mb-4">
             {{--            <svg fill="#0071BD" width="38px" height="38px" viewBox="0 -32 576 576" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M480 416v16c0 26.51-21.49 48-48 48H48c-26.51 0-48-21.49-48-48V176c0-26.51 21.49-48 48-48h16v48H54a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6v-10h48zm42-336H150a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6V86a6 6 0 0 0-6-6zm6-48c26.51 0 48 21.49 48 48v256c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V80c0-26.51 21.49-48 48-48h384zM264 144c0 22.091-17.909 40-40 40s-40-17.909-40-40 17.909-40 40-40 40 17.909 40 40zm-72 96l39.515-39.515c4.686-4.686 12.284-4.686 16.971 0L288 240l103.515-103.515c4.686-4.686 12.284-4.686 16.971 0L480 208v80H192v-48z"></path></g></svg>--}}
             {{__('Photo library')}}
         </h1>
         <livewire:client.image-gallery :images="$images" class="h-40 rounded-box"/>
-    </div>
-    <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
-            {{__('List of partners')}}
-        </h1>
-        <livewire:client.list-of-partners/>
-
     </div>
 </div>
