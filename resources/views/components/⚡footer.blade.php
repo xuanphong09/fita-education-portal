@@ -26,15 +26,15 @@ new class extends Component {
         <div class="h-1.5 bg-[#4E3636] w-full shadow-[0_0_6px_#4E3636]"></div>
     </div>
     <div class="bg-fita">
-        <div
-            class="flex w-full max-w-330 px-4 sm:px-6 lg:px-8 mx-auto py-8 gap-5 lg:gap-10 text-white text-[15px] font-barlow justify-between flex-wrap flex-col lg:flex-row">
-            <div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 w-full container mx-auto px-0 md:px-4 sm:px-6 py-8 lg:py-12 gap-8 lg:gap-10 text-white text-[15px] font-barlow">
+
+            <div class="lg:col-span-3">
                 <livewire:logo layout="footer"/>
-                <ul class="mt-5 space-y-2">
+                <ul class="mt-6 space-y-3">
                     @if(!empty($pageData['contact']['address']))
-                        <li class="flex items-center gap-2 hover:opacity-85">
-                            <x-icon name="s-map-pin" class="w-5 h-5"/>
-                            <span> {{$pageData['contact']['address']}}</span>
+                        <li class="flex items-start gap-2 hover:opacity-85">
+                            <x-icon name="s-map-pin" class="w-5 h-5 mt-0.5 shrink-0"/>
+                            <span class="leading-relaxed">{{$pageData['contact']['address']}}</span>
                         </li>
                     @endif
                     @if(!empty($pageData['contact']['phone']))
@@ -47,63 +47,63 @@ new class extends Component {
                                     $telLink = preg_replace('/[^0-9\+]/', '', $matches[0]);
                                 }
                             @endphp
-                            <a href="tel:{{$telLink??''}}" class="flex items-center gap-2">
-                                <x-icon name="s-phone" class="w-5 h-5"/>
-                                <span> {{$pageData['contact']['phone']}}</span>
+                            <a href="tel:{{$telLink??''}}" class="flex items-start gap-2">
+                                <x-icon name="s-phone" class="w-5 h-5 mt-0.5 shrink-0"/>
+                                <span class="leading-relaxed">{{$pageData['contact']['phone']}}</span>
                             </a>
                         </li>
                     @endif
                     @if(!empty($pageData['contact']['email']))
                         <li class="hover:opacity-85">
-                            <a href="mailto:{{$pageData['contact']['email']}}" class="flex items-center gap-2">
-                                <x-icon name="s-envelope" class="w-5 h-5"/>
-                                <span> {{$pageData['contact']['email']}} </span>
+                            <a href="mailto:{{$pageData['contact']['email']}}" class="flex items-start gap-2">
+                                <x-icon name="s-envelope" class="w-5 h-5 mt-0.5 shrink-0"/>
+                                <span class="leading-relaxed">{{$pageData['contact']['email']}}</span>
                             </a>
                         </li>
                     @endif
                     <li class="hover:opacity-85">
-                        <a href="{{route('client.home')}}" class="flex items-center gap-2">
-                            <x-icon name="s-globe-asia-australia" class="w-5 h-5"/>
-                            <span> {{route('client.home')}}</span>
+                        <a href="{{route('client.home')}}" class="flex items-start gap-2">
+                            <x-icon name="s-globe-asia-australia" class="w-5 h-5 mt-0.5 shrink-0"/>
+                            <span class="leading-relaxed">{{route('client.home')}}</span>
                         </a>
                     </li>
                 </ul>
             </div>
-            <div class="flex-1 w-full ms-5">
-                <h5 class="text-[22px] font-semibold">{{__('Useful links')}}</h5>
-                <ul class="mt-2 lg:mt-5 grid grid-rows-5 grid-flow-col gap-y-2 justify-between text-white w-full">
+
+            <div class="lg:col-span-2">
+                <h5 class="text-[20px] lg:text-[22px] font-semibold mb-4 lg:mb-6">{{__('Useful links')}}</h5>
+                <ul class="flex flex-col space-y-3 text-white w-full">
                     @foreach($pageData['quick_links']??[] as $index => $item)
                         @if(!empty(trim($item['name'])) && !empty(trim($item['url'])))
-                            <li class="hover:scale-x-105">
-                                <a href="{{$item['url']}}" class="flex items-center" wire:navigate>
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16" fill="none"
-                                         stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
-                                        <path
-                                            d="M4.146 3.646a.5.5 0 0 0 0 .708L7.793 8l-3.647 3.646a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708 0M11.5 1a.5.5 0 0 1"/>
+                            <li class="hover:translate-x-2 transition-transform duration-300 origin-left">
+                                <a href="{{$item['url']}}" class="flex items-center gap-2" wire:navigate>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
+                                        <path d="m5 3 5 5-5 5"/>
                                     </svg>
-                                    <span> {{$item['name']}}</span>
+                                    <span>{{$item['name']}}</span>
                                 </a>
                             </li>
                         @endif
                     @endforeach
                 </ul>
             </div>
-            <div class="w-87.5 h-50">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d232.79335334283132!2d105.9314793!3d21.0049137!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135a8d01169441f%3A0x588113cbf27a61f0!2zS2hvYSBDw7RuZyBuZ2jhu4cgdGjDtG5nIHRpbg!5e0!3m2!1svi!2s!4v1777305347149!5m2!1svi!2s" width="300" height="200" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+
+            <div class="lg:col-span-2 w-full h-56 sm:h-64 lg:h-full min-h-[200px] overflow-hidden rounded-md shadow-sm">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d232.79335334283132!2d105.9314793!3d21.0049137!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135a8d01169441f%3A0x588113cbf27a61f0!2zS2hvYSBDw7RuZyBuZ2jhu4cgdGjDtG5nIHRpbg!5e0!3m2!1svi!2s!4v1777305347149!5m2!1svi!2s" class="w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
-            <div class="me-5">
-                <h5 class="text-[22px] font-semibold">{{__('Connect')}}</h5>
-                <ul class="mt-2 lg:mt-5 space-y-2">
+
+            <div class="lg:col-span-1">
+                <h5 class="text-[20px] lg:text-[22px] font-semibold mb-4 lg:mb-6">{{__('Connect')}}</h5>
+                <ul class="flex flex-col space-y-4">
                     @foreach($pageData['socials']??[] as $index => $item)
                         @if(!empty(trim($item['name'])) && !empty(trim($item['url'])) && !empty(trim($item['icon'])))
-                            <li class="hover:scale-x-105">
-                                <a href="{{$item['url']}}" class="flex items-center gap-2" target="_blank">
+                            <li class="hover:translate-x-2 transition-transform duration-300 origin-left">
+                                <a href="{{$item['url']}}" class="flex items-center gap-3" target="_blank">
                                     @switch($item['icon'])
                                         @case('facebook')
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor"
-                                                 class="bi bi-facebook" viewBox="0 0 16 16">
-                                                <path
-                                                    d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951"/>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-facebook shrink-0" viewBox="0 0 16 16">
+                                                <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951"/>
                                             </svg>
                                             @break
                                         @case('instagram')
@@ -130,14 +130,14 @@ new class extends Component {
                                                 <path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0M4.882 1.731a.48.48 0 0 0 .14.291.487.487 0 0 1-.126.78l-.291.146a.7.7 0 0 0-.188.135l-.48.48a1 1 0 0 1-1.023.242l-.02-.007a1 1 0 0 0-.462-.04 7 7 0 0 1 2.45-2.027m-3 9.674.86-.216a1 1 0 0 0 .758-.97v-.184a1 1 0 0 1 .445-.832l.04-.026a1 1 0 0 0 .152-1.54L3.121 6.621a.414.414 0 0 1 .542-.624l1.09.818a.5.5 0 0 0 .523.047.5.5 0 0 1 .724.447v.455a.8.8 0 0 0 .131.433l.795 1.192a1 1 0 0 1 .116.238l.73 2.19a1 1 0 0 0 .949.683h.058a1 1 0 0 0 .949-.684l.73-2.189a1 1 0 0 1 .116-.238l.791-1.187A.45.45 0 0 1 11.743 8c.16 0 .306.084.392.218.557.875 1.63 2.282 2.365 2.282l.04-.001a7.003 7.003 0 0 1-12.658.905Z"/>
                                             </svg>
                                     @endswitch
-
-                                    <span> {{$item['name']}}</span>
+                                    <span class="font-medium">{{$item['name']}}</span>
                                 </a>
                             </li>
                         @endif
                     @endforeach
                 </ul>
             </div>
+
         </div>
     </div>
 </div>
