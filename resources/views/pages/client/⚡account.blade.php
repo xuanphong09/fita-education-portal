@@ -3,6 +3,7 @@
 use App\Models\Department;
 use App\Models\Intake;
 use App\Models\Major;
+use App\Models\ProgramMajor;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
@@ -15,6 +16,8 @@ new
 class extends Component {
     use Toast;
 
+    public bool $isSetupMode = false;
+
     public string $name = '';
     public string $email = '';
     public string $phone = '';
@@ -24,6 +27,7 @@ class extends Component {
     public string $class_name = '';
     public string $date_of_birth = '';
     public $major_id = null;
+    public $program_major_id = null;
     public $intake_id = null;
 
     public string $staff_code = '';
@@ -44,36 +48,50 @@ class extends Component {
 
         abort_unless($user, 403);
 
+        if ($user->user_type === 'student') {
+            $student = $user->student;
+
+            $isMissingInfo = !$student ||
+                empty($student->intake_id) ||
+                empty($student->class_name) ||
+                empty($student->program_major_id);
+
+            // Gán trạng thái SetupMode dựa trên dữ liệu thực tế
+            $this->isSetupMode = $isMissingInfo;
+        } else {
+            $this->isSetupMode = false;
+        }
+
         $user->loadMissing('student.major', 'student.intake', 'lecturer.department');
 
-        $this->name = (string) $user->name;
-        $this->email = (string) $user->email;
+        $this->name = (string)$user->name;
+        $this->email = (string)$user->email;
 
-        $this->isStudent = (bool) $user->student;
-        $this->isLecturer = (bool) $user->lecturer;
-
+        $this->isStudent = (bool)$user->student;
+        $this->isLecturer = (bool)$user->lecturer;
         if ($this->isStudent) {
             $student = $user->student;
-            $this->student_code = (string) $student->student_code;
-            $this->class_name = (string) ($student->class_name ?? '');
-            $this->gender = (string) ($student->gender ?? '');
-            $this->date_of_birth = (string) optional($student->date_of_birth)->format('Y-m-d');
-            $this->phone = (string) ($student->phone ?? '');
+            $this->student_code = (string)$student->student_code;
+            $this->class_name = (string)($student->class_name ?? '');
+            $this->gender = (string)($student->gender ?? '');
+            $this->date_of_birth = (string)optional($student->date_of_birth)->format('Y-m-d');
+            $this->phone = (string)($student->phone ?? '');
             $this->major_id = $student->major_id;
+            $this->program_major_id = $student->program_major_id;
             $this->intake_id = $student->intake_id;
         }
 
         if ($this->isLecturer) {
             $lecturer = $user->lecturer;
             $positions = is_array($lecturer->positions) ? $lecturer->positions : [];
-            $this->staff_code = (string) $lecturer->staff_code;
+            $this->staff_code = (string)$lecturer->staff_code;
             $this->department_id = $lecturer->department_id;
-            $this->gender = (string) ($lecturer->gender ?? '');
-            $this->phone = (string) ($lecturer->phone ?? '');
+            $this->gender = (string)($lecturer->gender ?? '');
+            $this->phone = (string)($lecturer->phone ?? '');
             $this->applyDegreeValue($lecturer->degree);
             $this->applyAcademicTitleValue($lecturer->academic_title);
-            $this->position_vi = (string) ($positions['vi'] ?? '');
-            $this->position_en = (string) ($positions['en'] ?? '');
+            $this->position_vi = (string)($positions['vi'] ?? '');
+            $this->position_en = (string)($positions['en'] ?? '');
         }
     }
 
@@ -91,7 +109,7 @@ class extends Component {
         return Intake::query()
             ->orderBy('name')
             ->get(['id', 'name'])
-            ->map(fn (Intake $intake) => [
+            ->map(fn(Intake $intake) => [
                 'id' => $intake->id,
                 'name' => $intake->name,
             ]);
@@ -99,18 +117,45 @@ class extends Component {
 
     public function getMajorsProperty()
     {
+        if (!$this->program_major_id) {
+            return collect(); // trả về empty collection
+        }
         return Major::query()
             ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->where('program_major_id', $this->program_major_id)
+            ->where('is_active', true)
             ->get(['id', 'name', 'slug'])
             ->map(function (Major $major) {
                 return [
                     'id' => $major->id,
                     'name' => $major->getTranslation('name', app()->getLocale(), false)
                         ?: $major->getTranslation('name', 'vi', false)
-                        ?: $major->getTranslation('name', 'en', false)
-                        ?: $major->slug,
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
                 ];
             });
+    }
+
+    public function getProgramMajorsProperty()
+    {
+        return ProgramMajor::query()
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->where('is_active', true)
+            ->get(['id', 'name', 'slug'])
+            ->map(function ($major) {
+                return [
+                    'id' => $major->id,
+                    'name' => $major->getTranslation('name', app()->getLocale(), false)
+                        ?: $major->getTranslation('name', 'vi', false)
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
+                ];
+            });
+    }
+
+    public function updatedProgramMajorId()
+    {
+        $this->major_id = null;
     }
 
     public function getDepartmentsProperty()
@@ -123,8 +168,8 @@ class extends Component {
                     'id' => $department->id,
                     'name' => $department->getTranslation('name', app()->getLocale(), false)
                         ?: $department->getTranslation('name', 'vi', false)
-                        ?: $department->getTranslation('name', 'en', false)
-                        ?: $department->slug,
+                            ?: $department->getTranslation('name', 'en', false)
+                                ?: $department->slug,
                 ];
             });
     }
@@ -151,7 +196,7 @@ class extends Component {
 
     protected function normalizeToken(?string $value): string
     {
-        return preg_replace('/[^a-z0-9]/', '', Str::lower(Str::ascii((string) $value))) ?? '';
+        return preg_replace('/[^a-z0-9]/', '', Str::lower(Str::ascii((string)$value))) ?? '';
     }
 
     protected function applyAcademicTitleValue(?string $value): void
@@ -172,7 +217,7 @@ class extends Component {
 
         if (filled($value)) {
             $this->academic_title = 'other';
-            $this->academic_title_other = (string) $value;
+            $this->academic_title_other = (string)$value;
             return;
         }
 
@@ -210,7 +255,7 @@ class extends Component {
 
         if (filled($value)) {
             $this->degree = 'other';
-            $this->degree_other = (string) $value;
+            $this->degree_other = (string)$value;
             return;
         }
 
@@ -237,12 +282,13 @@ class extends Component {
         ];
 
         if ($this->isStudent) {
-            $rules['class_name'] = ['nullable', 'string', 'max:50'];
+            $rules['class_name'] = ['required', 'string', 'max:50'];
             $rules['gender'] = ['nullable', 'in:male,female,other'];
             $rules['date_of_birth'] = ['nullable', 'date'];
             $rules['phone'] = ['nullable', 'string', 'max:20', 'regex:/^0[0-9]{9}$/'];
-            $rules['intake_id'] = ['nullable', 'exists:intakes,id'];
+            $rules['intake_id'] = ['required', 'exists:intakes,id'];
             $rules['major_id'] = ['nullable', 'exists:majors,id'];
+            $rules['program_major_id'] = ['required', 'exists:program_majors,id'];
 
             $messages['class_name.max'] = __('Class name may not be greater than 50 characters.');
             $messages['gender.in'] = __('Gender selection is invalid.');
@@ -251,6 +297,10 @@ class extends Component {
             $messages['phone.regex'] = __('Phone number format is invalid (0xxxxxxxxx).');
             $messages['intake_id.exists'] = __('Selected intake is invalid.');
             $messages['major_id.exists'] = __('Selected major is invalid.');
+            $messages['program_major_id.exists'] = __('Selected specialized is invalid.');
+            $messages['program_major_id.required'] = __('Major is required.');
+            $messages['intake_id.required'] = __('Intake is required.');
+            $messages['class_name.required'] = __('Class name is required.');
         }
 
         if ($this->isLecturer) {
@@ -283,19 +333,20 @@ class extends Component {
 
         if ($this->isStudent && $user->student) {
             $user->student->update([
-                'class_name' => trim((string) ($data['class_name'] ?? '')) ?: null,
-                'gender' => trim((string) ($data['gender'] ?? '')) ?: null,
+                'class_name' => trim((string)($data['class_name'] ?? '')) ?: null,
+                'gender' => trim((string)($data['gender'] ?? '')) ?: null,
                 'date_of_birth' => !empty($data['date_of_birth']) ? $data['date_of_birth'] : null,
-                'phone' => trim((string) ($data['phone'] ?? '')) ?: null,
-                'intake_id' => $data['intake_id'] ?? null,
-                'major_id' => $data['major_id'] ?? null,
+                'phone' => trim((string)($data['phone'] ?? '')) ?: null,
+                'intake_id' => $data['intake_id'] ?: null,
+                'major_id' => $data['major_id'] ?: null,
+                'program_major_id' => $data['program_major_id'] ?: null,
             ]);
         }
 
         if ($this->isLecturer && $user->lecturer) {
             $positions = [
-                'vi' => trim((string) ($data['position_vi'] ?? '')),
-                'en' => trim((string) ($data['position_en'] ?? '')),
+                'vi' => trim((string)($data['position_vi'] ?: '')),
+                'en' => trim((string)($data['position_en'] ?: '')),
             ];
 
             $user->lecturer->update([
@@ -310,6 +361,10 @@ class extends Component {
                     : (($data['academic_title'] ?? null) ?: null),
                 'positions' => array_filter($positions, fn ($value) => $value !== ''),
             ]);
+        }
+        if ($this->isSetupMode) {
+            $this->success(__('You have completed setting up your personal information. Welcome to the system!'), redirectTo: route('client.home'));
+            return;
         }
 
         $this->success(__('Profile updated successfully.'));
@@ -334,10 +389,16 @@ class extends Component {
 
         <x-card class="shadow-md p-6 lg:col-span-9">
             <h2 class="text-lg font-semibold mb-4">{{ __('Profile Information') }}</h2>
-
+            @if($isSetupMode)
+                <div class="alert alert-warning  font-medium shadow-sm mb-6 text-md">
+                    <x-icon name="o-exclamation-triangle" class="w-6 h-6"/>
+                    <span>{{ __('Vui lòng cập nhật Ngành, Khóa, Lớp để bắt đầu sử dụng hệ thống.') }}</span>
+                </div>
+            @endif
             <form wire:submit.prevent="saveProfile" class="space-y-0">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
-                    <x-input label="{{ __('Full name') }}" wire:model.defer="name" placeholder="{{ __('Enter your full name') }}" required/>
+                    <x-input label="{{ __('Full name') }}" wire:model.defer="name"
+                             placeholder="{{ __('Enter your full name') }}" required/>
                     <x-input label="Email" wire:model.defer="email" type="email" readonly/>
                     <x-input label="{{ __('Phone number') }}" wire:model.defer="phone" placeholder="0xxxxxxxxx"/>
                     <x-radio
@@ -354,7 +415,8 @@ class extends Component {
                         <h3 class="text-lg font-semibold text-gray-700">{{ __('Student Information') }}</h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-x-4">
                             <x-input label="{{ __('Student code') }}" :value="$student_code" readonly/>
-                            <x-input label="{{ __('Class') }}" wire:model.defer="class_name" placeholder="{{ __('Enter class') }}"/>
+                            <x-input label="{{ __('Class') }}" wire:model.defer="class_name"
+                                     placeholder="{{ __('Enter class') }}" required/>
                             <x-select
                                 label="{{ __('Intake') }}"
                                 wire:model.defer="intake_id"
@@ -362,16 +424,31 @@ class extends Component {
                                 option-value="id"
                                 option-label="name"
                                 placeholder="{{ __('Select intake') }}"
+                                required
                             />
+                            <x-input label="{{ __('Date of birth') }}" wire:model.defer="date_of_birth" type="date"/>
                             <x-select
+                                wire:key="select-program-major"
                                 label="{{ __('Major') }}"
-                                wire:model.defer="major_id"
-                                :options="$this->majors"
+                                wire:model.live="program_major_id"
+                                :options="$this->programMajors"
                                 option-value="id"
                                 option-label="name"
                                 placeholder="{{ __('Select major') }}"
+                                required
                             />
-                            <x-input label="{{ __('Date of birth') }}" wire:model.defer="date_of_birth" type="date"/>
+
+                            <x-select
+                                wire:key="select-major-{{ $program_major_id }}"
+                                label="{{ __('Specialized') }}"
+                                wire:model="major_id"
+                                :options="$this->majors"
+                                option-value="id"
+                                option-label="name"
+                                placeholder="{{!$program_major_id?__('Select specialization first'):__('No major selected') }}"
+                                {{-- Disable nếu chưa chọn chuyên ngành --}}
+                                :disabled="empty($program_major_id)"
+                            />
                         </div>
                     </div>
                 @endif
@@ -390,33 +467,39 @@ class extends Component {
                                 placeholder="{{ __('Select department') }}"
                             />
                             <div class="">
-                            <x-select
-                                label="{{ __('Degree') }}"
-                                wire:model.live.debounce.300ms="degree"
-                                :options="$this->degreeOptions"
-                                option-value="id"
-                                option-label="name"
-                                placeholder="{{ __('Select degree') }}"
-                            />
-                            @if($degree === 'other')
-                                <x-input label="{{ __('Degree (other)') }}" wire:model.live.debounce.300ms="degree_other" placeholder="{{ __('Enter custom degree') }}"/>
-                            @endif
+                                <x-select
+                                    label="{{ __('Degree') }}"
+                                    wire:model.live.debounce.300ms="degree"
+                                    :options="$this->degreeOptions"
+                                    option-value="id"
+                                    option-label="name"
+                                    placeholder="{{ __('Select degree') }}"
+                                />
+                                @if($degree === 'other')
+                                    <x-input label="{{ __('Degree (other)') }}"
+                                             wire:model.live.debounce.300ms="degree_other"
+                                             placeholder="{{ __('Enter custom degree') }}"/>
+                                @endif
                             </div>
                             <div class="">
-                            <x-select
-                                label="{{ __('Academic title') }}"
-                                wire:model.live.debounce.300ms="academic_title"
-                                :options="$this->academicTitleOptions"
-                                option-value="id"
-                                option-label="name"
-                                placeholder="{{ __('Select academic title') }}"
-                            />
-                            @if($academic_title === 'other')
-                                <x-input label="{{ __('Academic title (other)') }}" wire:model.live.debounce.300ms="academic_title_other" placeholder="{{ __('Enter custom academic title') }}"/>
-                            @endif
+                                <x-select
+                                    label="{{ __('Academic title') }}"
+                                    wire:model.live.debounce.300ms="academic_title"
+                                    :options="$this->academicTitleOptions"
+                                    option-value="id"
+                                    option-label="name"
+                                    placeholder="{{ __('Select academic title') }}"
+                                />
+                                @if($academic_title === 'other')
+                                    <x-input label="{{ __('Academic title (other)') }}"
+                                             wire:model.live.debounce.300ms="academic_title_other"
+                                             placeholder="{{ __('Enter custom academic title') }}"/>
+                                @endif
                             </div>
-                            <x-input label="{{ __('Position (Tiếng Việt)') }}" wire:model.defer="position_vi" placeholder="{{ __('Enter position (VI)') }}"/>
-                            <x-input label="{{ __('Position (Tiếng Anh)') }}" wire:model.defer="position_en" placeholder="{{ __('Enter position (EN)') }}"/>
+                            <x-input label="{{ __('Position (Tiếng Việt)') }}" wire:model.defer="position_vi"
+                                     placeholder="{{ __('Enter position (VI)') }}"/>
+                            <x-input label="{{ __('Position (Tiếng Anh)') }}" wire:model.defer="position_en"
+                                     placeholder="{{ __('Enter position (EN)') }}"/>
                         </div>
                     </div>
                 @endif

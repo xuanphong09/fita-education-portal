@@ -8,9 +8,8 @@ new class extends Component
 {
     public string $uuid;
 
-    public function __construct(
-        public ?string $id = null,
-    ) {
+    public function mount(): void
+    {
         $this->uuid = 'gallery-' . Str::random(10);
     }
 
@@ -34,7 +33,13 @@ new class extends Component
     x-data="{
         swiper: null,
         init() {
-            // KHỞI TẠO SWIPER
+            // Kiểm tra an toàn: Nếu Swiper chưa tải xong thì không chạy để tránh báo lỗi đỏ
+            if (typeof Swiper === 'undefined') {
+                console.warn('Swiper library is not loaded!');
+                return;
+            }
+
+            // Khởi tạo Swiper
             this.swiper = new Swiper(this.$refs.container, {
                 slidesPerView: 1,
                 spaceBetween: 20,
@@ -42,10 +47,6 @@ new class extends Component
                 grid: {
                     rows: 1,
                     fill: 'row',
-                },
-                navigation: {
-                    nextEl: '#next-{{ $uuid }}',
-                    prevEl: '#prev-{{ $uuid }}',
                 },
                 breakpoints: {
                     400: { slidesPerView: 3, spaceBetween: 40, grid: { rows: 1 } },
@@ -56,36 +57,35 @@ new class extends Component
         }
     }"
 >
-    <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-40! lg:h-50! pb-10!">
+    {{-- THÊM wire:ignore VÀO ĐÂY ĐỂ TRÁNH XUNG ĐỘT DOM VỚI LIVEWIRE --}}
+    <div id="{{ $uuid }}" x-ref="container" class="swiper w-[90%] lg:w-330 h-40! lg:h-50! pb-10!" wire:ignore>
         <div class="swiper-wrapper">
             @foreach($partners as $partner)
-                {{-- SWIPER SLIDE: Thêm flex để căn giữa dọc & ngang --}}
                 <div class="swiper-slide h-full flex items-center justify-center rounded-md overflow-hidden">
 
-                    {{-- Kiểm tra nếu có URL thì bọc bằng <a>, không thì bọc bằng <div> --}}
+                    {{-- Tách rõ ràng 2 trường hợp có Link và Không có Link để cấu trúc HTML không bị gãy --}}
                     @if(!empty($partner->url))
-                        <a href="{{ $partner->url }}" target="_blank" class="relative w-full h-full flex items-center justify-center group/img cursor-pointer">
-                            @else
-                                <div class="relative w-full h-full flex items-center justify-center group/img">
-                                    @endif
-
-                                    <img
-                                        src="{{ Storage::url($partner->logo) }}"
-                                        class="w-[80%] h-[80%] object-contain transition-transform duration-500 group-hover/img:scale-110"
-                                        loading="lazy"
-                                        alt="Logo"
-                                    />
-
-                                    {{-- Overlay đen mờ khi hover (Tuỳ chọn) --}}
-{{--                                    <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/10 transition-all duration-300"></div>--}}
-
-                                @if(!empty($partner->url))
+                        <a href="{{ $partner->url }}" target="_blank" rel="noopener noreferrer" class="relative w-full h-full flex items-center justify-center group/img cursor-pointer">
+                            <img
+                                src="{{ Storage::url($partner->logo) }}"
+                                class="w-[80%] h-[80%] object-contain transition-transform duration-500 group-hover/img:scale-110"
+                                loading="lazy"
+                                alt="Logo Đối tác"
+                            />
                         </a>
                     @else
-                </div>
-                @endif
+                        <div class="relative w-full h-full flex items-center justify-center group/img">
+                            <img
+                                src="{{ Storage::url($partner->logo) }}"
+                                class="w-[80%] h-[80%] object-contain transition-transform duration-500 group-hover/img:scale-110"
+                                loading="lazy"
+                                alt="Logo Đối tác"
+                            />
+                        </div>
+                    @endif
 
+                </div>
+            @endforeach
         </div>
-        @endforeach
     </div>
 </div>
