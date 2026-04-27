@@ -69,7 +69,7 @@ new class extends Component {
                     </li>
                 </ul>
             </div>
-            <div class="flex-1 w-full ms-10">
+            <div class="flex-1 w-full ms-5">
                 <h5 class="text-[22px] font-semibold">{{__('Useful links')}}</h5>
                 <ul class="mt-2 lg:mt-5 grid grid-rows-5 grid-flow-col gap-y-2 justify-between text-white w-full">
                     @foreach($pageData['quick_links']??[] as $index => $item)
@@ -89,7 +89,7 @@ new class extends Component {
                 </ul>
             </div>
             <div class="w-87.5 h-50">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d232.79335334283132!2d105.9314793!3d21.0049137!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135a8d01169441f%3A0x588113cbf27a61f0!2zS2hvYSBDw7RuZyBuZ2jhu4cgdGjDtG5nIHRpbg!5e0!3m2!1svi!2s!4v1777305347149!5m2!1svi!2s" width="350" height="200" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d232.79335334283132!2d105.9314793!3d21.0049137!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135a8d01169441f%3A0x588113cbf27a61f0!2zS2hvYSBDw7RuZyBuZ2jhu4cgdGjDtG5nIHRpbg!5e0!3m2!1svi!2s!4v1777305347149!5m2!1svi!2s" width="300" height="200" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
             <div class="me-5">
                 <h5 class="text-[22px] font-semibold">{{__('Connect')}}</h5>
