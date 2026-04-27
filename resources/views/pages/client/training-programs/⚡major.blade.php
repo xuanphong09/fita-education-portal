@@ -522,18 +522,8 @@ class extends Component {
             ? $programMajorOptions->firstWhere('slug', $this->programMajorSlug)
             : null;
 
-        // --- 1. KIỂM TRA TIẾN TRÌNH CHỌN ĐÃ HOÀN TẤT CHƯA? ---
-        $isSelectionComplete = false;
-
-        if ($this->intakeId && $selectedProgramMajor) {
-            if ($majorOptions->isNotEmpty()) {
-                if ($this->major) {
-                    $isSelectionComplete = true;
-                }
-            } else {
-                $isSelectionComplete = true;
-            }
-        }
+        // Chỉ cần khóa + ngành để bắt đầu tải CTĐT (ưu tiên CTĐT chung của ngành).
+        $isSelectionComplete = (bool) ($this->intakeId && $selectedProgramMajor);
 
         // Nếu chưa chọn đủ thông tin -> Trả về giao diện trống
         if (!$isSelectionComplete) {
@@ -555,7 +545,7 @@ class extends Component {
         $majorId = $this->major?->id ? (int) $this->major->id : null;
         $programMajorId = $selectedProgramMajor?->id ? (int) $selectedProgramMajor->id : null;
 
-        $activeProgramQuery = TrainingProgram::query()
+        $activeProgramBaseQuery = TrainingProgram::query()
             ->where('intake_id', $this->intakeId)
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -577,13 +567,22 @@ class extends Component {
             ->orderByDesc('published_at')
             ->orderByDesc('id');
 
+        $activeProgram = null;
+
         if ($majorId) {
-            $activeProgramQuery->where('major_id', $majorId);
-        } else {
-            $activeProgramQuery->where('program_major_id', $programMajorId)->whereNull('major_id');
+            $activeProgram = (clone $activeProgramBaseQuery)
+                ->where('major_id', $majorId)
+                ->first();
         }
 
-        $activeProgram = $activeProgramQuery->first();
+        // Nếu chưa chọn chuyên ngành (hoặc chuyên ngành không có bản riêng), fallback về CTĐT chung của ngành.
+        if (!$activeProgram && $programMajorId) {
+            $activeProgram = (clone $activeProgramBaseQuery)
+                ->where('program_major_id', $programMajorId)
+                ->whereNull('major_id')
+                ->first();
+        }
+
         $programs = $activeProgram ? collect([$activeProgram]) : collect();
 
         // --- 3. XỬ LÝ KHỐI DỮ LIỆU MÔN HỌC BÊN TRONG ---
@@ -928,8 +927,10 @@ class extends Component {
             @if(!$activeProgram)
                 <x-card shadow>
                     <div class="text-center text-[18px] py-10 text-gray-500">
-                        @if(!$this->programMajorSlug || !$this->selectedMajorSlug || !$this->intakeId)
-                            {{ __('Please select intake, major, and specialization to view the training program.') }}
+                        @if(!$this->programMajorSlug || !$this->intakeId)
+                            {{ __('Please select intake and major to view the training program.') }}
+                        @elseif(!$this->selectedMajorSlug && $majorOptions->isNotEmpty())
+                            {{ __('No general training program for this major yet. Please choose a specialization to continue.') }}
                         @else
                             {{ __('This major has no published training programs.') }}
                         @endif
