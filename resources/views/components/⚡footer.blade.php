@@ -26,7 +26,7 @@ new class extends Component {
         <div class="h-1.5 bg-[#4E3636] w-full shadow-[0_0_6px_#4E3636]"></div>
     </div>
     <div class="bg-fita">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 w-full container mx-auto px-0 md:px-4 sm:px-6 py-8 lg:py-12 gap-8 lg:gap-9 text-white text-[15px] font-barlow">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-8 w-full container mx-auto px-0 md:px-4 sm:px-6 py-8 lg:py-12 gap-8 text-white text-[15px] font-barlow">
 
             <div class="lg:col-span-3">
                 <livewire:logo layout="footer"/>
