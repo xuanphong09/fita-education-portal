@@ -324,7 +324,7 @@ class extends Component {
 {{--                                            </div>--}}
                                             <img
                                                 src="{{ asset('assets/images/noti-news.png') }}"
-                                                alt="{{ $related->getTranslation('title', app()->getLocale()) }}"
+                                                alt="ảnh bài viết"
                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                         @endif
@@ -367,7 +367,7 @@ class extends Component {
 {{--                                        </div>--}}
                                         <img
                                             src="{{ asset('assets/images/noti-news.png') }}"
-                                            alt="{{ $related->getTranslation('title', app()->getLocale()) }}"
+                                            alt="ảnh bài viết"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
                                     @endif
