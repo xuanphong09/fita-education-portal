@@ -544,6 +544,7 @@
                                                 class="rounded-none hover:bg-fita hover:text-white"
                                                 link="{{ $grand['url'] }}"
                                                 :no-wire-navigate="$isAbsoluteExternalUrl($grand['url'])"
+                                                :target="$isAbsoluteExternalUrl($grand['url']) ? '_blank' : null"
                                             />
                                         @endforeach
                                     </x-menu-sub>
@@ -553,6 +554,7 @@
                                         class="rounded-none hover:bg-fita hover:text-white"
                                         link="{{ $child['url'] }}"
                                         :no-wire-navigate="$isAbsoluteExternalUrl($child['url'])"
+                                        :target="$isAbsoluteExternalUrl($child['url']) ? '_blank' : null"
                                     />
                                 @endif
                             @endforeach
@@ -562,6 +564,7 @@
                             title="{{ $item['name'] }}"
                             link="{{ $item['url'] }}"
                             :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
+                            :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
                             class="rounded-none hover:bg-fita hover:text-white"
                         />
                     @endif
@@ -576,6 +579,7 @@
                                         class="rounded-none hover:bg-fita hover:text-white"
                                         link="{{ $topChild['url'] }}"
                                         :no-wire-navigate="$isAbsoluteExternalUrl($topChild['url'])"
+                                        :target="$isAbsoluteExternalUrl($topChild['url']) ? '_blank' : null"
                                     />
                                 @endforeach
                             </x-menu-sub>
@@ -584,6 +588,7 @@
                                 title="{{ $topMenuItem['name'] }}"
                                 link="{{ $topMenuItem['url'] }}"
                                 :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
+                                :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
                                 class="rounded-none hover:bg-fita hover:text-white"
                             />
                         @endif
