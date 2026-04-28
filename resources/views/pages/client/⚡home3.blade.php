@@ -323,10 +323,10 @@ class extends Component {
         <div class="container mx-auto"
              x-data="{
         menus: [
-            { title: 'ST-Care Hỏi đáp', link: '#', color: '#0961AA', btnText: 'XEM THÔNG TIN', img: 'assets/images/question-and-answer.png' },
-            { title: 'Tư vấn chọn hướng chuyên sâu', link: '#', color: '#F6A309', btnText: 'XEM THÔNG TIN', img: 'assets/images/health.png' },
-            { title: 'Đăng ký TTNN và KLTN', link: '#', color: '#066140', btnText: 'XEM THÔNG TIN', img: 'assets/images/register.png' },
-            { title: 'Quản lý phòng lab', link: '#', color: '#4E3636', btnText: 'CLICK HERE', img: 'assets/images/calendar.png' },
+            { title: 'ST-Care Hỏi đáp', link: 'https://st-dse.vnua.edu.vn:6896', color: '#0961AA', btnText: 'XEM THÔNG TIN', img: 'assets/images/question-and-answer.png' },
+            { title: 'Tư vấn chọn hướng chuyên sâu', link: 'https://st-dse.vnua.edu.vn:6879', color: '#F6A309', btnText: 'XEM THÔNG TIN', img: 'assets/images/health.png' },
+            { title: 'Đăng ký TTNN và KLTN', link: 'https://st-dse.vnua.edu.vn:6875', color: '#066140', btnText: 'XEM THÔNG TIN', img: 'assets/images/register.png' },
+            { title: 'Quản lý phòng lab', link: 'https://st-dse.vnua.edu.vn:6888', color: '#4E3636', btnText: 'CLICK HERE', img: 'assets/images/calendar.png' },
         ]
      }">
 
@@ -336,6 +336,7 @@ class extends Component {
                     <a :href="item.link"
                        class="relative flex items-center justify-between h-20 px-4 overflow-hidden rounded-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-md group"
                        :style="`background: linear-gradient(135deg, ${item.color} 0%, ${item.color}CC 100%);`"
+                       target="_blank"
                     >
 
                         <div class="z-10 text-white uppercase flex flex-col justify-center pb-1 mr-2">
