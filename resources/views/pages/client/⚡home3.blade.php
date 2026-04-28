@@ -361,7 +361,7 @@ class extends Component {
         </div>
     </div>
     <div class="container mx-auto px-4 lg:px-0">
-        <h1 class="uppercase lg:text-[32px] md:text-[28px] text-[22px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10">
+        <h1 class="uppercase lg:text-[32px] md:text-[28px] text-[24px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 md:mt-8 lg:mt-10">
             {{__('Faculty of Information Technology')}}
         </h1>
         <div class="flex gap-8 flex-col lg:flex-row mb-10 mt-6">
