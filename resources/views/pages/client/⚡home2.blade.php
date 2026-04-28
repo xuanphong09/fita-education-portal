@@ -56,6 +56,23 @@ class extends Component {
             && $this->hasMeaningfulTranslation($post, 'content', 'en');
     }
 
+    protected function isNewPost(Post $post): bool
+    {
+        if (!$post->published_at) {
+            return false;
+        }
+
+        $publishedAt = $post->published_at instanceof \Illuminate\Support\Carbon
+            ? $post->published_at
+            : \Illuminate\Support\Carbon::parse($post->published_at);
+
+        $now = now();
+        $threshold = $now->copy()->subDays(3);
+
+        return $publishedAt->greaterThanOrEqualTo($threshold)
+            && $publishedAt->lessThanOrEqualTo($now);
+    }
+
     public function with(): array
     {
         $locale = app()->getLocale();
@@ -136,7 +153,8 @@ class extends Component {
 
         $latestPosts = (clone $baseQuery)
             ->whereHas('categories', function ($query) {
-                $query->where('categories.slug', 'tin-tuc');
+                $query->where('categories.slug', 'tin-tuc')
+                ->orWhere('categories.slug', 'su-kien');
             })
             ->when($featuredPosts->isNotEmpty(), fn($q) => $q->whereNotIn('id', $featuredPosts->pluck('id')))
             ->latest('published_at')
@@ -299,7 +317,7 @@ class extends Component {
         @endscope
     </x-carousel>
 
-    <div>
+    <div >
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
             {{__('News and events')}}
         </h1>
@@ -332,11 +350,11 @@ class extends Component {
                                 width="1280"
                                 height="720"
                                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                onerror="this.onerror=null;this.src='{{ asset('assets/images/noti-news.png') }}'"
+                                onerror="this.onerror=null;this.src='{{ asset('assets/images/post-7.jpg') }}'"
                             >
                         @else
                             <img
-                                src="{{ asset('assets/images/noti-news.png') }}"
+                                src="{{ asset('assets/images/post-7.jpg') }}"
                                 alt="No image"
                                 loading="eager"
                                 fetchpriority="high"
@@ -345,6 +363,18 @@ class extends Component {
                                 height="720"
                                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                             >
+                        @endif
+
+                        @if($leftHighlightPost->is_featured)
+                            <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-white shadow">
+                                <x-icon name="s-star" class="w-3 h-3" />
+                                {{ __('Featured News') }}
+                            </div>
+                        @elseif($this->isNewPost($leftHighlightPost))
+                            <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
+                                <span class="h-2 w-2 rounded-full bg-white"></span>
+                                {{ __('New') }}
+                            </div>
                         @endif
 
                         <div
@@ -395,10 +425,10 @@ class extends Component {
                             <span class="relative inline-flex items-center h-6">
                                 {{ __('Featured News') }}
                                 @if($tabSelected !== 'tab-feature-post')
-                                    <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                                </span>
+{{--                                    <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">--}}
+{{--                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>--}}
+{{--                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>--}}
+{{--                                </span>--}}
                                 @endif
                         </span>
                         </x-slot:label>
@@ -406,21 +436,33 @@ class extends Component {
                             @forelse($featuredPosts->skip(1)->take(3) as $post)
                                 <div
                                     class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
-                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
+                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}"
                                                  class="w-full h-full object-cover"
                                                  alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
                                                  loading="lazy" decoding="async">
                                         @else
-                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                            <img src="{{ asset('assets/images/post-6.jpg') }}"
                                                  class="w-full h-full object-cover" alt="No image" loading="lazy"
                                                  decoding="async">
+                                        @endif
+                                        @if($leftHighlightPost->is_featured)
+                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
+                                                <x-icon name="s-star" class="w-3 h-3" />
+                                                {{ __('Featured News') }}
+                                            </div>
+
+                                        @elseif($this->isNewPost($post) && !$post->is_featured)
+                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
+                                                <span class="h-1 w-1 rounded-full bg-white"></span>
+                                                {{ __('New') }}
+                                            </div>
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
                                         <a href="{{ $post->client_url }}" wire:navigate
-                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:opacity-90">
                                             {{ $post->getTranslation('title', app()->getLocale()) }}
                                         </a>
                                         <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
@@ -432,7 +474,9 @@ class extends Component {
                                     </div>
                                 </div>
                             @empty
-                                <p class="text-gray-500">{{ __('No featured posts found.') }}</p>
+                                @if($featuredPosts->isEmpty())
+                                 <p class="text-gray-500">{{ __('No featured posts found.') }}</p>
+                                @endif
                             @endforelse
                         </div>
                         <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
@@ -443,16 +487,16 @@ class extends Component {
                     <x-tab name="tab-new-post">
                         <x-slot:label>
                             <span class="relative inline-flex items-center h-6">
-                                {{ __('Latest News') }}
+                                {{ __('News & Events') }}
 
 {{--                                <span class="absolute -top-0.5 -right-7 bg-amber-500 text-white text-[12px] font-bold px-1.5 py-1 flex items-center justify-center rounded-full shadow-sm leading-none">--}}
 {{--                                    Cập nhật--}}
 {{--                                </span>--}}
                                 @if($tabSelected !== 'tab-new-post')
-                                <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                                </span>
+{{--                                <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">--}}
+{{--                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>--}}
+{{--                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>--}}
+{{--                                </span>--}}
                                 @endif
                         </span>
                         </x-slot:label>
@@ -460,21 +504,28 @@ class extends Component {
                             @forelse($latestPosts->skip(1)->take(3) as $post)
                                 <div
                                     class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
-                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
+                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}"
                                                  class="w-full h-full object-cover"
                                                  alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
                                                  loading="lazy" decoding="async">
                                         @else
-                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                            <img src="{{ asset('assets/images/post-6.jpg') }}"
                                                  class="w-full h-full object-cover" alt="No image" loading="lazy"
                                                  decoding="async">
+                                        @endif
+
+                                        @if($this->isNewPost($post) && !$post->is_featured)
+                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
+                                                <span class="h-1 w-1 rounded-full bg-white"></span>
+                                                {{ __('New') }}
+                                            </div>
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
                                         <a href="{{ $post->client_url }}" wire:navigate
-                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:opacity-90">
                                             {{ $post->getTranslation('title', app()->getLocale()) }}
                                         </a>
                                         <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
@@ -486,7 +537,9 @@ class extends Component {
                                     </div>
                                 </div>
                             @empty
-                                <p class="text-gray-500">{{ __('No latest posts found.') }}</p>
+                                @if($latestPosts->isEmpty())
+                                    <p class="text-gray-500">{{ __('No latest posts found.') }}</p>
+                                @endif
                             @endforelse
                         </div>
                         <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
@@ -499,10 +552,10 @@ class extends Component {
                             <span class="relative inline-flex items-center h-6">
                                 {{ __('Notification') }}
                                 @if($tabSelected !== 'tab-notification-post')
-                                    <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">
-                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                                </span>
+{{--                                    <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">--}}
+{{--                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>--}}
+{{--                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>--}}
+{{--                                </span>--}}
                                 @endif
                         </span>
                         </x-slot:label>
@@ -510,21 +563,28 @@ class extends Component {
                             @forelse($notificationPosts->skip(1)->take(3) as $post)
                                 <div
                                     class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
-                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden">
+                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}"
                                                  class="w-full h-full object-cover"
                                                  alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
                                                  loading="lazy" decoding="async">
                                         @else
-                                            <img src="{{ asset('assets/images/noti-news.png') }}"
+                                            <img src="{{ asset('assets/images/post-6.jpg') }}"
                                                  class="w-full h-full object-cover" alt="No image" loading="lazy"
                                                  decoding="async">
+                                        @endif
+
+                                        @if($this->isNewPost($post) && !$post->is_featured)
+                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
+                                                <span class="h-1 w-1 rounded-full bg-white"></span>
+                                                {{ __('New') }}
+                                            </div>
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
                                         <a href="{{ $post->client_url }}" wire:navigate
-                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:underline">
+                                           class="text-[18px]/[20px] lg:text-[20px]/[22px] font-semibold text-fita line-clamp-3 lg:line-clamp-2 hover:opacity-90">
                                             {{ $post->getTranslation('title', app()->getLocale()) }}
                                         </a>
                                         <p class="mt-2 text-[16px]/[18px] lg:text-[18px]/[20px] font-normal line-clamp-2">
@@ -536,7 +596,9 @@ class extends Component {
                                     </div>
                                 </div>
                             @empty
-                                <p class="text-gray-500">{{ __('No announcement posts found.') }}</p>
+                                @if($notificationPosts->isEmpty())
+                                    <p class="text-gray-500">{{ __('No announcement posts found.') }}</p>
+                                @endif
                             @endforelse
                         </div>
                         <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}"
@@ -553,6 +615,7 @@ class extends Component {
         </div>
     </div>
     {{-- Why Choose Us Section --}}
+
     <section class="py-12 lg:py-16 bg-linear-to-b from-blue-50 to-blue-100">
         <div class="w-[90%] lg:w-330 mx-auto">
             <div class="text-center mb-12">

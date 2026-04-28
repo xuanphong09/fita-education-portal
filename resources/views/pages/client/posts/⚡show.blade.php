@@ -60,6 +60,23 @@ class extends Component {
             && $this->hasMeaningfulTranslation($post, 'content', $locale);
     }
 
+    protected function isNewPost(Post $post): bool
+    {
+        if (!$post->published_at) {
+            return false;
+        }
+
+        $publishedAt = $post->published_at instanceof \Illuminate\Support\Carbon
+            ? $post->published_at
+            : \Illuminate\Support\Carbon::parse($post->published_at);
+
+        $now = now();
+        $threshold = $now->copy()->subDays(3);
+
+        return $publishedAt->greaterThanOrEqualTo($threshold)
+            && $publishedAt->lessThanOrEqualTo($now);
+    }
+
     public function mount(string $categorySlug, string $slug)
     {
         $locale = app()->getLocale();
@@ -201,12 +218,19 @@ class extends Component {
             <article class="bg-white rounded-lg shadow-lg overflow-hidden">
                 {{-- Featured Image --}}
                 @if($post->thumbnail)
-                    <div class="aspect-video bg-gray-200 overflow-hidden">
+                    <div class="aspect-video bg-gray-200 overflow-hidden relative">
                         <img
                             src="{{ Storage::url($post->thumbnail) }}"
                             alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
                             class="w-full h-full object-cover"
                         />
+
+                        @if($this->isNewPost($post) && !$post->is_featured)
+                            <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
+                                <span class="h-2 w-2 rounded-full bg-white"></span>
+                                {{ __('New') }}
+                            </div>
+                        @endif
                     </div>
                 @endif
 
@@ -311,7 +335,7 @@ class extends Component {
                         @foreach($relatedPosts as $related)
                             <a href="{{ $related->client_url }}" wire:navigate class="group">
                                 <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
-                                    <div class="aspect-video bg-gray-200 overflow-hidden">
+                                    <div class="aspect-video bg-gray-200 overflow-hidden relative">
                                         @if($related->thumbnail)
                                             <img
                                                 src="{{ Storage::url($related->thumbnail) }}"
@@ -319,14 +343,23 @@ class extends Component {
                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
                                         @else
-{{--                                            <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-fita to-fita2">--}}
-{{--                                                <x-icon name="o-photo" class="w-12 h-12 text-white opacity-50" />--}}
-{{--                                            </div>--}}
                                             <img
-                                                src="{{ asset('assets/images/noti-news.png') }}"
+                                                src="{{ asset('assets/images/post-5.jpg') }}"
                                                 alt="ảnh bài viết"
                                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                             />
+                                        @endif
+
+                                        @if($related->is_featured)
+                                            <div class="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-full bg-warning px-2 py-1 text-xs font-semibold text-white shadow">
+                                                <x-icon name="s-star" class="w-3 h-3" />
+                                                {{ __('Featured') }}
+                                            </div>
+                                        @elseif($this->isNewPost($related))
+                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
+                                                <span class="h-1 w-1 rounded-full bg-white"></span>
+                                                {{ __('New') }}
+                                            </div>
                                         @endif
                                     </div>
                                     <div class="py-3 px-2 lg:h-24">
@@ -354,7 +387,7 @@ class extends Component {
                     <div class="space-y-4">
                         @foreach($recentPosts as $recent)
                             <a href="{{ $recent->client_url }}" wire:navigate class="group flex gap-3">
-                                <div class="w-20 h-20 shrink-0 bg-gray-200 rounded overflow-hidden">
+                                <div class="w-20 h-20 shrink-0 bg-gray-200 rounded overflow-hidden relative">
                                     @if($recent->thumbnail)
                                         <img
                                             src="{{ Storage::url($recent->thumbnail) }}"
@@ -362,14 +395,23 @@ class extends Component {
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
                                     @else
-{{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
-{{--                                            <x-icon name="o-photo" class="w-6 h-6 text-white opacity-50" />--}}
-{{--                                        </div>--}}
                                         <img
-                                            src="{{ asset('assets/images/noti-news.png') }}"
+                                            src="{{ asset('assets/images/post-7.jpg') }}"
                                             alt="ảnh bài viết"
-                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                            class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                                         />
+                                    @endif
+
+                                    @if($recent->is_featured)
+                                        <div class="absolute top-0 left-0 inline-flex items-center gap-0.5 rounded-full bg-warning px-1.5 py-0.5 text-[8px] font-semibold text-white shadow">
+                                            <x-icon name="s-star" class="w-2.5 h-2.5" />
+                                            {{ __('Featured') }}
+                                        </div>
+                                    @elseif($this->isNewPost($recent))
+                                        <div class="absolute top-0 left-0 inline-flex items-center gap-0.5 rounded-full bg-[#22c55e] px-1 py-0.5 text-[8px] font-semibold text-white shadow">
+                                            <span class="h-0.5 w-0.5 rounded-full bg-white"></span>
+                                            {{ __('New') }}
+                                        </div>
                                     @endif
                                 </div>
                                 <div class="flex-1">

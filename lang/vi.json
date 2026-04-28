@@ -61,6 +61,7 @@
     "Footer": "Chân trang",
     "Information": "Thông tin",
     "Connect": "Kết nối",
+    "News & Events": "Tin tức & Sự kiện",
     "Action": "Hành động",
     "Create new": "Tạo mới",
     "Edit": "Chỉnh sửa",
@@ -279,7 +280,8 @@
     "No announcement posts found.": "Không tìm thấy bài viết thông báo nào.",
     "No latest posts found.": "Không tìm thấy bài viết mới nào.",
     "No featured posts found.": "Không tìm thấy bài viết nổi bật nào.",
-    "No posts available.": "Không có bài viết nào.",
+    "No posts available": "Không có bài viết nào.",
     "Useful links": "Liên kết hữu ích",
-    "Inspection certificate": "Chứng nhận kiểm định"
+    "Inspection certificate": "Chứng nhận kiểm định",
+    "New": "Tin mới"
 }

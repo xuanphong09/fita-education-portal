@@ -46,6 +46,23 @@ class extends Component {
             ->first();
     }
 
+    protected function isNewPost(Post $post): bool
+    {
+        if (!$post->published_at) {
+            return false;
+        }
+
+        $publishedAt = $post->published_at instanceof \Illuminate\Support\Carbon
+            ? $post->published_at
+            : \Illuminate\Support\Carbon::parse($post->published_at);
+
+        $now = now();
+        $threshold = $now->copy()->subDays(3);
+
+        return $publishedAt->greaterThanOrEqualTo($threshold)
+            && $publishedAt->lessThanOrEqualTo($now);
+    }
+
     public function mount()
     {
         // Support legacy links (?q= / ?query=) and normalize to this page's search state.
@@ -279,6 +296,7 @@ class extends Component {
                                 'url' => $post->client_url,
                                 'title' => $post->getTranslation('title', app()->getLocale()),
                                 'excerpt' => $post->getExcerptOrAuto(app()->getLocale(), 220),
+                                'is_new' => $this->isNewPost($post),
                                 'categories' => $post->show_category ? $post->categories
                                     ->map(fn ($c) => $c->getTranslation('name', app()->getLocale(), false))
                                     ->filter()
@@ -338,6 +356,12 @@ class extends Component {
                                         <x-icon name="s-star" class="w-3.5 h-3.5" />
                                         {{ __('Featured News') }}
                                     </div>
+                                    <template x-if="current && current.is_new">
+                                        <div class="absolute top-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
+                                            <span class="h-2 w-2 rounded-full bg-white"></span>
+                                            {{ __('New') }}
+                                        </div>
+                                    </template>
                                     <template x-if="current && current.thumbnail">
                                         <img
                                             :src="current.thumbnail"
@@ -350,7 +374,7 @@ class extends Component {
 {{--                                            <x-icon name="o-photo" class="w-16 h-16 text-white opacity-50" />--}}
 {{--                                        </div>--}}
                                         <img
-                                            src="{{ asset('assets/images/noti-news.png') }}"
+                                            src="{{ asset('assets/images/post-5.jpg') }}"
                                             alt="No image"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
@@ -433,7 +457,7 @@ class extends Component {
                     @foreach($listPosts as $post)
                         <a href="{{ $post->client_url }}" wire:navigate class="group block p-4 sm:p-5 hover:bg-slate-50 transition-colors">
                             <div class="flex flex-col sm:flex-row gap-4">
-                                <div class="w-full sm:w-44 lg:h-28 h-50 bg-gray-200 rounded-lg overflow-hidden shrink-0">
+                                <div class="w-full sm:w-44 lg:h-28 h-50 bg-gray-200 rounded-lg overflow-hidden shrink-0 relative">
                                     @if($post->thumbnail)
                                         <img
                                             src="{{ Storage::url($post->thumbnail) }}"
@@ -442,13 +466,20 @@ class extends Component {
                                         />
                                     @else
                                         <img
-                                            src="{{ asset('assets/images/noti-news.png') }}"
+                                            src="{{ asset('assets/images/post-6.jpg') }}"
                                             alt="No image"
                                             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                         />
 {{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
 {{--                                            <x-icon name="o-photo" class="w-10 h-10 text-white opacity-50" />--}}
 {{--                                        </div>--}}
+                                    @endif
+
+                                    @if($this->isNewPost($post))
+                                        <div class="absolute top-2 left-2 inline-flex items-center gap-1 rounded-lg bg-[#22c55e] px-2 py-1 text-[11px] font-semibold text-white shadow">
+                                            <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+                                            {{ __('New') }}
+                                        </div>
                                     @endif
                                 </div>
 
