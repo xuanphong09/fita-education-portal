@@ -1058,7 +1058,7 @@ class extends Component {
                 name: 'Trần Thị Mỹ Linh',
                 role: 'Sinh viên ngành Công nghệ thông tin',
                 content: 'Môi trường năng động và các thầy cô cực kỳ tâm huyết đã giúp mình khai phá được khả năng sáng tạo của bản thân.',
-                avatar: 'assets/images/avatar-dep-10.jpg'
+                avatar: 'assets/images/avatar-dep-8.jpg'
             },
             {
                 id: 3,
