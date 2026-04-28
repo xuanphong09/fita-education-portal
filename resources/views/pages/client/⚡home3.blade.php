@@ -1062,7 +1062,7 @@ class extends Component {
             },
             {
                 id: 3,
-                name: 'Nguyễn Thanh Xuân',
+                name: 'Nguyễn Bình Minh',
                 role: ' Cựu sinh viên ngành Công nghệ thông tin',
                 content: 'Khoa Công nghệ thông tin không chỉ dạy mình kiến thức chuyên môn mà còn giúp mình phát triển kỹ năng mềm và tư duy phản biện.',
                 avatar: 'assets/images/avatar-dep-10.jpg'
