@@ -320,7 +320,7 @@ class extends Component {
 {{--        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">--}}
 {{--            {{__('Quick links')}}--}}
 {{--        </h1>--}}
-        <div class="container mx-auto"
+        <div class="container mx-auto px-4 lg:px-0"
              x-data="{
         menus: [
             { title: 'ST-Care Hỏi đáp', link: 'https://st-dse.vnua.edu.vn:6896', color: '#0961AA', btnText: 'XEM THÔNG TIN', img: 'assets/images/question-and-answer.png' },
@@ -334,13 +334,13 @@ class extends Component {
 
                 <template x-for="(item, index) in menus" :key="index">
                     <a :href="item.link"
-                       class="relative flex items-center justify-between h-20 px-4 overflow-hidden rounded-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-md group"
+                       class="relative flex items-center justify-between h-14 md:h-16 lg:h-20 px-4 overflow-hidden rounded-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-md group"
                        :style="`background: linear-gradient(135deg, ${item.color} 0%, ${item.color}CC 100%);`"
                        target="_blank"
                     >
 
                         <div class="z-10 text-white uppercase flex flex-col justify-center pb-1 mr-2">
-                            <h2 class="text-[17px] font-semibold leading-tight drop-shadow-sm" x-text="item.title"></h2>
+                            <h2 class="text-[15px] md:text-[16px] lg:text-[17px] font-semibold leading-tight drop-shadow-sm" x-text="item.title"></h2>
 {{--                            <div class="mt-2 flex items-center text-[10px] font-bold tracking-wider opacity-90 group-hover:opacity-100">--}}
 {{--                                <span x-text="item.btnText"></span>--}}
 {{--                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">--}}
@@ -349,7 +349,7 @@ class extends Component {
 {{--                            </div>--}}
                         </div>
 
-                        <div class="relative z-10 w-16 h-16 object-fill p-1 shrink-0 backdrop-blur-sm group-hover:rotate-2 transition-transform duration-300">
+                        <div class="relative z-10 size-14 md:size-15 lg:size-16 object-fill p-1 shrink-0 backdrop-blur-sm group-hover:rotate-2 transition-transform duration-300">
                             <img :src="item.img" alt="Thumbnail" class="w-full h-full object-cover">
                         </div>
 
@@ -411,7 +411,7 @@ class extends Component {
                 </ul>
             </div>
             <div class=" w-full lg:w-1/2">
-                <img src="{{asset('assets/images/fita-info.jpg')}}" class="object-cover h-110 mx-auto rounded-lg" alt="">
+                <img src="{{asset('assets/images/fita-info.jpg')}}" class="object-cover md:h-110 mx-auto rounded-lg" alt="">
             </div>
         </div>
     </div>
