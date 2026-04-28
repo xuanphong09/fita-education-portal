@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 Route::livewire('/', 'pages::client.home2')->name('client.home');
+Route::livewire('/trang-chu-v2', 'pages::client.home3')->name('client.home');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
 Route::livewire('/lien-he', 'pages::client.contact')->name('client.contact');
 Route::livewire('/search', 'pages::client.search')->name('client.search');

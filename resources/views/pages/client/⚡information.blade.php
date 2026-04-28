@@ -59,7 +59,7 @@ class extends Component {
                             <h2 class="font-semibold text-[18px]">{{__('About the')}}</h2>
                             <h2 class="font-bold text-[26px]/[28px] lg:text-[34px]/[36px]">{{__('Faculty of Information Technology')}}</h2>
                         </div>
-                        <div class="text-[16px]/[24px] text-justify space-y-2">
+                        <div class="text-[16px]/[24px] text-justify space-y-2 leading-relaxed">
                             @foreach(explode("\n", $pageData['dynamicBlocks'][$index]['data']['description'] ?? '') as $paragraph)
                                 @if(trim($paragraph))
                                     <p>{{ $paragraph }}</p>
@@ -86,7 +86,7 @@ class extends Component {
                                     {{ $column['title'] ?? '' }}
                                 </h3>
 
-                                <div class="text-[16px]/[24px] text-justify space-y-2 mt-2">
+                                <div class="text-[16px]/[24px] text-justify space-y-2 mt-2 leading-relaxed">
                                     @foreach(explode("\n", $column['content'] ?? '') as $paragraph)
                                         @if(trim($paragraph))
                                             <p>{{ $paragraph }}</p>
