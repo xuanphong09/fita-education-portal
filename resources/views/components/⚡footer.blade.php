@@ -71,7 +71,7 @@ new class extends Component {
             </div>
 
             <div class="lg:col-span-2">
-                <h5 class="text-[20px] lg:text-[22px] font-semibold mb-4 lg:mb-6">{{__('Useful links')}}</h5>
+                <h5 class="text-[20px] lg:text-[22px] font-semibold mb-4 lg:mb-6">{{__('Quick links')}}</h5>
                 <ul class="flex flex-col space-y-3 text-white w-full">
                     @foreach($pageData['quick_links']??[] as $index => $item)
                         @if(!empty(trim($item['name'])) && !empty(trim($item['url'])))
@@ -87,10 +87,6 @@ new class extends Component {
                         @endif
                     @endforeach
                 </ul>
-            </div>
-
-            <div class="lg:col-span-2 w-full h-56 sm:h-64 lg:h-full min-h-[200px] overflow-hidden rounded-md shadow-sm">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d232.79335334283132!2d105.9314793!3d21.0049137!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135a8d01169441f%3A0x588113cbf27a61f0!2zS2hvYSBDw7RuZyBuZ2jhu4cgdGjDtG5nIHRpbg!5e0!3m2!1svi!2s!4v1777305347149!5m2!1svi!2s" class="w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
 
             <div class="lg:col-span-1">
@@ -138,6 +134,9 @@ new class extends Component {
                 </ul>
             </div>
 
+            <div class="lg:col-span-2 w-full h-56 sm:h-64 lg:h-full min-h-[200px] overflow-hidden rounded-md shadow-sm">
+                <iframe src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d232.79335334283132!2d105.9314793!3d21.0049137!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3135a8d01169441f%3A0x588113cbf27a61f0!2zS2hvYSBDw7RuZyBuZ2jhu4cgdGjDtG5nIHRpbg!5e0!3m2!1svi!2s!4v1777305347149!5m2!1svi!2s" class="w-full h-full border-0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+            </div>
         </div>
     </div>
 </div>

@@ -316,6 +316,11 @@ class extends Component {
         </div>
         @endscope
     </x-carousel>
+    <div class="my-0.125">
+        <div class="h-1.25 bg-[#F6A309] w-full"></div>
+        <div class="h-1.25 bg-[#066140] w-full"></div>
+        <div class="h-1.25 bg-[#4E3636] w-full shadow-[0_0_6px_#4E3636]"></div>
+    </div>
     <div class="mt-5">
 {{--        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">--}}
 {{--            {{__('Quick links')}}--}}
