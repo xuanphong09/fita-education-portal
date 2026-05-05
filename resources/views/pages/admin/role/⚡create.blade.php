@@ -15,6 +15,7 @@ new class extends Component {
     public string $name = '';
 
     public array $selectedPermissions = [];
+    public string $searchCategory = '';
 
     #[Validate([
         'display_name' => 'required|string|max:255|unique:roles,display_name',
@@ -90,9 +91,17 @@ new class extends Component {
         }
 
         $categories = Category::orderBy('order')->get();
+        $allCategoryPermissions = $this->buildRecursivePermissions($categories, null, $grouped);
+        if (trim($this->searchCategory) !== '') {
+            $searchTerm = Str::lower(trim($this->searchCategory));
 
+            $allCategoryPermissions = array_filter($allCategoryPermissions, function ($item) use ($searchTerm) {
+                $categoryName = Str::lower($item['category']->getTranslatedName());
+                return Str::contains($categoryName, $searchTerm);
+            });
+        }
         // Ép kiểu sang Collection ở đây
-        return collect($this->buildRecursivePermissions($categories, null, $grouped));
+        return collect($allCategoryPermissions);
     }
 
     /**
@@ -207,8 +216,15 @@ new class extends Component {
 
             {{-- Category-Scoped Permissions Section --}}
             <div class="mt-8">
-                <div class="mb-4">
+                <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <label class="font-semibold mb-3 block">Quyền hạn theo danh mục bài viết</label>
+                    <x-input
+                        icon="o-magnifying-glass"
+                        placeholder="Tìm danh mục..."
+                        wire:model.live.debounce.300ms="searchCategory"
+                        class="w-full sm:w-82"
+                        clearable
+                    />
                 </div>
 
                 @if($this->categoryPermissions->count() > 0)
