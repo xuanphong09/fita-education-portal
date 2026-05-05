@@ -39,7 +39,12 @@ class extends Component {
         $this->locale  = app()->getLocale();
 
         $post = Post::findOrFail($id);
-        $isReviewer = auth()->user()?->can('duyet_bai_viet')
+        $postCategoryIds = $post->categories()->pluck('categories.id')->map(fn ($categoryId) => (int) $categoryId)->toArray();
+        if (empty($postCategoryIds) && $post->category_id) {
+            $postCategoryIds = [(int) $post->category_id];
+        }
+
+        $isReviewer = auth()->user()?->canReviewPosts($postCategoryIds)
             || auth()->user()?->can('xuat_ban_bai_viet')
             || auth()->user()?->can('quan_ly_bai_viet');
 

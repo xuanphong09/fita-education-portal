@@ -77,7 +77,7 @@ class PostManagementTest extends TestCase
 
 		$scheduled = now()->addDay()->format('Y-m-d\\TH:i');
 
-		Livewire::test('pages::admin.post.edit', ['id' => $post->id])
+		Livewire::test('pages::admin.post.review', ['id' => $post->id])
 			->set('published_at', $scheduled)
 			->call('approvePost')
 			->assertHasNoErrors();
@@ -93,6 +93,28 @@ class PostManagementTest extends TestCase
 			'action' => 'approved',
 			'reviewer_id' => $reviewer->id,
 		]);
+	}
+
+	public function test_reviewer_only_is_redirected_from_edit_to_review_page(): void
+	{
+		$reviewer = User::factory()->create();
+		$author = User::factory()->create();
+
+		$this->givePermission($reviewer, 'duyet_bai_viet');
+
+		$post = Post::create([
+			'title' => ['vi' => 'Bai viet cho duyet', 'en' => ''],
+			'content' => ['vi' => '<p>Noi dung</p>', 'en' => ''],
+			'slug' => 'bai-viet-cho-duyet-redirect',
+			'status' => Post::APPROVAL_PENDING,
+			'submitted_at' => now(),
+			'user_id' => $author->id,
+		]);
+
+		$this->actingAs($reviewer);
+
+		Livewire::test('pages::admin.post.edit', ['id' => $post->id])
+			->assertRedirect(route('admin.post.review', ['id' => $post->id]));
 	}
 
 	public function test_rejected_post_can_be_edited_and_resubmitted(): void
@@ -114,7 +136,7 @@ class PostManagementTest extends TestCase
 
 		$this->actingAs($reviewer);
 
-		Livewire::test('pages::admin.post.edit', ['id' => $post->id])
+		Livewire::test('pages::admin.post.review', ['id' => $post->id])
 			->set('reviewNote', 'Noi dung chua dat yeu cau.')
 			->call('rejectPost')
 			->assertHasNoErrors();

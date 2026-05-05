@@ -26,7 +26,7 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->pendingOnlyMode = request()->routeIs('admin.post.pending');
+        $this->pendingOnlyMode = request()->routeIs('admin.posts.pending');
 
         if ($this->pendingOnlyMode && !$this->canReview()) {
             abort(403);
@@ -39,26 +39,220 @@ new class extends Component {
 
     public function canReview(): bool
     {
+        return auth()->user()?->canReviewPosts() ?? false;
+    }
+
+    public function canWrite(): bool
+    {
+        return auth()->user()?->canWritePosts() ?? false;
+    }
+
+    public function isReviewerOnly(): bool
+    {
+        return $this->canReview() && ! $this->canWrite();
+    }
+    public function getPostActionLink(Post $post): array
+    {
+        $user = auth()->user();
+        if (!$user) {
+            return ['link' => '#', 'icon' => 'o-eye', 'tooltip' => 'Xem', 'class' => 'text-gray-500'];
+        }
+
+        // 1. Lấy danh sách ID danh mục của bài viết
+        $categoryIds = $post->categories->pluck('id')->map(fn($id) => (int)$id)->toArray();
+        if (empty($categoryIds) && $post->category_id) {
+            $categoryIds = [(int) $post->category_id];
+        }
+
+        // 2. Xác định các quyền (ÁP DỤNG LOGIC "CHỈ CẦN 1 DANH MỤC")
+        $isAuthor  = ((int) $post->user_id === (int) $user->id);
+
+        $hasGlobalReview = $user->can('quan_ly_bai_viet') || $user->can('duyet_bai_viet');
+        $reviewIds = $user->scopedPostCategoryIds('duyet_bai_viet') ?? [];
+        $canReview = $hasGlobalReview || count(array_intersect($categoryIds, $reviewIds)) > 0;
+
+        $hasGlobalWrite = $user->can('quan_ly_bai_viet') || $user->can('viet_bai_viet');
+        $writeIds = $user->scopedPostCategoryIds('viet_bai_viet') ?? [];
+        $canWrite = $hasGlobalWrite || count(array_intersect($categoryIds, $writeIds)) > 0;
+
+        // ==========================================
+        // 3. XỬ LÝ RIÊNG CHO BÀI ĐÃ ĐĂNG (PUBLISHED)
+        // ==========================================
+        if ($post->status === 'published') {
+            if ($isAuthor || $canWrite) {
+                return [
+                    'link' => route('admin.post.edit', $post->id),
+                    'icon' => 'o-pencil',
+                    'tooltip' => 'Chỉnh sửa',
+                    'class' => 'text-primary' // 🔵 Xanh dương
+                ];
+            }
+            if ($canReview) {
+                return [
+                    'link' => route('admin.posts.review', $post->id),
+                    'icon' => 'o-eye',
+                    'tooltip' => 'Xem chi tiết',
+                    'class' => 'text-info' // 🩵 Xanh nhạt (Chỉ xem)
+                ];
+            }
+        }
+
+        // ==========================================
+        // 4. CÁC TRẠNG THÁI KHÁC (Nháp, Chờ duyệt, Từ chối)
+        // ==========================================
+
+        // Tác giả bài viết -> Luôn vào trang Sửa
+        if ($isAuthor) {
+            return [
+                'link' => route('admin.post.edit', $post->id),
+                'icon' => 'o-pencil',
+                'tooltip' => 'Chỉnh sửa',
+                'class' => 'text-primary'
+            ];
+        }
+
+        // Biên tập viên (Vừa Duyệt + Vừa Viết) -> Sửa & Duyệt
+        if ($canReview && $canWrite) {
+            return [
+                'link' => route('admin.post.edit', $post->id),
+                'icon' => 'o-pencil-square',
+                'tooltip' => 'Sửa & Duyệt bài',
+                'class' => 'text-green-500'
+            ];
+        }
+
+        // Người kiểm duyệt (CHỈ Duyệt, KHÔNG Viết) -> Màn hình Read-only
+        if ($canReview && !$canWrite) {
+            return [
+                'link' => route('admin.posts.review', $post->id),
+                'icon' => 'o-document-check',
+                'tooltip' => 'Duyệt bài viết',
+                'class' => 'text-warning'
+            ];
+        }
+
+        // Quản lý nội dung (CHỈ Viết, KHÔNG Duyệt)
+        if ($canWrite && !$canReview) {
+            return [
+                'link' => route('admin.post.edit', $post->id),
+                'icon' => 'o-pencil',
+                'tooltip' => 'Chỉnh sửa',
+                'class' => 'text-primary'
+            ];
+        }
+
+        // Fallback: Không có quyền thao tác -> Chuyển vào trang Review để xem
+        return [
+            'link' => route('admin.posts.review', $post->id),
+            'icon' => 'o-eye',
+            'tooltip' => 'Xem chi tiết',
+            'class' => 'text-gray-500'
+        ];
+    }
+
+    private function hasGlobalWriteAccess(): bool
+    {
         $user = auth()->user();
 
-        return $user?->can('duyet_bai_viet')
-            || $user?->can('quan_ly_bai_viet');
+        return (bool) ($user?->can('quan_ly_bai_viet') || $user?->can('viet_bai_viet'));
+    }
+
+    private function hasGlobalReviewAccess(): bool
+    {
+        $user = auth()->user();
+
+        return (bool) ($user?->can('quan_ly_bai_viet') || $user?->can('duyet_bai_viet'));
+    }
+
+    private function categoryIdsForPermission(string $basePermission): array
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return [];
+        }
+
+        if ($basePermission === 'viet_bai_viet' && $this->hasGlobalWriteAccess()) {
+            return Category::query()->orderBy('order')->pluck('id')->map(fn ($categoryId) => (int) $categoryId)->all();
+        }
+
+        if ($basePermission === 'duyet_bai_viet' && $this->hasGlobalReviewAccess()) {
+            return Category::query()->orderBy('order')->pluck('id')->map(fn ($categoryId) => (int) $categoryId)->all();
+        }
+
+        return $user->scopedPostCategoryIds($basePermission);
+    }
+
+    private function accessibleCategoryIds(): array
+    {
+        return collect([
+            $this->categoryIdsForPermission('viet_bai_viet'),
+            $this->categoryIdsForPermission('duyet_bai_viet'),
+        ])
+            ->flatten()
+            ->map(fn ($categoryId) => (int) $categoryId)
+            ->filter(fn ($categoryId) => $categoryId > 0)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function getPostsProperty()
     {
         $search = trim($this->search);
 
+        // Chỉ lấy các danh mục mà user có QUYỀN DUYỆT để làm cơ sở cho việc nhìn thấy bài người khác
+        $reviewCategoryIds = $this->categoryIdsForPermission('duyet_bai_viet');
+        $isGlobalReviewer = $this->hasGlobalReviewAccess();
+
         return Post::query()
             ->with(['categories', 'user'])
-            ->when(
-                !$this->canReview(),
-                fn($q) => $q->where('user_id', auth()->id()),
-                fn($q) => $q->where(function ($inner) {
-                    $inner->where('status', '!=', 'draft')
-                        ->orWhere('user_id', auth()->id());
-                })
-            )
+            ->when($this->pendingOnlyMode, function ($query) use ($reviewCategoryIds, $isGlobalReviewer) {
+                // TRANG CHỜ DUYỆT:
+                $query->where('status', Post::APPROVAL_PENDING);
+
+                if (!$isGlobalReviewer) {
+                    if (empty($reviewCategoryIds)) {
+                        $query->whereRaw('1 = 0'); // Không có quyền duyệt danh mục nào -> Không thấy gì
+                    } else {
+                        // Chỉ thấy bài chờ duyệt thuộc các danh mục mình có quyền duyệt
+                        $query->where(function ($catQuery) use ($reviewCategoryIds) {
+                            $catQuery->where(function ($legacy) use ($reviewCategoryIds) {
+                                $legacy->whereDoesntHave('categories')->whereIn('category_id', $reviewCategoryIds);
+                            })->orWhereHas('categories', function ($pivot) use ($reviewCategoryIds) {
+                                $pivot->whereIn('categories.id', $reviewCategoryIds);
+                            });
+                        });
+                    }
+                }
+            }, function ($query) use ($reviewCategoryIds, $isGlobalReviewer) {
+                // TRANG DANH SÁCH TỔNG:
+                $query->where(function ($inner) use ($reviewCategoryIds, $isGlobalReviewer) {
+
+                    // 1. BẤT CHẤP LÀ AI: Luôn nhìn thấy tất cả bài viết của CHÍNH MÌNH
+                    $inner->where('user_id', auth()->id());
+
+                    // 2. NẾU LÀ ADMIN / TỔNG BIÊN TẬP TOÀN CỤC: Thấy toàn bộ bài của người khác (trừ bản nháp)
+                    if ($isGlobalReviewer) {
+                        $inner->orWhere('status', '!=', 'draft');
+                    }
+                    // 3. NẾU LÀ NGƯỜI DUYỆT TỪNG DANH MỤC: Thấy bài người khác (trừ nháp) TRONG DANH MỤC ĐƯỢC GIAO
+                    elseif (!empty($reviewCategoryIds)) {
+                        $inner->orWhere(function ($q) use ($reviewCategoryIds) {
+                            $q->where('status', '!=', 'draft')
+                                ->where(function ($catQuery) use ($reviewCategoryIds) {
+                                    $catQuery->where(function ($legacy) use ($reviewCategoryIds) {
+                                        $legacy->whereDoesntHave('categories')->whereIn('category_id', $reviewCategoryIds);
+                                    })->orWhereHas('categories', function ($pivot) use ($reviewCategoryIds) {
+                                        $pivot->whereIn('categories.id', $reviewCategoryIds);
+                                    });
+                                });
+                        });
+                    }
+                    // Nếu CHỈ CÓ QUYỀN VIẾT: Code sẽ không chạy vào 2 nhánh orWhere trên.
+                    // -> Kết quả là chỉ nhánh `where('user_id', auth()->id())` có hiệu lực!
+                });
+            })
             ->when($this->filterLanguage !== '', fn($q) => $this->applyLanguageFilter($q, $this->filterLanguage))
             ->when($search !== '', fn($q) => $this->applySearchFilter($q, $search, $this->filterLanguage))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
@@ -131,7 +325,15 @@ new class extends Component {
 
     public function getCategoriesProperty()
     {
-        return Category::orderBy('order')->get()->map(fn($c) => [
+        $allowedCategoryIds = $this->pendingOnlyMode
+            ? $this->categoryIdsForPermission('duyet_bai_viet')
+            : $this->accessibleCategoryIds();
+
+        return Category::query()
+            ->orderBy('order')
+            ->get()
+            ->filter(fn ($category) => $allowedCategoryIds === [] || in_array($category->id, $allowedCategoryIds, true))
+            ->map(fn($c) => [
             'id' => $c->id,
             'name' => $c->getTranslatedName(),
         ])->toArray();
@@ -142,7 +344,7 @@ new class extends Component {
         return [
             ['key' => 'id', 'label' => '#', 'class' => 'w-10'],
             ['key' => 'thumbnail', 'label' => 'Ảnh', 'sortable' => false, 'class' => 'w-16'],
-            ['key' => 'title', 'label' => 'Tiêu đề', 'class' => 'min-w-64'],
+            ['key' => 'title', 'label' => 'Tiêu đề', 'class' => 'min-w-44'],
             ['key' => 'category', 'label' => 'Danh mục', 'sortable' => false, 'class' => 'w-36'],
             ['key' => 'status', 'label' => 'Trạng thái', 'sortable' => false, 'class' => 'w-28'],
             ['key' => 'featured', 'label' => 'Nổi bật', 'sortable' => false, 'class' => 'w-24'],
@@ -203,7 +405,7 @@ new class extends Component {
     {
         return trim($this->search) !== ''
             || !is_null($this->filterCategory)
-            || $this->filterStatus !== ''
+            || ($this->pendingOnlyMode? $this->filterStatus !== Post::APPROVAL_PENDING : $this->filterStatus !== '')
             || $this->filterFeatured !== ''
             || $this->filterLanguage !== ''
             || !is_null($this->filterAuthor);
@@ -211,11 +413,21 @@ new class extends Component {
 
     public function canDeletePost(Post $post): bool
     {
-        if ($this->canReview()) {
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->canAny('quan_ly_bai_viet', 'duyet_bai_viet')) {
             return true;
         }
 
-        return $post->status === 'draft' && (int)$post->user_id === (int)auth()->id();
+        // 2. Tác giả bài viết -> Chỉ được xóa bài của CHÍNH MÌNH khi đang Nháp hoặc Bị từ chối
+        if ((int) $post->user_id === (int) $user->id) {
+            return in_array($post->status, ['draft', 'rejected'], true);
+        }
+
+        return false;
     }
 
     public function delete(int $id): void
@@ -223,7 +435,7 @@ new class extends Component {
         $post = Post::findOrFail($id);
 
         if (!$this->canDeletePost($post)) {
-            $this->error('Bạn chỉ có thể xóa bài nháp của chính mình.');
+            $this->error($this->isReviewerOnly() ? 'Bạn chỉ có quyền duyệt bài viết, không thể xóa.' : 'Bạn chỉ có thể xóa bài nháp của chính mình.');
             return;
         }
 
@@ -243,7 +455,7 @@ new class extends Component {
         $post = Post::findOrFail($id);
 
         if (!$this->canDeletePost($post)) {
-            $this->error('Bạn không có quyền xóa bài viết này.');
+            $this->error($this->isReviewerOnly() ? 'Bạn chỉ có quyền duyệt bài viết, không thể xóa.' : 'Bạn không có quyền xóa bài viết này.');
             return;
         }
 
@@ -293,13 +505,13 @@ new class extends Component {
     x-on:livewire:response.window="loading = false"
     x-on:livewire:error.window="loading = false"
 >
-    <x-slot:title>{{ $pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết' }}</x-slot:title>
+    <x-slot:title>{{ $pendingOnlyMode ? 'Danh sách bài viết chờ duyệt' : 'Danh sách bài viết' }}</x-slot:title>
 
     <x-slot:breadcrumb>
-        <span>{{ $pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết' }}</span>
+        <span>{{ $pendingOnlyMode ? 'Danh sách bài viết chờ duyệt' : 'Danh sách bài viết' }}</span>
     </x-slot:breadcrumb>
 
-    <x-header :title="$pendingOnlyMode ? 'Bài chờ duyệt' : 'Danh sách bài viết'"
+    <x-header :title="$pendingOnlyMode ? 'Danh sách bài viết chờ duyệt' : 'Danh sách bài viết'"
               class="pb-3 mb-5! border-b border-gray-300">
         <x-slot:middle class="justify-end!">
             <x-input
@@ -311,11 +523,11 @@ new class extends Component {
             />
         </x-slot:middle>
         <x-slot:actions>
-            {{--            @if($this->canReview())--}}
-            <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.post.trash') }}"/>
-            {{--            @endif--}}
-            <x-button icon="o-plus" class="btn-primary text-white" label="Tạo bài viết"
+            @if(!$this->pendingOnlyMode && $this->canWrite())
+                <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.post.trash') }}"/>
+                <x-button icon="o-plus" class="btn-primary text-white" label="Tạo bài viết"
                       link="{{ route('admin.post.create') }}"/>
+            @endif
         </x-slot:actions>
     </x-header>
 
@@ -333,6 +545,7 @@ new class extends Component {
             option-label="name"
             class="select-md w-48"
         />
+        @if(!$pendingOnlyMode)
         <x-select
             wire:model.live="filterStatus"
             placeholder="Tất cả trạng thái"
@@ -348,6 +561,7 @@ new class extends Component {
             option-label="name"
             class="select-md w-48"
         />
+        @endif
         <x-select
             wire:model.live="filterCategory"
             placeholder="Tất cả danh mục"
@@ -357,18 +571,20 @@ new class extends Component {
             option-label="name"
             class="select-md w-48"
         />
-        <x-select
-            wire:model.live="filterFeatured"
-            placeholder="Tất cả bài viết"
-            placeholder-value=""
-            :options="[
-                ['id' => '1', 'name' => 'Bài nổi bật'],
-                ['id' => '0', 'name' => 'Không nổi bật'],
-            ]"
-            option-value="id"
-            option-label="name"
-            class="select-md w-48"
-        />
+        @canany(['duyet_bai_viet', 'quan_ly_bai_viet'])
+            <x-select
+                wire:model.live="filterFeatured"
+                placeholder="Tất cả bài viết"
+                placeholder-value=""
+                :options="[
+                    ['id' => '1', 'name' => 'Bài nổi bật'],
+                    ['id' => '0', 'name' => 'Không nổi bật'],
+                ]"
+                option-value="id"
+                option-label="name"
+                class="select-md w-48"
+            />
+        @endcanany
         @if($this->canReview())
             <x-select
                 wire:model.live="filterAuthor"
@@ -439,9 +655,12 @@ new class extends Component {
             @scope('cell_category', $post)
             @if($post->categories->isNotEmpty())
                 <div class="flex flex-wrap gap-1">
-                    @foreach($post->categories as $category)
-                        <x-badge :value="$category->getTranslatedName()" class="badge-ghost badge-md"/>
+                    @foreach($post->categories->take(2) as $category)
+                        <x-badge :value="$category->getTranslatedName()" class="badge-ghost badge-md line-clamp-1"/>
                     @endforeach
+                    @if($post->categories->count() > 2)
+                        <x-badge value="+{{ $post->categories->count() - 2 }}" class="badge-ghost"/>
+                    @endif
                 </div>
             @else
                 <span class="text-sm text-gray-400">—</span>
@@ -479,14 +698,22 @@ new class extends Component {
 
             @scope('cell_actions', $post)
             <div class="flex gap-1">
-                <x-button icon="o-pencil" class="btn-sm btn-ghost text-primary" tooltip="Chỉnh sửa"
-                          link="{{ route('admin.post.edit', $post->id) }}"/>
+                @php
+                    $action = $this->getPostActionLink($post);
+                @endphp
 
-                @if($this->canReview() && $post->status === 'published')
+                <x-button
+                    :icon="$action['icon']"
+                    class="btn-sm btn-ghost {{ $action['class'] }} z-5"
+                    :tooltipLeft="$action['tooltip']"
+                    link="{{ $action['link'] }}"
+                />
+
+                @if(auth()->user()?->canAny(['quan_ly_bai_viet', 'duyet_bai_viet']) && $post->status === 'published')
                     <x-button
                         :icon="$post->is_featured ? 's-star' : 'o-star'"
-                        class="btn-sm btn-ghost {{ $post->is_featured ? 'text-warning' : 'text-gray-500' }}"
-                        :tooltip="$post->is_featured ? 'Bỏ nổi bật' : 'Đánh dấu nổi bật'"
+                        class="btn-sm btn-ghost z-5 {{ $post->is_featured ? 'text-warning' : 'text-gray-500' }}"
+                        :tooltipLeft="$post->is_featured ? 'Bỏ nổi bật' : 'Đánh dấu nổi bật'"
                         wire:click="toggleFeatured({{ $post->id }})"
                         spinner="toggleFeatured({{ $post->id }})"
                     />

@@ -81,8 +81,10 @@ class extends Component {
 
         // 4. Regenerate session ngay sau khi đăng nhập thành công
         request()->session()->regenerate();
+        if(Auth::user()->can('trang_quan_tri')) {
+            return redirect()->route('admin.dashboard');
+        }
 
-        // 5. Dùng full redirect sau login để tránh xung đột request khi navigate SPA
         return redirect()->route('client.home');
     }
     // Form login chỉ validate lúc submit để tránh race-condition request nền.

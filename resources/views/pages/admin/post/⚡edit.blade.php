@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Mary\Traits\Toast;
 use App\Services\ContentImageService;
+use App\Services\PostNotificationService;
 
 new class extends Component {
     use Toast, WithFileUploads;
@@ -68,48 +69,121 @@ new class extends Component {
     public bool $show_category = true;
     public bool $show_related_posts = true;
 
-    public array $statusOptions = [
-        ['id' => 'draft',     'name' => 'Nháp'],
-        ['id' => 'pending_review', 'name' => 'Chờ duyệt'],
-        ['id' => 'rejected',  'name' => 'Từ chối'],
-        ['id' => 'published', 'name' => 'Đã đăng'],
-        ['id' => 'archived',  'name' => 'Lưu trữ'],
-    ];
-
     public function canReview(): bool
     {
-        $user = auth()->user();
-
-        return $user?->can('duyet_bai_viet')
-            || $user?->can('quan_ly_bai_viet');
+        return auth()->user()?->canReviewPosts() ?? false;
     }
 
     public function canWrite(): bool
     {
         $user = auth()->user();
+        if (! $user) return false;
 
-        return $this->canReview() || $user?->can('viet_bai_viet');
+        return $user->can('quan_ly_bai_viet')
+            || $user->can('viet_bai_viet')
+            || $user->scopedPostCategoryIds('viet_bai_viet') !== [];
+    }
+
+    public function isReviewerOnly(): bool
+    {
+        return $this->canReview() && ! $this->canWrite();
+    }
+
+    private function postCategoryIds(Post $post): array
+    {
+        $categoryIds = $post->categories()->pluck('categories.id')->map(fn ($id) => (int) $id)->toArray();
+        if (empty($categoryIds) && $post->category_id) {
+            $categoryIds = [(int) $post->category_id];
+        }
+        return array_values(array_unique(array_filter($categoryIds, fn ($id) => $id > 0)));
+    }
+
+    // Lấy quyền Duyệt dựa trên Database (Cố định, không bị ảnh hưởng bởi UI)
+    public function canReviewOriginalPost(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        if ($user->can('quan_ly_bai_viet') || $user->can('duyet_bai_viet')) return true;
+
+        $reviewIds = $user->scopedPostCategoryIds('duyet_bai_viet') ?? [];
+        $post = Post::find($this->id);
+        if (!$post) return false;
+
+        return count(array_intersect($this->postCategoryIds($post), $reviewIds)) > 0;
+    }
+
+    // Lấy quyền Viết dựa trên Database (Cố định, không bị ảnh hưởng bởi UI)
+    public function canWriteOriginalPost(): bool
+    {
+        $user = auth()->user();
+        if (!$user) return false;
+        if ($user->can('quan_ly_bai_viet') || $user->can('viet_bai_viet')) return true;
+
+        $writeIds = $user->scopedPostCategoryIds('viet_bai_viet') ?? [];
+        $post = Post::find($this->id);
+        if (!$post) return false;
+
+        return count(array_intersect($this->postCategoryIds($post), $writeIds)) > 0;
+    }
+
+    private function validateCategoryPermissions(array $finalCategoryIds, array $originalCategoryIdsFromDB): void
+    {
+        if (empty($finalCategoryIds)) return;
+
+        $user = auth()->user();
+        if (!$user) return;
+
+        if ($user->can('quan_ly_bai_viet') || $user->can('viet_bai_viet') || $user->can('duyet_bai_viet')) {
+            return;
+        }
+
+        $allowedIds = $this->allowedCategoryIds();
+
+        if (count(array_intersect($finalCategoryIds, $allowedIds)) === 0) {
+            // Khôi phục mảng về trạng thái Database để giữ nguyên UI không bị mất nút
+            $this->category_ids = $originalCategoryIdsFromDB;
+            throw ValidationException::withMessages([
+                'category_ids' => 'Bạn phải giữ lại ít nhất 1 danh mục thuộc quyền của mình.',
+            ]);
+        }
     }
 
     protected function authorizePostAccess(Post $post): void
     {
-        abort_unless($this->canWrite(), 403);
+        $user = auth()->user();
+        if (!$user) abort(403);
 
-        if ($post->status === 'draft' && (int) $post->user_id !== (int) auth()->id()) {
-            abort(403);
-        }
+        if ((int) $post->user_id === (int) $user->id) return;
+        if ($user->can('quan_ly_bai_viet') || $user->can('viet_bai_viet') || $user->can('duyet_bai_viet')) return;
 
-        if ($this->canReview()) {
-            return;
-        }
+        $postCategoryIds = $this->postCategoryIds($post);
 
-        abort_unless((int) $post->user_id === (int) auth()->id(), 403);
+        $reviewIds = $user->scopedPostCategoryIds('duyet_bai_viet') ?? [];
+        if (count(array_intersect($postCategoryIds, $reviewIds)) > 0) return;
+
+        $writeIds = $user->scopedPostCategoryIds('viet_bai_viet') ?? [];
+        if (count(array_intersect($postCategoryIds, $writeIds)) > 0) return;
+
+        abort(403);
     }
 
     public function isAuthor(): bool
     {
         $userId = auth()->id();
         return $userId !== null && (int) $this->author_id === (int) $userId;
+    }
+
+    public function isScheduledPublished(): bool
+    {
+        if ($this->currentStatus !== 'published' || empty($this->published_at)) {
+            return false;
+        }
+
+        try {
+            return Carbon::parse($this->published_at)->isFuture();
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     protected function rules(): array
@@ -131,7 +205,6 @@ new class extends Component {
                     ->ignore($this->id)
                     ->where(function ($query) use ($primaryCategoryId) {
                         $query->whereNull('deleted_at');
-
                         if ($primaryCategoryId) {
                             $query->where('category_id', $primaryCategoryId);
                         } else {
@@ -139,7 +212,7 @@ new class extends Component {
                         }
                     }),
             ],
-            'category_ids'       => 'nullable|array',
+            'category_ids'       => 'required|array|min:1',
             'category_ids.*'     => 'integer|exists:categories,id',
             'status'             => 'required|in:draft,pending_review,rejected,published,archived',
             'is_featured'        => 'boolean',
@@ -165,27 +238,15 @@ new class extends Component {
         'thumbnail.max'       => 'Ảnh không được vượt quá 2MB.',
         'reviewNote.required' => 'Vui lòng nhập lý do từ chối.',
         'reviewNote.min'      => 'Lý do từ chối cần tối thiểu 5 ký tự.',
+        'published_at.date'      => 'Ngày xuất bản không hợp lệ.',
     ];
 
     private function hasMeaningfulEditorContent(?string $html): bool
     {
-//        $plain = trim((string) preg_replace('/\x{00A0}/u', ' ', strip_tags(html_entity_decode((string) $html, ENT_QUOTES | ENT_HTML5, 'UTF-8'))));
-//
-//        return $plain !== '';
-        if (empty($html)) {
-            return false;
-        }
-
-        // Giải mã HTML entities
+        if (empty($html)) return false;
         $decoded = html_entity_decode((string) $html, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-
-        // Xóa các thẻ HTML nhưng GIỮ LẠI img, video, iframe
         $stripped = strip_tags($decoded, '<img><video><iframe>');
-
-        // Xóa các ký tự khoảng trắng đặc biệt (như &nbsp;)
         $plain = trim((string) preg_replace('/\x{00A0}/u', ' ', $stripped));
-
-        // Trả về true nếu vẫn còn chữ hoặc còn thẻ ảnh/video
         return $plain !== '';
     }
 
@@ -195,28 +256,16 @@ new class extends Component {
         $enTitle = trim($this->title_en) !== '';
         $viContent = $this->hasMeaningfulEditorContent($this->content_vi);
         $enContent = $this->hasMeaningfulEditorContent($this->content_en);
-
         $errors = [];
 
-        if ($viTitle xor $viContent) {
-            $errors[$viTitle ? 'content_vi' : 'title_vi'] = 'Tiếng Việt cần nhập đủ cả tiêu đề và nội dung.';
-        }
-
-        if ($enTitle xor $enContent) {
-            $errors[$enTitle ? 'content_en' : 'title_en'] = 'Tiếng Anh cần nhập đủ cả tiêu đề và nội dung.';
-        }
-
-        $hasVi = $viTitle && $viContent;
-        $hasEn = $enTitle && $enContent;
-
-        if (! $hasVi && ! $hasEn) {
+        if ($viTitle xor $viContent) $errors[$viTitle ? 'content_vi' : 'title_vi'] = 'Tiếng Việt cần nhập đủ cả tiêu đề và nội dung.';
+        if ($enTitle xor $enContent) $errors[$enTitle ? 'content_en' : 'title_en'] = 'Tiếng Anh cần nhập đủ cả tiêu đề và nội dung.';
+        if (!($viTitle && $viContent) && !($enTitle && $enContent)) {
             $errors['title_vi'] = 'Cần có ít nhất một ngôn ngữ đầy đủ (tiêu đề + nội dung).';
             $errors['title_en'] = 'Cần có ít nhất một ngôn ngữ đầy đủ (tiêu đề + nội dung).';
         }
 
-        if (! empty($errors)) {
-            throw ValidationException::withMessages($errors);
-        }
+        if (! empty($errors)) throw ValidationException::withMessages($errors);
     }
 
     public function mount(int $id): void
@@ -225,6 +274,11 @@ new class extends Component {
         $post       = Post::findOrFail($id);
         $this->author_id = $post->user_id;
         $this->authorizePostAccess($post);
+
+        if ($this->isReviewerOnly()) {
+            $this->redirectRoute('admin.posts.review', ['id' => $id], navigate: true);
+            return;
+        }
 
         $this->title_vi           = $post->getTranslation('title',           'vi', false) ?? '';
         $this->title_en           = $post->getTranslation('title',           'en', false) ?? '';
@@ -237,14 +291,14 @@ new class extends Component {
         $this->seo_description_vi = $post->getTranslation('seo_description', 'vi', false) ?? '';
         $this->seo_description_en = $post->getTranslation('seo_description', 'en', false) ?? '';
         $this->slug               = $post->slug ?? '';
-        $this->url = $post->client_url;
+        $this->url                = $post->client_url;
         $this->category_ids       = $post->categories()->pluck('categories.id')->map(fn ($id) => (int) $id)->toArray();
         if (empty($this->category_ids) && $post->category_id) {
             $this->category_ids = [(int) $post->category_id];
         }
         $this->status             = $post->status;
         $this->currentStatus      = $post->status;
-        $this->readOnlyPublished  = $post->status === 'published' && ! $this->canReview();
+        $this->readOnlyPublished  = $post->status === 'published' && ! $this->canReviewOriginalPost();
         $this->submitted_at       = $post->submitted_at?->format('d/m/Y H:i');
         $this->reviewed_at        = $post->reviewed_at?->format('d/m/Y H:i');
         $this->rejection_reason   = $post->rejection_reason;
@@ -262,55 +316,155 @@ new class extends Component {
     {
         $this->slug = Str::slug($value);
     }
+    public function updatedCategoryIds($value): void
+    {
+        if (empty($value)) {
+            $this->category_ids = [];
+            return;
+        }
+        if (!is_array($value)) {
+            $value = [$value];
+        }
+
+        $selectedIds = array_map(fn($id) => (int) $id, $value);
+        $categories = Category::all(); // Lấy cây danh mục
+        $allowedMap = array_flip($this->allowedCategoryIds()); // Chuyển quyền thành map O(1) để tra cứu siêu tốc
+        $finalIds = [];
+
+        foreach ($selectedIds as $id) {
+            $finalIds[] = $id; // Chắc chắn giữ lại danh mục con mà user vừa click
+
+            $curr = $categories->firstWhere('id', $id);
+
+            // Dò ngược lên các cấp cha
+            while ($curr && $curr->parent_id) {
+                $parentId = (int) $curr->parent_id;
+
+                // Nếu User có quyền viết ở danh mục cha này -> Tự động thêm vào mảng chọn
+                if (isset($allowedMap[$parentId])) {
+                    $finalIds[] = $parentId;
+                }
+
+                // Tiếp tục dò lên ông nội, cụ cố...
+                $curr = $categories->firstWhere('id', $parentId);
+            }
+        }
+
+        // Cập nhật lại mảng hiển thị lên UI (Loại bỏ các ID trùng lặp)
+        $this->category_ids = array_values(array_unique($finalIds));
+    }
 
     public function updated($property): void
     {
         $this->validateOnly($property);
     }
 
-    public function getCategoryOptionsProperty(): array
+    public function canToggleFeatured(): bool
     {
-        $categories = Category::query()
-//            ->where('is_active', true)
-            ->orderBy('order')
-            ->get();
-
-        return $this->flattenCategoryOptions($categories);
+        $user = auth()->user();
+        if (! $user) return false;
+        return $user->can('quan_ly_bai_viet') || $user->can('duyet_bai_viet');
     }
 
-    private function flattenCategoryOptions($categories, ?int $parentId = null, int $depth = 0): array
+    public function getStatusOptionsProperty(): array
     {
-        $options = [];
+        $allOptions = [
+            ['id' => 'draft',          'name' => 'Nháp'],
+            ['id' => 'pending_review', 'name' => 'Chờ duyệt'],
+            ['id' => 'rejected',       'name' => 'Từ chối'],
+            ['id' => 'published',      'name' => 'Đã đăng'],
+            ['id' => 'archived',       'name' => 'Lưu trữ'],
+        ];
 
-        foreach ($categories->where('parent_id', $parentId) as $category) {
-            $prefix = $depth > 0 ? str_repeat('— ', $depth) : '';
-
-            $options[] = [
-                'id' => $category->id,
-                'name' => $prefix . $category->getTranslatedName(),
+        // Đang lưu trữ thì chỉ được chọn xuất bản lại hoặc giữ nguyên
+        if ($this->currentStatus === 'archived') {
+            return [
+                ['id' => 'published', 'name' => 'Đã đăng'],
+                ['id' => 'archived',  'name' => 'Lưu trữ'],
             ];
-
-            $options = array_merge(
-                $options,
-                $this->flattenCategoryOptions($categories, (int) $category->id, $depth + 1)
-            );
         }
 
+        // Đã đăng quá 24h thì không được quay lùi về Nháp/Chờ duyệt/Từ chối nữa
+        if ($this->currentStatus === 'published') {
+            $post = Post::find($this->id);
+            $publishDate = $post->published_at ?? $post->created_at;
+
+            if ($publishDate && Carbon::parse($publishDate)->diffInHours(now()) > 24) {
+                return [
+                    ['id' => 'published', 'name' => 'Đã đăng'],
+                    ['id' => 'archived',  'name' => 'Lưu trữ'],
+                ];
+            }
+        }
+
+        return $allOptions;
+    }
+
+    public function getCategoryOptionsProperty(): array
+    {
+        $categories = Category::query()->orderBy('order')->get();
+        $allowedCategoryIds = $this->allowedCategoryIds();
+        $displayCategoryIds = array_unique(array_merge($allowedCategoryIds, $this->category_ids));
+
+        if ($displayCategoryIds === []) return [];
+
+        $allowedCategoryIds = array_map(fn($id) => (int) $id, $allowedCategoryIds);
+        $displayCategoryIds = array_map(fn($id) => (int) $id, $displayCategoryIds);
+
+        $allowedMap = array_flip($allowedCategoryIds);
+        $visibleMap = array_flip($displayCategoryIds);
+
+        foreach ($displayCategoryIds as $id) {
+            $curr = $categories->firstWhere('id', $id);
+            while ($curr && $curr->parent_id) {
+                $visibleMap[(int)$curr->parent_id] = true;
+                $curr = $categories->firstWhere('id', $curr->parent_id);
+            }
+        }
+        return $this->flattenCategoryOptions($categories, null, $allowedMap, $visibleMap, 0);
+    }
+
+    private function allowedCategoryIds(): array
+    {
+        $user = auth()->user();
+        if (! $user) return [];
+        if ($user->can('quan_ly_bai_viet') || $user->can('viet_bai_viet') || $user->can('duyet_bai_viet')) {
+            return Category::query()->orderBy('order')->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+        $writeIds = $user->scopedPostCategoryIds('viet_bai_viet') ?? [];
+        $reviewIds = $user->scopedPostCategoryIds('duyet_bai_viet') ?? [];
+
+        $merged = array_unique(array_merge($writeIds, $reviewIds));
+        return array_map(fn($id) => (int) $id, $merged);
+    }
+
+    private function flattenCategoryOptions($categories, ?int $parentId = null, array $allowedMap = [], array $visibleMap = [], int $depth = 0): array
+    {
+        $options = [];
+        $prefix = $depth > 0 ? str_repeat('—', $depth) . ' ' : '';
+        foreach ($categories->where('parent_id', $parentId) as $category) {
+            $label = $prefix . $category->getTranslatedName();
+            if (isset($visibleMap[$category->id])) {
+                $options[] = [
+                    'id' => $category->id,
+                    'name' => $label,
+                    'disabled' => !isset($allowedMap[$category->id]),
+                ];
+            }
+            $options = array_merge($options, $this->flattenCategoryOptions($categories, (int) $category->id, $allowedMap, $visibleMap, $depth + 1));
+        }
         return $options;
     }
 
     public function fillSeoEn(): void
     {
-        if (empty($this->seo_title_en))
-            $this->seo_title_en = $this->title_en ?: $this->title_vi;
-        if (empty($this->seo_description_en))
-            $this->seo_description_en = $this->excerpt_en ?: $this->excerpt_vi;
+        if (empty($this->seo_title_en)) $this->seo_title_en = $this->title_en ?: $this->title_vi;
+        if (empty($this->seo_description_en)) $this->seo_description_en = $this->excerpt_en ?: $this->excerpt_vi;
     }
 
     public function previewDraft(): void
     {
         $cacheKey = 'post_preview_' . $this->id . '_' . auth()->id();
-
         Cache::put($cacheKey, [
             'title'           => ['vi' => $this->title_vi,   'en' => $this->title_en],
             'content'         => ['vi' => $this->content_vi, 'en' => $this->content_en],
@@ -327,16 +481,12 @@ new class extends Component {
             'user_id'         => auth()->id(),
             'show_related_posts' => $this->show_related_posts,
         ], now()->addMinutes(30));
-
-        // Mở tab mới qua JS
         $this->dispatch('open-preview', url: route('admin.preview.post', ['id' => $this->id, 'draft' => 1]));
     }
 
     public function removeThumbnail(): void
     {
-        if ($this->currentThumbnail) {
-            Storage::disk('public')->delete($this->currentThumbnail);
-        }
+        if ($this->currentThumbnail) Storage::disk('public')->delete($this->currentThumbnail);
         $this->currentThumbnail = null;
         Post::where('id', $this->id)->update(['thumbnail' => null]);
         $this->success('Đã xóa ảnh thumbnail.');
@@ -344,51 +494,26 @@ new class extends Component {
 
     private function ensureFeaturedLimitForUpdate(Post $post): void
     {
-        if (! $this->canReview()) {
-            return;
-        }
-
-        // Chỉ tính quota cho bài featured + published.
+        if (! $this->canToggleFeatured()) return;
         $wasCounted = $post->is_featured && $post->status === 'published';
         $willBeCounted = $this->is_featured && $this->status === 'published';
+        if (! $willBeCounted || $wasCounted) return;
 
-        // Không tăng số lượng featured published thì không cần chặn.
-        if (! $willBeCounted || $wasCounted) {
-            return;
-        }
-
-        $featuredCount = Post::where('is_featured', true)
-            ->where('status', 'published')
-            ->count();
-
-        if ($featuredCount >= 5) {
-            throw ValidationException::withMessages([
-                'is_featured' => 'Chỉ được tối đa 5 bài viết nổi bật trong nhóm đã đăng (published).',
-            ]);
+        if (Post::where('is_featured', true)->where('status', 'published')->count() >= 5) {
+            throw ValidationException::withMessages(['is_featured' => 'Chỉ được tối đa 5 bài viết nổi bật.']);
         }
     }
 
     public function cleanEmptyHtmlLines(string $html): string
     {
-        // 1. Dọn dẹp khoảng trắng thông thường trước
         $html = trim($html);
-
-        // 2. Biểu thức Regex dọn dẹp các thẻ p rỗng, br, hoặc chứa &nbsp; ở ĐẦU và CUỐI chuỗi
-        $pattern = '/^(?:<p[^>]*>(?:\s|&nbsp;|<br\/?\s*>)*<\/p>\s*|<br\/?\s*>\s*)+|(?:<p[^>]*>(?:\s|&nbsp;|<br\/?\s*>)*<\/p>\s*|<br\/?\s*>\s*)+$/i';
-
-        // 3. Thực thi xóa
-        $cleanedHtml = preg_replace($pattern, '', $html);
-
-        return trim($cleanedHtml);
+        return trim(preg_replace('/^(?:<p[^>]*>(?:\s|&nbsp;|<br\/?\s*>)*<\/p>\s*|<br\/?\s*>\s*)+|(?:<p[^>]*>(?:\s|&nbsp;|<br\/?\s*>)*<\/p>\s*|<br\/?\s*>\s*)+$/i', '', $html));
     }
 
     private function enforceWriterDraftRules(Post $post): void
     {
-        if ($this->canReview()) {
-            return;
-        }
+        if ($this->canReviewOriginalPost()) return;
 
-        // Tác giả có thể lưu khi bài ở draft/pending/rejected nhưng không được đổi trạng thái.
         $this->status = $post->status;
         $this->published_at = null;
         $this->is_featured = false;
@@ -400,7 +525,7 @@ new class extends Component {
             'post_id' => $post->id,
             'action' => $action,
             'actor_id' => auth()->id(),
-            'reviewer_id' => $this->canReview() ? auth()->id() : null,
+            'reviewer_id' => $this->canReviewOriginalPost() ? auth()->id() : null,
             'note' => $note,
             'scheduled_publish_at' => $scheduledPublishAt,
         ]);
@@ -409,21 +534,13 @@ new class extends Component {
     public function submitForReview(): void
     {
         $post = Post::findOrFail($this->id);
-        $this->authorizePostAccess($post);
-
-        if ($this->canReview()) {
+        if ($this->canReviewOriginalPost()) {
             $this->warning('Bạn đang có quyền duyệt, không cần gửi chờ duyệt.');
             return;
         }
 
-//        if ($post->status === Post::APPROVAL_PENDING) {
-            $this->warning('Bài viết đã ở trạng thái chờ duyệt.');
-//            return;
-//        }
-
-        $this->save();
-
-        $post->refresh();
+        $this->persistData($post);
+        $wasPending = $post->status === Post::APPROVAL_PENDING;
         $isResubmitted = $post->status === Post::APPROVAL_REJECTED || $this->currentStatus === Post::APPROVAL_PENDING;
 
         $post->update([
@@ -440,24 +557,29 @@ new class extends Component {
         $this->reviewed_at = null;
         $this->rejection_reason = null;
 
-        $this->logApprovalHistory(
+        $this->logApprovalHistory($post, $isResubmitted ? 'resubmitted' : 'submitted', $isResubmitted ? 'Tác giả gửi lại duyệt.' : 'Tác giả gửi chờ duyệt.');
+        app(PostNotificationService::class)->notifySubmitted(
             $post,
-            $isResubmitted ? 'resubmitted' : 'submitted',
-            $isResubmitted ? 'Tác giả chỉnh sửa và gửi lại duyệt.' : 'Tác giả gửi bài chờ duyệt.'
+            auth()->user()?->name ?? '—'
         );
-
+        if (!$wasPending) {
+            $this->dispatch('post:pending-count-changed', delta: 1);
+        }
         $this->success('Đã gửi bài viết chờ duyệt!');
     }
 
     public function approvePost(): void
     {
-        abort_unless($this->canReview(), 403);
-
         $post = Post::findOrFail($this->id);
         $this->authorizePostAccess($post);
+        $this->persistData($post);
 
-        $publishAt = $this->published_at ? Carbon::parse($this->published_at) : now();
-
+        if (!$this->canReviewOriginalPost()) {
+            $this->warning('Bài viết đã lưu nhưng bạn không có quyền Duyệt bài này.');
+            return;
+        }
+        $safeDate = str_replace('/', '-', $this->published_at);
+        $publishAt = $this->published_at ? Carbon::parse($safeDate) : now();
         $post->update([
             'status' => 'published',
             'published_at' => $publishAt,
@@ -471,26 +593,26 @@ new class extends Component {
         $this->reviewed_at = now()->format('d/m/Y H:i');
         $this->rejection_reason = null;
 
-        $this->logApprovalHistory(
+        $this->logApprovalHistory($post, 'approved', 'Duyệt bài viết.', $publishAt->toDateTimeString());
+        app(PostNotificationService::class)->notifyApproved(
             $post,
-            'approved',
-            'Duyệt bài viết.',
-            $publishAt->toDateTimeString()
+            auth()->user()?->name ?? '—'
         );
-
+        $this->dispatch('post:pending-count-changed', delta: -1);
         $this->success($publishAt->greaterThan(now()) ? 'Đã duyệt và lên lịch đăng bài.' : 'Đã duyệt và đăng bài viết.');
     }
 
     public function rejectPost(): void
     {
-        abort_unless($this->canReview(), 403);
-
-        $this->validate([
-            'reviewNote' => 'required|string|min:5|max:1000',
-        ]);
-
+        $this->validate(['reviewNote' => 'required|string|min:5|max:1000']);
         $post = Post::findOrFail($this->id);
         $this->authorizePostAccess($post);
+        $this->persistData($post);
+
+        if (!$this->canReviewOriginalPost()) {
+            $this->warning('Bài viết đã lưu nhưng bạn không có quyền Từ chối bài này.');
+            return;
+        }
 
         $post->update([
             'status' => Post::APPROVAL_REJECTED,
@@ -508,90 +630,68 @@ new class extends Component {
 
         $this->logApprovalHistory($post, 'rejected', $this->reviewNote);
         $this->reviewNote = '';
-
+        app(PostNotificationService::class)->notifyRejected(
+            $post,
+            auth()->user()?->name ?? '—',
+            $this->rejection_reason ?? ''
+        );
+        $this->dispatch('post:pending-count-changed', delta: -1);
         $this->warning('Đã từ chối bài viết.');
     }
 
-    public function save(): void
+    private function persistData(Post $post): void
     {
-        $post = Post::findOrFail($this->id);
-        $this->authorizePostAccess($post);
+        $allowedIds = $this->allowedCategoryIds();
+        $originalCategoryIdsFromDB = $post->categories()->pluck('categories.id')->map(fn($id) => (int)$id)->toArray();
+        $lockedCategoryIds = array_diff($originalCategoryIdsFromDB, $allowedIds);
 
-        if ($post->status === 'published' && ! $this->canReview()) {
-            $this->warning('Bạn chỉ có quyền xem bài đã đăng, không thể lưu thay đổi.');
-            return;
-        }
+        $newValidCategoryIds = array_intersect($this->category_ids, $allowedIds);
+        $finalCategoryIds = array_unique(array_merge($lockedCategoryIds, $newValidCategoryIds));
 
-        try {
-            $this->enforceWriterDraftRules($post);
-        } catch (ValidationException $e) {
-            $this->error('Bạn không thể cập nhật bài viết ở trạng thái hiện tại.');
-            throw $e;
-        }
+        $this->category_ids = $finalCategoryIds;
 
-        try {
-            $this->validate();
-            $this->validateLocalizedContent();
-            $this->ensureFeaturedLimitForUpdate($post);
-        } catch (ValidationException $e) {
-            $this->error('Vui lòng kiểm tra lại thông tin đã nhập.');
-            throw $e;
-        }
+        $this->validate();
+        $this->validateLocalizedContent();
+
+        // KIỂM TRA QUYỀN MỚI
+        $this->validateCategoryPermissions($finalCategoryIds, $originalCategoryIdsFromDB);
 
         $thumbnailPath = $this->currentThumbnail;
-
-        try {
-            $this->ensureFeaturedLimitForUpdate($post);
-        } catch (ValidationException $e) {
-            $this->error('Không thể cập nhật bài nổi bật.');
-            throw $e;
-        }
-
         if ($this->thumbnail) {
             if ($thumbnailPath) Storage::disk('public')->delete($thumbnailPath);
             $thumbnailPath = $this->thumbnail->store('uploads/posts', 'public');
         }
 
         $primaryCategoryId = $this->category_ids[0] ?? null;
-
-        // Xử lý ảnh ngoài cho nội dung bài viết
         $contentImageService = app(ContentImageService::class);
-        $content_vi = $contentImageService->downloadAndReplaceExternalImages($this->content_vi);
-        $content_vi = $contentImageService->downloadDocuments($content_vi);
-        $content_en = $contentImageService->downloadAndReplaceExternalImages($this->content_en);
-        $content_en = $contentImageService->downloadDocuments($content_en);
-        $content_vi = $this->cleanEmptyHtmlLines($content_vi);
-        $content_en = $this->cleanEmptyHtmlLines($content_en);
+        $content_vi = $this->cleanEmptyHtmlLines($contentImageService->downloadDocuments($contentImageService->downloadAndReplaceExternalImages($this->content_vi)));
+        $content_en = $this->cleanEmptyHtmlLines($contentImageService->downloadDocuments($contentImageService->downloadAndReplaceExternalImages($this->content_en)));
 
-        $nextStatus = $this->canReview() ? $this->status : $post->status;
-        $nextPublishedAt = $nextStatus === 'published' ? ($this->published_at ?? now()) : null;
+        $post->setTranslation('title', 'vi', $this->title_vi);
+        $post->setTranslation('title', 'en', $this->title_en);
+        $post->setTranslation('content', 'vi', $content_vi);
+        $post->setTranslation('content', 'en', $content_en);
 
-        $post->update([
-            'title'   => [
-                'vi' => $this->title_vi,
-                'en' => $this->title_en,
-            ],
-            'content' => [
-                'vi' => $content_vi,
-                'en' => $content_en,
-            ],
-            'excerpt' => $this->excerpt_vi || $this->excerpt_en
-                ? ['vi' => $this->excerpt_vi, 'en' => $this->excerpt_en]
-                : null,
-            'slug'         => $this->slug,
-            // Keep legacy category_id for backward compatibility (first selected category).
-            'category_id'  => $primaryCategoryId,
-            'status'       => $nextStatus,
-            'is_featured'  => $this->canReview() ? $this->is_featured : false,
-            'published_at' => $nextPublishedAt,
-            'seo_title' => $this->seo_title_vi || $this->seo_title_en
-                ? ['vi' => $this->seo_title_vi, 'en' => $this->seo_title_en]
-                : null,
-            'seo_description' => $this->seo_description_vi || $this->seo_description_en
-                ? ['vi' => $this->seo_description_vi, 'en' => $this->seo_description_en]
-                : null,
-            'user_id'   => $post->user_id ?? Auth::id(),
-            'thumbnail' => $thumbnailPath  ? $thumbnailPath : null,
+        if ($this->excerpt_vi !== '' || $this->excerpt_en !== '') {
+            $post->setTranslation('excerpt', 'vi', $this->excerpt_vi);
+            $post->setTranslation('excerpt', 'en', $this->excerpt_en);
+        }
+
+        if ($this->seo_title_vi !== '' || $this->seo_title_en !== '') {
+            $post->setTranslation('seo_title', 'vi', $this->seo_title_vi);
+            $post->setTranslation('seo_title', 'en', $this->seo_title_en);
+        }
+
+        if ($this->seo_description_vi !== '' || $this->seo_description_en !== '') {
+            $post->setTranslation('seo_description', 'vi', $this->seo_description_vi);
+            $post->setTranslation('seo_description', 'en', $this->seo_description_en);
+        }
+
+        $post->fill([
+            'slug' => $this->slug,
+            'category_id' => $primaryCategoryId,
+            'is_featured' => $this->canToggleFeatured() ? $this->is_featured : $post->is_featured,
+            'thumbnail' => $thumbnailPath ?: null,
             'show_author' => $this->show_author,
             'show_published_at' => $this->show_published_at,
             'show_views' => $this->show_views,
@@ -599,208 +699,132 @@ new class extends Component {
             'show_related_posts' => $this->show_related_posts,
         ]);
 
-        $post->categories()->sync($this->category_ids);
+        $post->save();
+
+        $post->categories()->sync($finalCategoryIds);
+        $this->currentThumbnail = $thumbnailPath;
+    }
+
+    public function save(): void
+    {
+        $post = Post::findOrFail($this->id);
+        $this->authorizePostAccess($post);
+
+        if ($post->status === 'published' && ! $this->canReviewOriginalPost()) {
+            $this->warning('Bạn chỉ có quyền xem bài đã đăng, không thể lưu thay đổi.');
+            return;
+        }
+
+        try {
+            $this->enforceWriterDraftRules($post);
+            $this->ensureFeaturedLimitForUpdate($post);
+        } catch (ValidationException $e) {
+            $this->error('Vui lòng kiểm tra lại thông tin đã nhập.');
+            throw $e;
+        }
+
+        $nextStatus = $this->canReviewOriginalPost() ? $this->status : $post->status;
+        if ($post->status === Post::APPROVAL_PENDING && in_array($nextStatus, ['published', 'rejected'])) {
+            $this->warning('Vui lòng sử dụng các nút bên trong khối "Duyệt bài viết" để thao tác chính xác!');
+            return;
+        }
+        $this->persistData($post);
+
+        $nextPublishedAt = null;
+        if ($nextStatus === 'published') {
+            $safeDate = str_replace('/', '-', $this->published_at);
+            $nextPublishedAt = $this->published_at ? Carbon::parse($safeDate) : now();
+        } elseif ($nextStatus === 'archived') {
+            $nextPublishedAt = $post->published_at;
+        }
+        $post->update(['status' => $nextStatus, 'published_at' => $nextPublishedAt]);
         $this->currentStatus = $nextStatus;
         $this->status = $nextStatus;
-        $this->published_at = $nextPublishedAt ? Carbon::parse($nextPublishedAt)->format('Y-m-d\\TH:i') : null;
+        $this->published_at = $nextPublishedAt ? Carbon::parse($nextPublishedAt)->format('Y-m-d\TH:i') : null;
 
         $this->success('Cập nhật bài viết thành công!');
     }
 
     public function getApprovalHistoriesProperty()
     {
-        return PostApprovalHistory::query()
-            ->with(['actor', 'reviewer'])
-            ->where('post_id', $this->id)
-            ->latest()
-            ->limit(10)
-            ->get();
+        return PostApprovalHistory::query()->with(['actor', 'reviewer'])->where('post_id', $this->id)->latest()->limit(10)->get();
     }
 };
 ?>
 
 <div x-data x-on:open-preview.window="window.open($event.detail.url, '_blank')">
     <x-slot:title>Chỉnh sửa bài viết</x-slot:title>
-
     <x-slot:breadcrumb>
         <a href="{{ route('admin.post.index') }}" class="font-semibold text-slate-700" wire:navigate>Danh sách bài viết</a>
-        <span class="mx-1">/</span>
-        <span>Chỉnh sửa bài viết</span>
+        <span class="mx-1">/</span><span>Chỉnh sửa bài viết</span>
     </x-slot:breadcrumb>
-
     <x-header title="Chỉnh sửa bài viết" class="pb-3 mb-5! border-b border-gray-300"/>
 
     <div class="grid lg:grid-cols-12 gap-5 custom-form-admin text-[14px]!">
-
-        {{-- ===================== MAIN ===================== --}}
+        {{-- MAIN --}}
         <div class="col-span-12 lg:col-span-9 flex flex-col gap-5">
             <x-tabs wire:model="selectedTab">
-                {{-- ================= TAB TIẾNG VIỆT ================= --}}
                 <x-tab name="tab-vi" label="Tiếng Việt" class="pt-2!">
-                    <div x-data="{ open: true }"
-                         class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-
-                        {{-- HEADER KHỐI --}}
+                    <div x-data="{ open: true }" class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                            <button type="button"
-                                    class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition"
-                                    @click="open = !open">
-                                Nội dung bài viết
-                            </button>
-
-                            <div class="flex items-center gap-1">
-                                <x-icon name="o-chevron-down"
-                                        class="w-5 h-5 cursor-pointer transition-transform"
-                                        x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/>
-                            </div>
+                            <button type="button" class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition" @click="open = !open">Nội dung bài viết</button>
+                            <div class="flex items-center gap-1"><x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/></div>
                         </div>
-
-                        {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input wire:model.live.debounce.400ms="title_vi" label="Tiêu đề"
-                                     placeholder="VD: Thông báo tuyển sinh 2025"
-                            />
-{{--                            <x-input label="Đường dẫn" wire:model.live.debounce.1000ms="slug"--}}
-{{--                                     placeholder="thong-bao-tuyen-sinh-2025"--}}
-{{--                                     hint="Tự động sinh từ tiêu đề tiếng Việt. Chỉ gồm chữ thường, số và dấu gạch ngang." required--}}
-{{--                            />--}}
-                            <x-textarea wire:model="excerpt_vi"
-                                        placeholder="Mô tả ngắn" rows="3"
-                                        hint="Tối đa 500 ký tự"
-                                        label="Mô tả ngắn"
-                            />
-                            <x-editor
-                                wire:model="content_vi"
-                                :config="config('tinymce')"
-                                class="h-full"
-                                label="Nội dung chi tiết"
-                                folder="uploads/posts/editor"
-                            />
+                            <x-input wire:model.live.debounce.400ms="title_vi" label="Tiêu đề" placeholder="VD: Thông báo tuyển sinh 2025"/>
+                            <x-textarea wire:model="excerpt_vi" placeholder="Mô tả ngắn" rows="3" hint="Tối đa 500 ký tự" label="Mô tả ngắn"/>
+                            <x-editor wire:model="content_vi" :config="config('tinymce')" class="h-full" label="Nội dung chi tiết" folder="uploads/posts/editor"/>
                         </div>
-
                     </div>
-                    <div x-data="{ open: true }"
-                         class="mt-4 border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-
-                        {{-- HEADER KHỐI --}}
+                    <div x-data="{ open: true }" class="mt-4 border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                            <button type="button"
-                                    class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition"
-                                    @click="open = !open">
-                                SEO
-                            </button>
-
-                            <div class="flex items-center gap-1">
-                                <x-icon name="o-chevron-down"
-                                        class="w-5 h-5 cursor-pointer transition-transform"
-                                        x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/>
-                            </div>
+                            <button type="button" class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition" @click="open = !open">SEO</button>
+                            <div class="flex items-center gap-1"><x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/></div>
                         </div>
-
-                        {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
                             <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-md text-blue-700 space-y-1">
-                                <p>💡 <strong>SEO Tiêu đề </strong> hiển thị trên tab trình duyệt và kết quả Google — <strong>khác với tiêu đề bài viết</strong>. Nên ngắn gọn, chứa từ khóa chính, dưới 60 ký tự.</p>
-                                <p>💡 <strong>SEO Mô tả</strong> là dòng mô tả hiện dưới tiêu đề trên Google — <strong>khác với tóm tắt</strong> hiển thị trên website. Nên dưới 160 ký tự.</p>
+                                <p>💡 <strong>SEO Tiêu đề </strong> hiển thị trên tab trình duyệt và kết quả Google.</p>
+                                <p>💡 <strong>SEO Mô tả</strong> là dòng mô tả hiện dưới tiêu đề trên Google.</p>
                             </div>
                             <div class="flex flex-col gap-3">
                                 <div>
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="fieldset-legend">SEO Tiêu đề</span>
-                                        <button type="button"
-                                                wire:click="$set('seo_title_vi', $wire.title_vi)"
-                                                class="text-sm text-primary hover:underline">
-                                            ↖ Lấy từ tiêu đề
-                                        </button>
+                                        <button type="button" wire:click="$set('seo_title_vi', $wire.title_vi)" class="text-sm text-primary hover:underline">↖ Lấy từ tiêu đề</button>
                                     </div>
                                     <x-input wire:model="seo_title_vi" placeholder="Để trống = dùng tiêu đề bài viết"/>
-                                    <p class="text-sm text-gray-400 mt-1">
-                                        {{ mb_strlen($seo_title_vi) }}/60 ký tự
-                                        @if(mb_strlen($seo_title_vi) > 60) <span class="text-warning">— nên dưới 60</span> @endif
-                                    </p>
+                                    <p class="text-sm text-gray-400 mt-1">{{ mb_strlen($seo_title_vi) }}/60 ký tự @if(mb_strlen($seo_title_vi) > 60) <span class="text-warning">— nên dưới 60</span> @endif</p>
                                 </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="fieldset-legend">SEO Mô tả</span>
-                                        <button type="button"
-                                                wire:click="$set('seo_description_vi', $wire.excerpt_vi)"
-                                                class="text-sm text-primary hover:underline">
-                                            ↖ Lấy từ tóm tắt
-                                        </button>
+                                        <button type="button" wire:click="$set('seo_description_vi', $wire.excerpt_vi)" class="text-sm text-primary hover:underline">↖ Lấy từ tóm tắt</button>
                                     </div>
-                                    <x-textarea wire:model="seo_description_vi" rows="2"
-                                                placeholder="Để trống = dùng tóm tắt bài viết"/>
-                                    <p class="text-sm text-gray-400 mt-1">
-                                        {{ mb_strlen($seo_description_vi) }}/160 ký tự
-                                        @if(mb_strlen($seo_description_vi) > 160) <span class="text-warning">— nên dưới 160</span> @endif
-                                    </p>
+                                    <x-textarea wire:model="seo_description_vi" rows="2" placeholder="Để trống = dùng tóm tắt bài viết"/>
+                                    <p class="text-sm text-gray-400 mt-1">{{ mb_strlen($seo_description_vi) }}/160 ký tự @if(mb_strlen($seo_description_vi) > 160) <span class="text-warning">— nên dưới 160</span> @endif</p>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </x-tab>
 
-                {{-- ================= TAB TIẾNG ANH ================= --}}
                 <x-tab name="tab-en" label="Tiếng Anh" class="pt-2!">
-                    <div x-data="{ open: true }"
-                         class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-
-                        {{-- HEADER KHỐI --}}
+                    <div x-data="{ open: true }" class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                            <button type="button"
-                                    class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition"
-                                    @click="open = !open">
-                                Nội dung bài viết (Tiếng Anh)
-                            </button>
-
-                            <div class="flex items-center gap-1">
-                                <x-icon name="o-chevron-down"
-                                        class="w-5 h-5 cursor-pointer transition-transform"
-                                        x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/>
-                            </div>
+                            <button type="button" class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition" @click="open = !open">Nội dung bài viết (Tiếng Anh)</button>
+                            <div class="flex items-center gap-1"><x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/></div>
                         </div>
-
-                        {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input wire:model.live.debounce.400ms="title_en" label="Tiêu đề (Tiếng Anh)"
-                                     placeholder="Ex: Admission announcement 2025"
-                            />
-                            <x-textarea wire:model="excerpt_en"
-                                        placeholder="Short description" rows="3"
-                                        hint="Max 500 characters"
-                                        label="Mô tả ngắn (Tiếng Anh)"
-                            />
-                            <x-editor
-                                wire:model="content_en"
-                                :config="config('tinymce')"
-                                class="h-full"
-                                label="Nội dung chi tiết (Tiếng Anh)"
-                                folder="uploads/posts/editor"
-                            />
+                            <x-input wire:model.live.debounce.400ms="title_en" label="Tiêu đề (Tiếng Anh)" placeholder="Ex: Admission announcement 2025"/>
+                            <x-textarea wire:model="excerpt_en" placeholder="Short description" rows="3" hint="Max 500 characters" label="Mô tả ngắn (Tiếng Anh)"/>
+                            <x-editor wire:model="content_en" :config="config('tinymce')" class="h-full" label="Nội dung chi tiết (Tiếng Anh)" folder="uploads/posts/editor"/>
                         </div>
-
                     </div>
-
-                    <div x-data="{ open: true }"
-                         class="mt-4 border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-
-                        {{-- HEADER KHỐI --}}
+                    <div x-data="{ open: true }" class="mt-4 border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                            <button type="button"
-                                    class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition"
-                                    @click="open = !open">
-                                SEO (Tiếng Anh)
-                            </button>
-
-                            <div class="flex items-center gap-1">
-                                <x-icon name="o-chevron-down"
-                                        class="w-5 h-5 cursor-pointer transition-transform"
-                                        x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/>
-                            </div>
+                            <button type="button" class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition" @click="open = !open">SEO (Tiếng Anh)</button>
+                            <div class="flex items-center gap-1"><x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="open ? 'rotate-180' : ''" @click="open = !open"/></div>
                         </div>
-
-                        {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
                             <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4 text-md text-blue-700 space-y-1">
                                 <p><strong>SEO Tiêu đề</strong> hiển thị trên tab trình duyệt và kết quả Google (khác tiêu đề bài viết).</p>
@@ -810,59 +834,38 @@ new class extends Component {
                                 <div>
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="fieldset-legend">SEO Tiêu đề</span>
-                                        <button type="button"
-                                                wire:click="$set('seo_title_en', $wire.title_en)"
-                                                class="text-sm text-primary hover:underline">
-                                            ↖ Lấy từ Tiêu đề (Tiếng Anh)
-                                        </button>
+                                        <button type="button" wire:click="$set('seo_title_en', $wire.title_en)" class="text-sm text-primary hover:underline">↖ Lấy từ Tiêu đề (Tiếng Anh)</button>
                                     </div>
                                     <x-input wire:model="seo_title_en" placeholder="Để trống = dùng title bài viết"/>
-                                    <p class="text-sm text-gray-400 mt-1">
-                                        {{ mb_strlen($seo_title_en) }}/60 ký tự
-                                        @if(mb_strlen($seo_title_en) > 60) <span class="text-warning">— nên dưới 60</span> @endif
-                                    </p>
+                                    <p class="text-sm text-gray-400 mt-1">{{ mb_strlen($seo_title_en) }}/60 ký tự @if(mb_strlen($seo_title_en) > 60) <span class="text-warning">— nên dưới 60</span> @endif</p>
                                 </div>
                                 <div>
                                     <div class="flex items-center justify-between mb-1">
                                         <span class="fieldset-legend">SEO Mô tả</span>
-                                        <button type="button"
-                                                wire:click="$set('seo_description_en', $wire.excerpt_en)"
-                                                class="text-sm text-primary hover:underline">
-                                            ↖ Lấy từ Mô tả ngắn (Tiếng Anh)
-                                        </button>
+                                        <button type="button" wire:click="$set('seo_description_en', $wire.excerpt_en)" class="text-sm text-primary hover:underline">↖ Lấy từ Mô tả ngắn (Tiếng Anh)</button>
                                     </div>
-                                    <x-textarea wire:model="seo_description_en" rows="2"
-                                                placeholder="Để trống = dùng short description bài viết"/>
-                                    <p class="text-sm text-gray-400 mt-1">
-                                        {{ mb_strlen($seo_description_en) }}/160 ký tự
-                                        @if(mb_strlen($seo_description_en) > 160) <span class="text-warning">— nên dưới 160</span> @endif
-                                    </p>
+                                    <x-textarea wire:model="seo_description_en" rows="2" placeholder="Để trống = dùng short description bài viết"/>
+                                    <p class="text-sm text-gray-400 mt-1">{{ mb_strlen($seo_description_en) }}/160 ký tự @if(mb_strlen($seo_description_en) > 160) <span class="text-warning">— nên dưới 160</span> @endif</p>
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </x-tab>
-
             </x-tabs>
             <x-card title="Lịch sử duyệt bài viết" shadow class="p-3!">
                 @forelse($this->approvalHistories as $history)
+                    @php
+                        $historyTitleClass = match($history->action) {
+                            'approved' => 'text-md font-bold text-green-600',
+                            'rejected' => 'text-md font-bold text-red-600',
+                            default => 'text-md font-bold text-gray-700',
+                        };
+                    @endphp
                     <div class="py-2 border-b border-gray-100 last:border-b-0">
-                        <div class="text-md font-bold @if($history->action === 'approved') text-green-600 @elseif($history->action === 'rejected') text-red-600 @else text-gray-700 @endif">
-                            {{ __(ucfirst(str_replace('_', ' ', $history->action))) }}
-                        </div>
-                        <div class="text-sm text-gray-500">
-                            {{ $history->created_at?->format('d/m/Y H:i') }}
-                            @if($history->actor)
-                                - {{ $history->actor->name }}
-                            @endif
-                        </div>
-                        @if($history->scheduled_publish_at)
-                            <div class="text-sm text-gray-500">Lên lịch: {{ $history->scheduled_publish_at->format('d/m/Y H:i') }}</div>
-                        @endif
-                        @if($history->note)
-                            <div class="text-sm text-gray-700 mt-1"> <span class="text-md font-semibold">Nội dung: </span>{{ $history->note }}</div>
-                        @endif
+                        <div class="{{ $historyTitleClass }}">{{ __(ucfirst(str_replace('_', ' ', $history->action))) }}</div>
+                        <div class="text-sm text-gray-500">{{ $history->created_at?->format('d/m/Y H:i') }} @if($history->actor) - {{ $history->actor->name }} @endif</div>
+                        @if($history->scheduled_publish_at) <div class="text-sm text-gray-500">Lên lịch: {{ $history->scheduled_publish_at->format('d/m/Y H:i') }}</div> @endif
+                        @if($history->note) <div class="text-sm text-gray-700 mt-1"> <span class="text-md font-semibold">Nội dung: </span>{{ $history->note }}</div> @endif
                     </div>
                 @empty
                     <div class="text-md text-gray-500">Chưa có lịch sử duyệt.</div>
@@ -870,249 +873,142 @@ new class extends Component {
             </x-card>
         </div>
 
-        {{-- ===================== SIDEBAR ===================== --}}
+        {{-- SIDEBAR --}}
         <div class="col-span-12 lg:col-span-3 flex flex-col gap-5">
-
-            {{-- Hành động --}}
             <x-card title="Hành động" shadow separator class="p-3!">
-                {{-- 1. TRƯỜNG HỢP: NGƯỜI DUYỆT BÀI --}}
-                @if($this->canReview())
-                    @if($currentStatus === \App\Models\Post::APPROVAL_PENDING)
-{{--                        <x-button label="Đang chờ duyệt" class="bg-warning text-white w-full my-1" disabled/>--}}
-                        <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
-                    @elseif($currentStatus === 'published')
-                        <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
-                        <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                @if($this->canReviewOriginalPost())
+                    @if($this->isReviewerOnly())
+                        <x-button label="Chỉ duyệt (Không có quyền sửa)" class="bg-gray-400 text-white w-full my-1" disabled/>
                     @else
-                        <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                        @if($currentStatus === \App\Models\Post::APPROVAL_PENDING)
+                            <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                        @elseif($currentStatus === 'published')
+                            <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                            @if(!$this->isScheduledPublished())
+                                <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                            @endif
+                        @else
+                            <x-button label="Lưu thay đổi" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                        @endif
                     @endif
-
-                    {{-- 2. TRƯỜNG HỢP: CHÍNH TÁC GIẢ BÀI VIẾT --}}
                 @elseif($this->isAuthor())
                     @if($currentStatus === 'published')
                         <x-button label="Chỉ xem (Đã xuất bản)" class="bg-gray-400 text-white w-full my-1" disabled/>
-                        <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                        @if(!$this->isScheduledPublished())
+                            <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                        @endif
                     @elseif($currentStatus === \App\Models\Post::APPROVAL_PENDING)
                         <x-button label="Đã gửi duyệt (Đang chờ)" class="bg-gray-400 text-white w-full my-1" disabled/>
-                        <x-button
-                            :label="$currentStatus === \App\Models\Post::APPROVAL_PENDING ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'"
-                            class="bg-success text-white w-full my-1"
-                            wire:click="submitForReview"
-                            spinner="submitForReview"
-                        />
+                        <x-button :label="$currentStatus === \App\Models\Post::APPROVAL_PENDING ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'" class="bg-success text-white w-full my-1" wire:click="submitForReview" spinner="submitForReview"/>
                     @else
-                        {{-- Nháp hoặc bị từ chối --}}
-                        <x-button label="Lưu bản nháp" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
-                        <x-button
-                            :label="$currentStatus === \App\Models\Post::APPROVAL_REJECTED ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'"
-                            class="bg-success text-white w-full my-1"
-                            wire:click="submitForReview"
-                            spinner="submitForReview"
-                        />
+                        <x-button label="Lưu" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
+                        <x-button :label="$currentStatus === \App\Models\Post::APPROVAL_REJECTED ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'" class="bg-success text-white w-full my-1" wire:click="submitForReview" spinner="submitForReview"/>
                     @endif
-
-                    {{-- 3. TRƯỜNG HỢP: NGƯỜI XEM BÌNH THƯỜNG (Không phải tác giả, không có quyền duyệt) --}}
                 @else
                     <x-button label="Chỉ xem (Không có quyền sửa)" class="bg-gray-400 text-white w-full my-1" disabled/>
                     @if($currentStatus === 'published')
-                        <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                        @if(!$this->isScheduledPublished())
+                            <x-button label="Xem bài viết" class="bg-info text-white w-full my-1" link="{{$url}}" external="true"/>
+                        @endif
                     @endif
                 @endif
 
-                @if($currentStatus !== 'published' && $this->isAuthor() || $this->canReview())
+                @if(($currentStatus !== 'published' && $this->isAuthor()) || $this->canReviewOriginalPost())
                     <x-button label="Xem trước" class="bg-warning text-white w-full my-1" wire:click="previewDraft" spinner="previewDraft"/>
                 @endif
             </x-card>
+
             @if($currentStatus === \App\Models\Post::APPROVAL_PENDING || $currentStatus === \App\Models\Post::APPROVAL_REJECTED || $currentStatus === 'published')
                 <x-card title="Duyệt bài viết" shadow class="p-3!">
-                @php
-                    $approvalMap = [
-                        \App\Models\Post::APPROVAL_PENDING => ['label' => 'Chờ duyệt', 'class' => 'badge-warning'],
-                        \App\Models\Post::APPROVAL_REJECTED => ['label' => 'Bị từ chối', 'class' => 'badge-error'],
-                        'published' => ['label' => 'Đã duyệt', 'class' => 'badge-success'],
-                    ];
-                    $approval = $approvalMap[$currentStatus] ?? null;
-                @endphp
+                    @php
+                        $approvalMap = [
+                            \App\Models\Post::APPROVAL_PENDING => ['label' => 'Chờ duyệt', 'class' => 'badge-warning'],
+                            \App\Models\Post::APPROVAL_REJECTED => ['label' => 'Bị từ chối', 'class' => 'badge-error'],
+                            'published' => ['label' => 'Đã duyệt', 'class' => 'badge-success'],
+                        ];
+                        $approval = $approvalMap[$currentStatus] ?? null;
+                    @endphp
+                    @if($approval) <x-badge :value="$approval['label']" class="{{ $approval['class'] }} text-white font-semibold"/> @endif
+                    @if($submitted_at) <p class="text-sm text-gray-500 mt-2">Gửi duyệt lúc: {{ $submitted_at }}</p> @endif
+                    @if($reviewed_at) <p class="text-sm text-gray-500">Xử lý lúc: {{ $reviewed_at }}</p> @endif
+                    @if($status === \App\Models\Post::APPROVAL_REJECTED && $rejection_reason)
+                        <div class="mt-3 text-md bg-red-50 border border-red-200 text-red-700 rounded p-2"><strong>Lý do từ chối:</strong> {{ $rejection_reason }}</div>
+                    @endif
 
-                @if($approval && $reviewed_at)
-                    <x-badge :value="$approval['label']" class="{{ $approval['class'] }} text-white font-semibold"/>
-                @else
-                    <span class="text-md text-gray-500">Chưa gửi duyệt</span>
-                @endif
-
-                @if($submitted_at)
-                    <p class="text-sm text-gray-500 mt-2">Gửi duyệt lúc: {{ $submitted_at }}</p>
-                @endif
-
-                @if($reviewed_at)
-                    <p class="text-sm text-gray-500">Xử lý lúc: {{ $reviewed_at }}</p>
-                @endif
-
-                @if($status === \App\Models\Post::APPROVAL_REJECTED && $rejection_reason)
-                    <div class="mt-3 text-md bg-red-50 border border-red-200 text-red-700 rounded p-2">
-                        <strong>Lý do từ chối:</strong> {{ $rejection_reason }}
-                    </div>
-                @endif
-
-                @if($this->canReview() && $currentStatus === \App\Models\Post::APPROVAL_PENDING)
-                    <div class="mt-3 space-y-2">
-                        <x-input
-                            label="Lên lịch đăng (tùy chọn)"
-                            type="datetime-local"
-                            wire:model="published_at"
-                            hint="Để trống để đăng ngay khi duyệt"
-                        />
-
-                        <x-textarea
-                            wire:model="reviewNote"
-                            rows="3"
-                            label="Ghi chú duyệt / lý do từ chối"
-                            placeholder="Nhập ghi chú cho tác giả..."
-                        />
-
-                        <x-button label="Duyệt bài" class="bg-success text-white w-full"
-                                  wire:click="approvePost" spinner="approvePost"/>
-                        <x-button label="Từ chối bài" class="bg-error text-white w-full"
-                                  wire:click="rejectPost" spinner="rejectPost"/>
-                    </div>
-                @endif
-            </x-card>
+                    @if($this->canReviewOriginalPost() && $currentStatus === \App\Models\Post::APPROVAL_PENDING)
+                        <div class="mt-3 space-y-2">
+                            <x-input label="Lên lịch đăng (tùy chọn)" type="datetime-local" wire:model="published_at" hint="Để trống để đăng ngay khi duyệt"/>
+                            <x-textarea wire:model="reviewNote" rows="3" label="Ghi chú duyệt / lý do từ chối" placeholder="Nhập ghi chú cho tác giả..."/>
+                            <x-button label="Lưu nội dung & Duyệt bài" class="bg-success text-white w-full" wire:click="approvePost" spinner="approvePost"/>
+                            <x-button label="Lưu nội dung & Từ chối bài" class="bg-error text-white w-full" wire:click="rejectPost" spinner="rejectPost"/>
+                        </div>
+                    @endif
+                </x-card>
             @endif
-            {{-- Xuất bản --}}
+
             <x-card title="Xuất bản" shadow class="p-3!">
-                <x-input label="Đường dẫn" wire:model.live.debounce.1000ms="slug"
-                         placeholder="thong-bao-tuyen-sinh-2025"
-                    required
-                />
-                @if($this->canReview() && $this->isAuthor() || $currentStatus === 'published' || $currentStatus === 'archived')
-                    <x-select label="Trạng thái" wire:model.live="status"
-                              :options="$statusOptions"
-                              option-value="id" option-label="name"
-                    class="mt-2"/>
-                @else
-{{--                    <div class="text-md text-gray-600 bg-gray-50 border border-gray-200 rounded p-3 mt-2">--}}
-{{--                        Bạn chỉ có thể chỉnh sửa bản nháp và gửi chờ duyệt.--}}
-{{--                    </div>--}}
+                <x-input label="Đường dẫn" wire:model.live.debounce.1000ms="slug" placeholder="thong-bao-tuyen-sinh-2025" required/>
+                @if(($this->canReviewOriginalPost() && $this->isAuthor()) || $currentStatus === 'published' || $currentStatus === 'archived')
+                    <x-select label="Trạng thái" wire:model.live="status" :options="$this->statusOptions" option-value="id" option-label="name" class="mt-2"/>
                 @endif
 
-                @if($this->canReview())
-                    <x-checkbox
-                        class="mt-3"
-                        label="Đánh dấu là bài viết nổi bật"
-                        wire:model="is_featured"
-                    />
+                @if($this->canToggleFeatured())
+                    <x-checkbox class="mt-3" label="Đánh dấu là bài viết nổi bật" wire:model="is_featured"/>
                     @error('is_featured') <p class="text-error text-sm mt-1">{{ $message }}</p> @enderror
                 @endif
 
-                @if($this->canReview() && $status === 'published')
+                @if($this->canReviewOriginalPost() && $status === 'published')
                     <div class="mt-3">
-                        <x-input label="Thời gian đăng" wire:model="published_at"
-                                 type="datetime-local"
-                                 hint="Để trống = đăng ngay bây giờ"/>
+                        <x-input label="Thời gian đăng" wire:model="published_at" type="datetime-local" hint="Để trống = đăng ngay bây giờ"/>
                     </div>
                 @endif
             </x-card>
 
-            {{-- Danh mục --}}
             <x-card title="Danh mục" shadow class="p-3!">
-                <select
-                    wire:model="category_ids"
-                    multiple
-                    size="8"
-                    class="select select-bordered w-full max-h-80 overflow-auto"
-                >
+                <select wire:model.live.debounce.300ms="category_ids" multiple size="8" class="select select-bordered w-full max-h-80 overflow-auto @error('category_ids') select-error @enderror [&_option:checked]:bg-blue-50 [&_option:checked]:text-blue-700 focus:outline-none">
                     @foreach($this->categoryOptions as $category)
-                        <option value="{{ $category['id'] }}">{{ $category['name'] }}</option>
+                        <option value="{{ $category['id'] }}" @if($category['disabled'] ?? false) disabled class="text-gray-400 bg-gray-50 italic pointer-events-none @error('category_ids') border-red-500 @enderror" title="Danh mục này được thiết lập bởi cấp trên" @endif>
+                            {{ $category['name'] }}
+                        </option>
                     @endforeach
                 </select>
+                @error('category_ids') <p class="text-error text-sm mt-1">{{ $message }}</p> @enderror
             </x-card>
 
-{{--            ảnh đại diện--}}
             <x-card title="Ảnh đại diện" shadow class="p-3!">
                 <div x-data="{ previewUrl: null }" x-on:livewire-upload-start="previewUrl = null">
-                    <x-file wire:model="thumbnail" label="Ảnh thumbnail"
-                            hint="jpg, jpeg, png, webp – tối đa 2MB" accept="image/*"
-                            x-on:change="previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null"/>
+                    <x-file wire:model="thumbnail" label="Ảnh thumbnail" hint="jpg, jpeg, png, webp – tối đa 2MB" accept="image/*" x-on:change="previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null"/>
                     <div class="mt-3 space-y-3">
                         <template x-if="previewUrl">
-                            <div>
-                                <p class="text-sm text-gray-500 mb-1">Ảnh mới (chưa lưu)</p>
-                                <img src="#" :src="previewUrl" alt="Preview"
-                                     class="size-40 rounded object-cover ring-1 ring-gray-200"/>
-                            </div>
+                            <div><p class="text-sm text-gray-500 mb-1">Ảnh mới (chưa lưu)</p><img src="#" :src="previewUrl" alt="Preview" class="size-40 rounded object-cover ring-1 ring-gray-200"/></div>
                         </template>
-
                         @if($currentThumbnail)
-                            <div x-show="!previewUrl">
-                                <p class="text-sm text-gray-500 mb-1">Ảnh hiện tại</p>
-                                <img src="{{ Storage::url($currentThumbnail) }}" alt="Current thumbnail"
-                                     class="size-40 rounded object-cover ring-1 ring-gray-200"/>
-                            </div>
-                            @if($currentStatus !== 'published' && $this->isAuthor() || $this->canReview())
-                            <x-button
-                                label="Xóa ảnh hiện tại"
-                                icon="o-trash"
-                                class="btn-outline btn-error btn-sm"
-                                wire:click="removeThumbnail"
-                                spinner="removeThumbnail"
-                            />
+                            <div x-show="!previewUrl"><p class="text-sm text-gray-500 mb-1">Ảnh hiện tại</p><img src="{{ Storage::url($currentThumbnail) }}" alt="Current thumbnail" class="size-40 rounded object-cover ring-1 ring-gray-200"/></div>
+                            @if(($currentStatus !== 'published' && $this->isAuthor()) || $this->canReviewOriginalPost())
+                                <x-button label="Xóa ảnh hiện tại" icon="o-trash" class="btn-outline btn-error btn-sm" wire:click="removeThumbnail" spinner="removeThumbnail"/>
                             @endif
                         @endif
                     </div>
                 </div>
             </x-card>
-            {{-- Ẩn/hiển thị metadata --}}
+
             <x-card title="Ẩn/hiển thị metadata" shadow class="p-3!">
-                <x-checkbox
-                    class="mb-2"
-                    label="Hiển thị người viết"
-                    wire:model="show_author"
-                />
-                <x-checkbox
-                    class="mb-2"
-                    label="Hiển thị ngày đăng"
-                    wire:model="show_published_at"
-                />
-                <x-checkbox
-                    class="mb-2"
-                    label="Hiển thị lượt xem"
-                    wire:model="show_views"
-                />
-                <x-checkbox
-                    class="mb-2"
-                    label="Hiển thị danh mục"
-                    wire:model="show_category"
-                />
-                <x-checkbox
-                    class="mb-2"
-                    label="Hiển thị bài viết liên quan"
-                    wire:model="show_related_posts"
-                />
+                <x-checkbox class="mb-2" label="Hiển thị người viết" wire:model="show_author"/>
+                <x-checkbox class="mb-2" label="Hiển thị ngày đăng" wire:model="show_published_at"/>
+                <x-checkbox class="mb-2" label="Hiển thị lượt xem" wire:model="show_views"/>
+                <x-checkbox class="mb-2" label="Hiển thị danh mục" wire:model="show_category"/>
+                <x-checkbox class="mb-2" label="Hiển thị bài viết liên quan" wire:model="show_related_posts"/>
             </x-card>
+
             <x-card title="Thông tin" shadow class="p-3!">
                 @php $post = App\Models\Post::find($id); @endphp
                 <div class="text-md space-y-2 text-gray-600">
-                    <div class="flex justify-between">
-                        <span>Lượt xem:</span>
-                        <span class="font-medium">{{ number_format($post?->views ?? 0) }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Tác giả:</span>
-                        <span class="font-medium truncate">{{ $post?->user?->name ?? '—' }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Ngày tạo:</span>
-                        <span class="font-medium">{{ $post?->created_at?->format('H:i d/m/Y') }}</span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span>Cập nhật:</span>
-                        <span class="font-medium">{{ $post?->updated_at?->format('H:i d/m/Y') }}</span>
-                    </div>
+                    <div class="flex justify-between"><span>Lượt xem:</span><span class="font-medium">{{ number_format($post?->views ?? 0) }}</span></div>
+                    <div class="flex justify-between"><span>Tác giả:</span><span class="font-medium truncate">{{ $post?->user?->name ?? '—' }}</span></div>
+                    <div class="flex justify-between"><span>Ngày tạo:</span><span class="font-medium">{{ $post?->created_at?->format('H:i d/m/Y') }}</span></div>
+                    <div class="flex justify-between"><span>Cập nhật:</span><span class="font-medium">{{ $post?->updated_at?->format('H:i d/m/Y') }}</span></div>
                 </div>
             </x-card>
         </div>
     </div>
 </div>
-
-
-

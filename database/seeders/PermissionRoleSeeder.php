@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Category;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -34,6 +35,22 @@ class PermissionRoleSeeder extends Seeder
                 ['display_name' => $permission['display_name']]
             );
         }
+
+        Category::query()->get()->each(function (Category $category) {
+            $categoryName = trim($category->getTranslatedName()) ?: ('Category #' . $category->id);
+
+            foreach (['viet_bai_viet' => 'Viết bài viết', 'duyet_bai_viet' => 'Duyệt bài viết'] as $permissionName => $displayName) {
+                Permission::query()->updateOrCreate(
+                    [
+                        'name' => $permissionName . ':' . $category->id,
+                        'guard_name' => 'web',
+                    ],
+                    [
+                        'display_name' => $displayName . ': ' . $categoryName,
+                    ]
+                );
+            }
+        });
 
         Role::query()->updateOrCreate(
             ['name' => 'sinh_vien', 'guard_name' => 'web'],

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 use Laravel\Scout\Searchable;
 use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
@@ -81,6 +82,82 @@ class User extends Authenticatable
     public function posts()
     {
         return $this->hasMany(Post::class, 'user_id', 'id');
+    }
+
+    private function normalizePostCategoryIds(?array $categoryIds): array
+    {
+        return collect($categoryIds ?? [])
+            ->map(fn ($categoryId) => (int) $categoryId)
+            ->filter(fn ($categoryId) => $categoryId > 0)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function hasAnyScopedPostPermission(string $basePermission): bool
+    {
+        return $this->getAllPermissions()
+            ->pluck('name')
+            ->contains(fn (string $permissionName) => Str::startsWith($permissionName, $basePermission . ':'));
+    }
+
+    public function scopedPostCategoryIds(string $basePermission): array
+    {
+        return $this->getAllPermissions()
+            ->pluck('name')
+            ->filter(fn (string $permissionName) => Str::startsWith($permissionName, $basePermission . ':'))
+            ->map(function (string $permissionName) use ($basePermission) {
+                $categoryId = (int) Str::after($permissionName, $basePermission . ':');
+
+                return $categoryId > 0 ? $categoryId : null;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function canWritePosts(?array $categoryIds = null): bool
+    {
+        if ($this->can('quan_ly_bai_viet') || $this->can('viet_bai_viet')) {
+            return true;
+        }
+
+        if ($categoryIds === null) {
+            return $this->hasAnyScopedPostPermission('viet_bai_viet');
+        }
+
+        $categoryIds = $this->normalizePostCategoryIds($categoryIds);
+
+        if ($categoryIds === []) {
+            return false;
+        }
+
+        return collect($categoryIds)->every(fn (int $categoryId) => $this->can('viet_bai_viet:' . $categoryId));
+    }
+
+    public function canReviewPosts(?array $categoryIds = null): bool
+    {
+        if ($this->can('quan_ly_bai_viet') || $this->can('duyet_bai_viet')) {
+            return true;
+        }
+
+        if ($categoryIds === null) {
+            return $this->hasAnyScopedPostPermission('duyet_bai_viet');
+        }
+
+        $categoryIds = $this->normalizePostCategoryIds($categoryIds);
+
+        if ($categoryIds === []) {
+            return false;
+        }
+
+        return collect($categoryIds)->every(fn (int $categoryId) => $this->can('duyet_bai_viet:' . $categoryId));
+    }
+
+    public function canAccessPostModule(): bool
+    {
+        return $this->canWritePosts() || $this->canReviewPosts();
     }
 
     public function getUserTypeLabelAttribute()

@@ -103,13 +103,15 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/category/edit/{id}', 'pages::admin.category.edit')->name('admin.category.edit');
     });
 
-    Route::middleware('permission:quan_ly_bai_viet|viet_bai_viet|duyet_bai_viet')->group(function () {
+//    Route::middleware('permission:quan_ly_bai_viet|viet_bai_viet|duyet_bai_viet')->group(function () {
         Route::livewire('/post/index', 'pages::admin.post.index')->name('admin.post.index');
         Route::livewire('/post/pending', 'pages::admin.post.index')->name('admin.posts.pending');
         Route::livewire('/post/create', 'pages::admin.post.create')->name('admin.post.create');
+        Route::livewire('/post/review/{id}', 'pages::admin.post.review')->name('admin.posts.review');
         Route::livewire('/post/edit/{id}', 'pages::admin.post.edit')->name('admin.post.edit');
         Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
-    });
+//    });
+    Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
 
     Route::middleware('permission:quan_ly_bai_viet')->group(function () {
         Route::livewire('/contact-message/index', 'pages::admin.contact-message.index')->name('admin.contact-message.index');

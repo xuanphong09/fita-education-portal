@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Permission\Models\Permission;
 use Spatie\Translatable\HasTranslations;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -56,6 +57,30 @@ class Category extends Model
     public function getTranslatedName(string $locale = null): string
     {
         return $this->getTranslation('name', $locale ?? app()->getLocale(), true);
+    }
+
+    private function syncPostPermissions(): void
+    {
+        $categoryName = trim($this->getTranslatedName()) ?: ('Category #' . $this->id);
+
+        foreach (['viet_bai_viet' => 'Viết bài viết', 'duyet_bai_viet' => 'Duyệt bài viết'] as $permissionName => $displayName) {
+            Permission::query()->updateOrCreate(
+                [
+                    'name' => $permissionName . ':' . $this->id,
+                    'guard_name' => 'web',
+                ],
+                [
+                    'display_name' => $displayName . ': ' . $categoryName,
+                ]
+            );
+        }
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function (Category $category) {
+            $category->syncPostPermissions();
+        });
     }
 }
 
