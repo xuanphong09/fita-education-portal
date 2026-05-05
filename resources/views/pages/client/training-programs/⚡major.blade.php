@@ -816,7 +816,7 @@ class extends Component {
 
         </div>
     </div>
-    <div class="container mx-auto px-4 py-8">
+    <div class="container mx-auto px-4 py-8 ctdt">
         <div class="space-y-4">
             <x-card shadow>
                 <div class="grid grid-cols-5 gap-4">

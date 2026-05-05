@@ -84,19 +84,21 @@
                 </label>
             </div>
             {{-- end logo sidebar mobile --}}
-
             <x-menu-item title="Dashboard" icon="o-home" link="{{route('admin.dashboard')}}" :active="request()->routeIs('admin.dashboard')"/>
-            @canany(['quan_ly_bai_viet', 'viet_bai_viet', 'duyet_bai_viet'])
+            @if(auth()->user()?->canAccessPostModule())
                 <x-menu-sub title="Quản lý bài viết" icon="o-newspaper">
                     @can('quan_ly_bai_viet')
                         <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
                     @endcan
                     <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
-{{--                    @canany(['duyet_bai_viet', 'quan_ly_bai_viet'])--}}
-{{--                        <x-menu-item title="Bài chờ duyệt" link="{{route('admin.posts.pending')}}" :active="request()->routeIs('admin.posts.pending')"/>--}}
-{{--                    @endcanany--}}
+
+
+                    @if(auth()->user()?->canReviewPosts())
+                        <livewire:admin.list-pending-menu-item />
+{{--                        <x-menu-item title="Danh sách bài viết chờ duyệt" link="{{route('admin.posts.pending')}}" :active="request()->routeIs('admin.posts.*')"/>--}}
+                    @endif
                 </x-menu-sub>
-            @endcanany
+            @endif
             @can('quan_ly_dao_tao')
                 <x-menu-sub title="Quản lý đào tạo" icon="o-book-open">
                     <x-menu-item title="Chương trình đào tạo" link="{{route('admin.training-program.index')}}" :active="request()->routeIs('admin.training-program.*')"/>
@@ -137,7 +139,7 @@
                 <x-menu-item title="Trang giảng viên" icon="o-document-text" link="{{route('admin.lecturer.manager', auth()->user()->lecturer->slug) ?? ''}}" :active="request()->routeIs('admin.lecturer.manager')"/>
             @endrole
             @can('quan_ly_lien_he')
-                <livewire:contact-message-menu-item />
+                <livewire:admin.contact-message-menu-item />
             @endcan
 
 
