@@ -80,6 +80,9 @@ new class extends Component {
     public $studentId;
     public $lecturerId;
     public $is_active;
+    public bool $showPasswordModal = false;
+    public string $password = '';
+    public string $password_confirmation = '';
 
     protected function rules()
     {
@@ -367,7 +370,62 @@ new class extends Component {
             $this->degree_other = null;
         }
 
+        if (in_array($property, ['showPasswordModal', 'password', 'password_confirmation'], true)) {
+            return;
+        }
+
         $this->validateOnly($property);
+    }
+
+    public function updatedShowPasswordModal($value): void
+    {
+        if (! $value) {
+            $this->reset(['password', 'password_confirmation']);
+            $this->resetValidation(['password', 'password_confirmation']);
+        }
+    }
+
+    public function openPasswordModal(): void
+    {
+        $this->reset(['password', 'password_confirmation']);
+        $this->resetValidation(['password', 'password_confirmation']);
+        $this->showPasswordModal = true;
+    }
+
+    public function updatePassword(): void
+    {
+        try {
+            $this->validate([
+                'password' => ['required', 'string', 'min:8', 'confirmed'],
+            ], [
+                'password.required' => 'Mật khẩu mới không được để trống.',
+                'password.string' => 'Mật khẩu mới phải là một chuỗi.',
+                'password.min' => 'Mật khẩu mới phải có ít nhất 8 ký tự.',
+                'password.confirmed' => 'Xác nhận mật khẩu chưa khớp.',
+            ]);
+        } catch (ValidationException $e) {
+            $this->error('Vui lòng kiểm tra lại mật khẩu đã nhập.');
+            throw $e;
+        }
+
+        try {
+            DB::transaction(function () {
+                $user = User::findOrFail($this->userId);
+
+                $user->forceFill([
+                    'password' => $this->password,
+                    'remember_token' => Str::random(60),
+                ])->save();
+            });
+
+            $this->showPasswordModal = false;
+            $this->reset(['password', 'password_confirmation']);
+            $this->resetValidation(['password', 'password_confirmation']);
+            $this->success('Đổi mật khẩu thành công!');
+        } catch (\Throwable $e) {
+            $this->error('Không thể đổi mật khẩu.');
+            report($e);
+        }
     }
 
     public function mount($id)
@@ -741,7 +799,35 @@ new class extends Component {
         </x-card>
 
         <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
+                    <x-button label="Đổi mật khẩu" class="btn-warning text-white  my-1 w-full" wire:click="openPasswordModal" spinner="openPasswordModal"/>
             <x-button label="Lưu" class="bg-primary text-white my-1 w-full" wire:click="save" spinner/>
         </x-card>
     </div>
+
+            <x-modal wire:model="showPasswordModal" title="Đổi mật khẩu" separator>
+                <div class="space-y-0">
+                    <x-password
+                        label="Mật khẩu mới"
+                        wire:model.defer="password"
+                        password-icon="o-lock-closed"
+                        password-visible-icon="o-lock-open"
+                        placeholder="••••••••"
+                        required
+                    />
+
+                    <x-password
+                        label="Xác nhận mật khẩu"
+                        wire:model.defer="password_confirmation"
+                        password-icon="o-lock-closed"
+                        password-visible-icon="o-lock-open"
+                        placeholder="••••••••"
+                        required
+                    />
+                </div>
+
+                <x-slot:actions>
+                            <x-button label="Hủy" wire:click="$wire.showPasswordModal = false" />
+                    <x-button label="Lưu mật khẩu" class="btn-primary" wire:click="updatePassword" spinner="updatePassword" />
+                </x-slot:actions>
+            </x-modal>
 </div>
