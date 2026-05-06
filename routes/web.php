@@ -43,7 +43,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::livewire('/{categorySlug}/{slug}', 'pages::client.posts.show')
-    ->where('categorySlug', '^(?!admin$|gioi-thieu$|lien-he$|search$|dao-tao$|giang-vien$|login$|forgot-password$|logout$|auth$|setup-password$|tai-khoan$|doi-mat-khau$|test-email$)[a-z0-9-]+$')
+    ->where('categorySlug', '^(?!admin$|gioi-thieu$|lien-he$|search$|chuong-trình-dao-tao$|giang-vien$|login$|forgot-password$|logout$|auth$|setup-password$|tai-khoan$|doi-mat-khau$|test-email$)[a-z0-9-]+$')
     ->where('slug', '[a-z0-9-]+')
     ->middleware('throttle:60,1') // Giới hạn 60 requests/phút để chống bot spam
     ->name('client.posts.show');
