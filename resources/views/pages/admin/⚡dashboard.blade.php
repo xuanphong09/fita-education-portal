@@ -418,181 +418,182 @@
                 </div>
             </section>
         </div>
+        {{-- Sử dụng @script của Livewire thay vì thẻ <script> thông thường --}}
+        @script
         <script>
-            document.addEventListener('alpine:init', () => {
-                Alpine.data('dashboardData', () => ({
-                    userPeriod: 'daily',
-                    postPeriod: 'daily',
-                    usersChart: null,
-                    postsChart: null,
-                    chartData: {
-                        users: {
-                            daily: {
-                                labels: {!! json_encode($usersDailyLabels) !!},
-                                data: {!! json_encode($usersDailyData) !!},
-                            },
-                            monthly: {
-                                labels: {!! json_encode($usersMonthLabels) !!},
-                                data: {!! json_encode($usersMonthData) !!},
-                            },
-                            semester: {
-                                labels: {!! json_encode($usersMonthlyLabels) !!},
-                                data: {!! json_encode($usersMonthlyData) !!},
-                            }
+            Alpine.data('dashboardData', () => ({
+                userPeriod: 'daily',
+                postPeriod: 'daily',
+                usersChart: null,
+                postsChart: null,
+                chartData: {
+                    users: {
+                        daily: {
+                            labels: $wire.usersDailyLabels,
+                            data: $wire.usersDailyData,
                         },
-                        posts: {
-                            daily: {
-                                labels: {!! json_encode($postsDailyLabels) !!},
-                                data: {!! json_encode($postsDailyData) !!},
-                            },
-                            monthly: {
-                                labels: {!! json_encode($postsMonthLabels) !!},
-                                data: {!! json_encode($postsMonthData) !!},
-                            },
-                            semester: {
-                                labels: {!! json_encode($postsMonthlyLabels) !!},
-                                data: {!! json_encode($postsMonthlyData) !!},
-                            }
+                        monthly: {
+                            labels: $wire.usersMonthLabels,
+                            data: $wire.usersMonthData,
+                        },
+                        semester: {
+                            labels: $wire.usersMonthlyLabels,
+                            data: $wire.usersMonthlyData,
                         }
                     },
-
-                    initCharts() {
-                        this.renderUsersChart();
-                        this.renderPostsChart();
-                    },
-
-                    setUserPeriod(period) {
-                        this.userPeriod = period;
-                        this.renderUsersChart();
-                    },
-
-                    setPostPeriod(period) {
-                        this.postPeriod = period;
-                        this.renderPostsChart();
-                    },
-
-                    renderUsersChart() {
-                        const ctx = document.getElementById('usersTrendChart')?.getContext('2d');
-                        if (!ctx) return;
-
-                        const series = this.chartData.users[this.userPeriod] || this.chartData.users.daily;
-                        const maxValue = series.data.length ? Math.max(...series.data) + 5 : 5;
-
-                        if (this.usersChart) this.usersChart.destroy();
-
-                        this.usersChart = new Chart(ctx, {
-                            type: 'line',
-                            data: {
-                                labels: series.labels,
-                                datasets: [{
-                                    label: '{{ __("Người dùng mới") }}',
-                                    data: series.data,
-                                    borderColor: '#0ea5e9',
-                                    backgroundColor: 'rgba(14, 165, 233, 0.12)',
-                                    borderWidth: 2,
-                                    fill: true,
-                                    tension: 0.4,
-                                    pointBackgroundColor: '#0ea5e9',
-                                    pointBorderColor: '#fff',
-                                    pointBorderWidth: 2,
-                                    pointRadius: 5,
-                                    pointHoverRadius: 7,
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        display: true,
-                                        position: 'top',
-                                        labels: { usePointStyle: true, padding: 15 }
-                                    },
-                                    tooltip: {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                        padding: 12,
-                                        borderRadius: 8,
-                                        titleFont: { size: 14 },
-                                        bodyFont: { size: 12 },
-                                        callbacks: {
-                                            label: function(context) {
-                                                return context.dataset.label + ': ' + context.parsed.y + ' {{ __("người") }}';
-                                            }
-                                        }
-                                    }
-                                },
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        max: maxValue,
-                                        grid: { color: 'rgba(0, 0, 0, 0.05)' },
-                                        ticks: { font: { size: 12 } }
-                                    },
-                                    x: {
-                                        grid: { display: false },
-                                        ticks: { font: { size: 12 } }
-                                    }
-                                }
-                            }
-                        });
-                    },
-
-                    renderPostsChart() {
-                        const ctx = document.getElementById('postsTrendChart')?.getContext('2d');
-                        if (!ctx) return;
-
-                        const series = this.chartData.posts[this.postPeriod] || this.chartData.posts.daily;
-
-                        if (this.postsChart) this.postsChart.destroy();
-
-                        this.postsChart = new Chart(ctx, {
-                            type: 'bar',
-                            data: {
-                                labels: series.labels,
-                                datasets: [{
-                                    label: '{{ __("Bài viết mới") }}',
-                                    data: series.data,
-                                    backgroundColor: 'rgba(16, 185, 129, 0.75)',
-                                    borderRadius: 10,
-                                    borderSkipped: false,
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                plugins: {
-                                    legend: {
-                                        display: true,
-                                        position: 'top',
-                                        labels: { usePointStyle: true, padding: 15 }
-                                    },
-                                    tooltip: {
-                                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                        padding: 12,
-                                        borderRadius: 8,
-                                        callbacks: {
-                                            label: function(context) {
-                                                return context.dataset.label + ': ' + context.parsed.y + ' {{ __("bài viết") }}';
-                                            }
-                                        }
-                                    }
-                                },
-                                scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        suggestedMax: series.data.length ? Math.max(...series.data) + 5 : 5,
-                                        grid: { color: 'rgba(0, 0, 0, 0.05)' }
-                                    },
-                                    x: {
-                                        grid: { display: false }
-                                    }
-                                }
-                            }
-                        });
+                    posts: {
+                        daily: {
+                            labels: $wire.postsDailyLabels,
+                            data: $wire.postsDailyData,
+                        },
+                        monthly: {
+                            labels: $wire.postsMonthLabels,
+                            data: $wire.postsMonthData,
+                        },
+                        semester: {
+                            labels: $wire.postsMonthlyLabels,
+                            data: $wire.postsMonthlyData,
+                        }
                     }
-                }));
-            });
+                },
+
+                initCharts() {
+                    this.renderUsersChart();
+                    this.renderPostsChart();
+                },
+
+                setUserPeriod(period) {
+                    this.userPeriod = period;
+                    this.renderUsersChart();
+                },
+
+                setPostPeriod(period) {
+                    this.postPeriod = period;
+                    this.renderPostsChart();
+                },
+
+                renderUsersChart() {
+                    const ctx = document.getElementById('usersTrendChart')?.getContext('2d');
+                    if (!ctx) return;
+
+                    const series = this.chartData.users[this.userPeriod] || this.chartData.users.daily;
+                    const maxValue = series.data.length ? Math.max(...series.data) + 5 : 5;
+
+                    if (this.usersChart) this.usersChart.destroy();
+
+                    this.usersChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: series.labels,
+                            datasets: [{
+                                label: 'Người dùng mới',
+                                data: series.data,
+                                borderColor: '#0ea5e9',
+                                backgroundColor: 'rgba(14, 165, 233, 0.12)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.4,
+                                pointBackgroundColor: '#0ea5e9',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 5,
+                                pointHoverRadius: 7,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: { usePointStyle: true, padding: 15 }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    titleFont: { size: 14 },
+                                    bodyFont: { size: 12 },
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.dataset.label + ': ' + context.parsed.y + ' người';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    max: maxValue,
+                                    grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                                    ticks: { font: { size: 12 } }
+                                },
+                                x: {
+                                    grid: { display: false },
+                                    ticks: { font: { size: 12 } }
+                                }
+                            }
+                        }
+                    });
+                },
+
+                renderPostsChart() {
+                    const ctx = document.getElementById('postsTrendChart')?.getContext('2d');
+                    if (!ctx) return;
+
+                    const series = this.chartData.posts[this.postPeriod] || this.chartData.posts.daily;
+
+                    if (this.postsChart) this.postsChart.destroy();
+
+                    this.postsChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: series.labels,
+                            datasets: [{
+                                label: 'Bài viết mới',
+                                data: series.data,
+                                backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                                borderRadius: 10,
+                                borderSkipped: false,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'top',
+                                    labels: { usePointStyle: true, padding: 15 }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.dataset.label + ': ' + context.parsed.y + ' bài viết';
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    suggestedMax: series.data.length ? Math.max(...series.data) + 5 : 5,
+                                    grid: { color: 'rgba(0, 0, 0, 0.05)' }
+                                },
+                                x: {
+                                    grid: { display: false }
+                                }
+                            }
+                        }
+                    });
+                }
+            }));
         </script>
+        @endscript
     </div>
 
 
