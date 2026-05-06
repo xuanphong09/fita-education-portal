@@ -45,12 +45,52 @@ new class extends Component {
             $this->display_name = $role->display_name ?? '';
             $this->name = $role->name ?? '';
             $this->selectedPermissions = $role->permissions()->pluck('name')->toArray();
+
+            // Lọc dọn dẹp các quyền con nếu DB cũ lỡ lưu thừa
+            $this->updatedSelectedPermissions();
         }
     }
 
     public function updated($property)
     {
         $this->validateOnly($property);
+
+        // Bắt sự kiện cập nhật mảng checkbox để ép hệ thống dọn dẹp ngay lập tức
+        if (Str::startsWith($property, 'selectedPermissions')) {
+            $this->updatedSelectedPermissions();
+        }
+    }
+
+    /**
+     * Tự động dọn dẹp các quyền con nếu người dùng chọn Quyền Tất Cả
+     */
+    public function updatedSelectedPermissions()
+    {
+        // 1. Tự động thêm Viết bài & Duyệt bài (tất cả) nếu chọn Quản lý bài viết
+        if (in_array('quan_ly_bai_viet', $this->selectedPermissions)) {
+            if (!in_array('viet_bai_viet', $this->selectedPermissions)) {
+                $this->selectedPermissions[] = 'viet_bai_viet';
+            }
+            if (!in_array('duyet_bai_viet', $this->selectedPermissions)) {
+                $this->selectedPermissions[] = 'duyet_bai_viet';
+            }
+        }
+
+        $hasWriteAll = in_array('viet_bai_viet', $this->selectedPermissions);
+        $hasReviewAll = in_array('duyet_bai_viet', $this->selectedPermissions);
+
+        // 2. Dọn dẹp quyền con nếu đã có quyền Tất cả
+        if ($hasWriteAll || $hasReviewAll) {
+            $this->selectedPermissions = array_values(array_filter($this->selectedPermissions, function ($perm) use ($hasWriteAll, $hasReviewAll) {
+                // Nếu đã có quyền "Viết bài (Tất cả)", loại bỏ các quyền viết bài theo danh mục
+                if ($hasWriteAll && Str::startsWith($perm, 'viet_bai_viet:')) return false;
+
+                // Nếu đã có quyền "Duyệt bài (Tất cả)", loại bỏ các quyền duyệt bài theo danh mục
+                if ($hasReviewAll && Str::startsWith($perm, 'duyet_bai_viet:')) return false;
+
+                return true;
+            }));
+        }
     }
 
     /**
@@ -66,7 +106,14 @@ new class extends Component {
      */
     public function getGeneralPermissionsProperty()
     {
-        return $this->permissions->filter(fn($p) => !Str::contains($p->name, ':'));
+        return $this->permissions->filter(function($p) {
+            // ĐÃ SỬA: Loại trừ quyền truy cập trang quản trị khỏi giao diện để ẩn nó đi
+            return !Str::contains($p->name, ':') && !in_array($p->name, [
+                    'viet_bai_viet',
+                    'duyet_bai_viet',
+                    'trang_quan_tri' // <--- Mã quyền cần ẩn (bạn sửa lại cho khớp với DB của bạn nhé)
+                ]);
+        });
     }
 
     /**
@@ -79,9 +126,6 @@ new class extends Component {
 
     /**
      * Parse category-scoped permissions and group them by category
-     */
-    /**
-     * Lấy danh sách quyền và sắp xếp theo thứ tự Cha - Con
      */
     public function getCategoryPermissionsProperty()
     {
@@ -105,6 +149,7 @@ new class extends Component {
 
         $categories = Category::orderBy('order')->get();
         $allCategoryPermissions = $this->buildRecursivePermissions($categories, null, $grouped);
+
         if (trim($this->searchCategory) !== '') {
             $searchTerm = Str::lower(trim($this->searchCategory));
 
@@ -113,13 +158,10 @@ new class extends Component {
                 return Str::contains($categoryName, $searchTerm);
             });
         }
-        // Ép kiểu sang Collection ở đây
+
         return collect($allCategoryPermissions);
     }
 
-    /**
-     * Hàm đệ quy để sắp xếp permission theo cấu trúc cha-con
-     */
     private function buildRecursivePermissions($categories, $parentId, $groupedPermissions, $depth = 0): array
     {
         $results = [];
@@ -137,17 +179,12 @@ new class extends Component {
 
             $children = $this->buildRecursivePermissions($categories, $category->id, $groupedPermissions, $depth + 1);
 
-            // $children lúc này chắc chắn là array nên array_merge sẽ không bị lỗi
             $results = array_merge($results, $children);
         }
 
-        // Trả về array nguyên thủy
         return $results;
     }
 
-    /**
-     * Get all active categories (for displaying missing categories)
-     */
     public function getActiveCategoriesProperty()
     {
         return Category::where('is_active', true)->orderBy('order')->get();
@@ -168,7 +205,7 @@ new class extends Component {
         }
 
         $slug = Str::slug($this->display_name, '_');
-        $count = Role::where('name', 'like', "{$slug}%")->count();
+        $count = Role::where('name', 'like', "{$slug}%")->where('id', '!=', $this->id)->count();
         $name = $count ? "{$slug}_{$count}" : $slug;
 
         $role = Role::findOrFail($this->id);
@@ -176,11 +213,18 @@ new class extends Component {
             'display_name' => $this->display_name,
             'name' => $name
         ]);
-        $role->syncPermissions($this->selectedPermissions);
-        $this->success(
-            'Cập nhật vai trò thành công!',
-        );
 
+        // Đảm bảo loại bỏ quyền rác trước khi lưu
+        $this->updatedSelectedPermissions();
+
+        // ĐÃ SỬA: Luôn luôn ép quyền truy cập trang quản trị vào danh sách được cấp
+        $mandatoryPermission = 'trang_quan_tri'; // <--- Mã quyền bắt buộc (sửa lại cho khớp với DB)
+        if (!in_array($mandatoryPermission, $this->selectedPermissions)) {
+            $this->selectedPermissions[] = $mandatoryPermission;
+        }
+
+        $role->syncPermissions($this->selectedPermissions);
+        $this->success('Cập nhật vai trò thành công!');
     }
 };
 ?>
@@ -190,7 +234,6 @@ new class extends Component {
     <x-slot:title>
         {{ __('Edit new roles') }}
     </x-slot:title>
-    {{--  end - title  --}}
 
     {{-- start - breadcrumb --}}
     <x-slot:breadcrumb>
@@ -199,14 +242,12 @@ new class extends Component {
         <span class="mx-1">/</span>
         <span>{{__('Edit new roles')}}</span>
     </x-slot:breadcrumb>
-    {{-- end - breadcrumb --}}
 
-    {{--    start - header--}}
+    {{-- start - header --}}
     <x-header title="{{__('Edit new roles')}}"
               class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300"></x-header>
-    {{--    end - header--}}
-    <div class="grid lg:grid-cols-12 gap-5 custom-form-admin text-[14px]!">
 
+    <div class="grid lg:grid-cols-12 gap-5 custom-form-admin text-[14px]!">
         <x-card class="col-span-10 flex flex-col p-3!">
             <x-input label="Tên vai trò" wire:model.live.debounce.500ms="display_name" required
                      :readonly="$name === 'super_admin' || $name === 'sinh_vien' || $name === 'giang_vien'"/>
@@ -220,7 +261,7 @@ new class extends Component {
                         <div class="select-none" wire:key="permission-{{ $permission->id }}">
                             <x-checkbox
                                 label="{{ $permission->display_name }}"
-                                wire:model="selectedPermissions"
+                                wire:model.live="selectedPermissions"
                                 value="{{ $permission->name }}"
                                 class="checkbox-primary checkbox-sm"
                                 :disabled="$name === 'super_admin'"
@@ -251,60 +292,82 @@ new class extends Component {
                     <div class="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
                         <table class="w-full text-sm">
                             <thead class="bg-gray-100 border-b border-gray-200">
-                                <tr class="divide-x divide-gray-200">
-                                    <th class="px-4 py-3 text-left font-semibold">Danh mục</th>
-                                    <th class="px-4 py-3 text-center font-semibold w-32">Viết bài</th>
-                                    <th class="px-4 py-3 text-center font-semibold w-32">Duyệt bài</th>
-                                </tr>
+                            <tr class="divide-x divide-gray-200">
+                                <th class="px-4 py-3 text-left font-semibold">Danh mục</th>
+                                <th class="px-4 py-3 text-center w-32">
+                                    <div class="flex flex-col items-center justify-center gap-1">
+                                        <span class="font-semibold">Viết bài</span>
+                                        <label class="cursor-pointer text-[14px] font-normal text-primary flex items-center gap-1 hover:text-blue-700">
+                                            @if(in_array('quan_ly_bai_viet', $selectedPermissions) || $name === 'super_admin')
+                                                <input wire:key="header-write-all-disabled" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
+                                            @else
+                                                <input wire:key="header-write-all-active" type="checkbox" wire:model.live="selectedPermissions" value="viet_bai_viet" class="checkbox checkbox-primary checkbox-sm" />
+                                            @endif
+                                            (Tất cả)
+                                        </label>
+                                    </div>
+                                </th>
+                                <th class="px-4 py-3 text-center w-32">
+                                    <div class="flex flex-col items-center justify-center gap-1">
+                                        <span class="font-semibold">Duyệt bài</span>
+                                        <label class="cursor-pointer text-[14px] font-normal text-primary flex items-center gap-1 hover:text-blue-700">
+                                            @if(in_array('quan_ly_bai_viet', $selectedPermissions) || $name === 'super_admin')
+                                                <input wire:key="header-review-all-disabled" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
+                                            @else
+                                                <input wire:key="header-review-all-active" type="checkbox" wire:model.live="selectedPermissions" value="duyet_bai_viet" class="checkbox checkbox-primary checkbox-sm" />
+                                            @endif
+                                            (Tất cả)
+                                        </label>
+                                    </div>
+                                </th>
+                            </tr>
                             </thead>
                             <tbody class="divide-y divide-gray-200">
-                                @foreach($this->categoryPermissions as $categoryId => $categoryData)
-                                    @php
-                                        $category = $categoryData['category'];
-                                        $permissions = $categoryData['permissions'];
-                                        $writePermission = $permissions['viet_bai_viet'] ?? null;
-                                        $reviewPermission = $permissions['duyet_bai_viet'] ?? null;
-                                    @endphp
-                                    <tr class="hover:bg-gray-50 divide-x divide-gray-200">
-                                        <td class="px-4 py-2">
-                                            <div class="flex items-center">
-                                                <div>
-                                                    <p class="font-medium text-gray-800">{{ $category->getTranslatedName() }}</p>
-                                                </div>
+                            @foreach($this->categoryPermissions as $categoryId => $categoryData)
+                                @php
+                                    $category = $categoryData['category'];
+                                    $permissions = $categoryData['permissions'];
+                                    $writePermission = $permissions['viet_bai_viet'] ?? null;
+                                    $reviewPermission = $permissions['duyet_bai_viet'] ?? null;
+                                    $depth = $categoryData['depth'] ?? 0;
+                                @endphp
+                                <tr class="hover:bg-gray-50 divide-x divide-gray-200">
+                                    <td class="py-2" style="padding-left: {{ $depth * 1.5 + 1 }}rem; padding-right: 1rem;">
+                                        <div class="flex items-center gap-2">
+                                            @if($depth > 0)
+                                                <span class="text-gray-300">└─</span>
+                                            @endif
+                                            <p class="font-medium text-gray-800">{{ $category->getTranslatedName() }}</p>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-2 text-center">
+                                        @if($writePermission)
+                                            <div class="flex justify-center">
+                                                @if(in_array('viet_bai_viet', $selectedPermissions) || in_array('quan_ly_bai_viet', $selectedPermissions) || $name === 'super_admin')
+                                                    <input wire:key="write-all-{{ $category->id }}" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
+                                                @else
+                                                    <input wire:key="write-single-{{ $category->id }}" type="checkbox" wire:model="selectedPermissions" value="{{ $writePermission['name'] }}" class="checkbox checkbox-primary checkbox-sm" />
+                                                @endif
                                             </div>
-                                        </td>
-                                        <td class="px-4 py-2 text-center">
-                                            @if($writePermission)
-                                                <div class="flex justify-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        wire:model="selectedPermissions"
-                                                        value="{{ $writePermission['name'] }}"
-                                                        class="checkbox checkbox-primary checkbox-sm"
-                                                        :disabled="$name === 'super_admin'"
-                                                    />
-                                                </div>
-                                            @else
-                                                <span class="text-gray-400 text-xs">-</span>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-2 text-center">
-                                            @if($reviewPermission)
-                                                <div class="flex justify-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        wire:model="selectedPermissions"
-                                                        value="{{ $reviewPermission['name'] }}"
-                                                        class="checkbox checkbox-primary checkbox-sm"
-                                                        :disabled="$name === 'super_admin'"
-                                                    />
-                                                </div>
-                                            @else
-                                                <span class="text-gray-400 text-xs">-</span>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @endforeach
+                                        @else
+                                            <span class="text-gray-400 text-xs">-</span>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2 text-center">
+                                        @if($reviewPermission)
+                                            <div class="flex justify-center">
+                                                @if(in_array('duyet_bai_viet', $selectedPermissions) || in_array('quan_ly_bai_viet', $selectedPermissions) || $name === 'super_admin')
+                                                    <input wire:key="review-all-{{ $category->id }}" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
+                                                @else
+                                                    <input wire:key="review-single-{{ $category->id }}" type="checkbox" wire:model="selectedPermissions" value="{{ $reviewPermission['name'] }}" class="checkbox checkbox-primary checkbox-sm" />
+                                                @endif
+                                            </div>
+                                        @else
+                                            <span class="text-gray-400 text-xs">-</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
                             </tbody>
                         </table>
                     </div>

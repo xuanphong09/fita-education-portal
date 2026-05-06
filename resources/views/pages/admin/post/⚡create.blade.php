@@ -35,7 +35,7 @@ new class extends Component {
 
     // Quan hệ
     public array $category_ids = [];
-
+    public string $searchCategory = '';
     // Trạng thái
     public string $status       = 'draft';
     public ?string $published_at = null;
@@ -250,24 +250,65 @@ new class extends Component {
     {
         $categories = Category::query()->orderBy('order')->get();
         $allowedCategoryIds = $this->allowedCategoryIds();
-        $displayCategoryIds = array_unique(array_merge($allowedCategoryIds, $this->category_ids));
-
-        if ($displayCategoryIds === []) return [];
-
-        $allowedCategoryIds = array_map(fn($id) => (int) $id, $allowedCategoryIds);
-        $displayCategoryIds = array_map(fn($id) => (int) $id, $displayCategoryIds);
-
         $allowedMap = array_flip($allowedCategoryIds);
-        $visibleMap = array_flip($displayCategoryIds);
 
-        foreach ($displayCategoryIds as $id) {
-            $curr = $categories->firstWhere('id', $id);
-            while ($curr && $curr->parent_id) {
-                $visibleMap[(int)$curr->parent_id] = true;
-                $curr = $categories->firstWhere('id', $curr->parent_id);
+        // Biến lưu trữ các ID sẽ được hiển thị lên màn hình
+        $visibleIds = [];
+
+        if (trim($this->searchCategory) !== '') {
+            $searchTerm = Str::lower(Str::ascii(trim($this->searchCategory)));
+            $matchedIds = [];
+
+            // 1. Tìm các danh mục khớp từ khóa (hoặc đang được tích chọn)
+            foreach ($categories as $cat) {
+                $normalizedName = Str::lower(Str::ascii($cat->getTranslatedName()));
+                if (Str::contains($normalizedName, $searchTerm) || in_array($cat->id, $this->category_ids)) {
+                    $matchedIds[] = $cat->id;
+                }
+            }
+
+            // 2. Mở rộng: Tìm tất cả Cha và Con của các danh mục đã khớp
+            foreach ($matchedIds as $id) {
+                $visibleIds[] = $id;
+
+                // 2a. Dò ngược lên: Thêm tất cả danh mục Cha, Ông nội...
+                $curr = $categories->firstWhere('id', $id);
+                while ($curr && $curr->parent_id) {
+                    $visibleIds[] = (int)$curr->parent_id;
+                    $curr = $categories->firstWhere('id', $curr->parent_id);
+                }
+
+                // 2b. Dò đệ quy xuống: Thêm tất cả danh mục Con, Cháu...
+                $visibleIds = array_merge($visibleIds, $this->getAllDescendantIds($categories, $id));
+            }
+        } else {
+            // Khi không tìm kiếm: Hiển thị danh mục được phép + danh mục đã chọn + cha của chúng
+            $displayCategoryIds = array_unique(array_merge($allowedCategoryIds, $this->category_ids));
+            foreach ($displayCategoryIds as $id) {
+                $visibleIds[] = $id;
+                $curr = $categories->firstWhere('id', $id);
+                while ($curr && $curr->parent_id) {
+                    $visibleIds[] = (int)$curr->parent_id;
+                    $curr = $categories->firstWhere('id', $curr->parent_id);
+                }
             }
         }
+
+        // Loại bỏ ID trùng lặp và chuyển thành Map để hàm flatten tra cứu siêu tốc O(1)
+        $visibleMap = array_flip(array_unique($visibleIds));
+
+        // Hàm flatten tự động xếp chúng thành hình cây theo Map hiển thị
         return $this->flattenCategoryOptions($categories, null, $allowedMap, $visibleMap, 0);
+    }
+
+    private function getAllDescendantIds($categories, $parentId): array
+    {
+        $ids = [];
+        foreach ($categories->where('parent_id', $parentId) as $child) {
+            $ids[] = $child->id;
+            $ids = array_merge($ids, $this->getAllDescendantIds($categories, $child->id));
+        }
+        return $ids;
     }
 
     private function allowedCategoryIds(): array
@@ -653,10 +694,21 @@ new class extends Component {
 
             {{-- Danh mục --}}
             <x-card title="Danh mục" shadow class="p-3!">
+                <div class="mb-3">
+                    <x-input
+                        icon="o-magnifying-glass"
+                        placeholder="Tìm kiếm danh mục..."
+                        wire:model.live.debounce.300ms="searchCategory"
+                        clearable
+                        class="input-md w-full"
+                    />
+                </div>
                 <select wire:model.live.debounce.300ms="category_ids" multiple size="8" class="select select-bordered w-full max-h-80 overflow-auto @error('category_ids') select-error @enderror [&_option:checked]:bg-blue-50 [&_option:checked]:text-blue-700 focus:outline-none">
-                    @foreach($this->categoryOptions as $category)
-                        <option value="{{ $category['id'] }}" @if($category['disabled']) disabled @endif>{{ $category['name'] }}</option>
-                    @endforeach
+                    @forelse($this->categoryOptions as $category)
+                        <option wire:key="cat-opt-{{ $category['id'] }}" value="{{ $category['id'] }}" @if($category['disabled']) disabled @endif>{{ $category['name'] }}</option>
+                    @empty
+                        <option disabled class="text-gray-800 italic p-0">Không tìm thấy danh mục nào.</option>
+                    @endforelse
                 </select>
                 @error('category_ids') <p class="text-error text-xs mt-1">{{ $message }}</p> @enderror
             </x-card>

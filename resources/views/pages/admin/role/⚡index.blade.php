@@ -142,13 +142,17 @@ new class extends Component {
             @scope('cell_permissions', $role)
             <div class="flex flex-wrap gap-1">
                 @if($this->permissions->count() > 0 && $role->permissions->count() === $this->permissions->count())
-                    <x-badge value="Toàn quyền hệ thống" class="badge-error badge-outline badge-sm font-semibold"/>
+                    <x-badge value="Toàn quyền hệ thống" class="badge-error badge-outline badge-md font-semibold"/>
+                @elseif($role->name === 'super_admin')
+                    <x-badge value="Toàn quyền hệ thống" class="badge-error badge-outline badge-md font-semibold"/>
                 @else
                     @forelse($role->permissions as $permission)
-                        <x-badge :value="$permission->display_name"
-                                 class="badge-ghost badge-sm border-gray-300 text-gray-600"/>
+                        @if($permission->name !== 'trang_quan_tri')
+                            <x-badge :value="$permission->display_name"
+                                 class="badge-ghost badge-md border-gray-300 text-gray-600"/>
+                        @endif
                     @empty
-                        <span class="text-xs text-gray-400 italic">Chưa được cấp quyền nào</span>
+                        <span class="text-md text-gray-400 italic">Chưa được cấp quyền nào</span>
                     @endforelse
                 @endif
             </div>
