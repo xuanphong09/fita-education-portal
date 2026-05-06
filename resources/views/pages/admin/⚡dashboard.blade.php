@@ -136,29 +136,72 @@
         {{-- Main Grid Layout --}}
         @php
             $hour = now()->hour;
-            $greeting = $hour < 11 ? __('Chào buổi sáng') : ($hour < 14 ? __('Chào buổi trưa') : ($hour < 18 ? __('Chào buổi chiều') : __('Chào buổi tối')));
+            // Sử dụng match() của PHP 8+ giúp code gọn và dễ đọc hơn nhiều
+            $greeting = match(true) {
+                $hour < 11 => __('Chào buổi sáng'),
+                $hour < 13 => __('Chào buổi trưa'),
+                $hour < 18 => __('Chào buổi chiều'),
+                default => __('Chào buổi tối'),
+            };
+            // Lấy tên người dùng, nếu không có thì để mặc định
+            $userName = auth()->user()->name ?? __('bạn');
+
+            // Danh sách các câu chúc ngẫu nhiên
+            $quotes = [
+                __('Chúc bạn một ngày làm việc năng suất và tràn đầy năng lượng!'),
+                __('Hôm nay là một ngày tuyệt vời để hoàn thành các mục tiêu.'),
+                __('Theo dõi và quản lý hệ thống thật hiệu quả nhé!'),
+                __('Mọi thứ đang hoạt động trơn tru, chúc bạn làm việc vui vẻ!'),
+                __('Hãy giữ vững tinh thần tích cực cho một ngày làm việc bùng nổ!'),
+                __('Đừng quên nghỉ ngơi một chút nếu thấy căng thẳng nhé.')
+            ];
+            // Lấy ngẫu nhiên 1 câu từ mảng
+            $randomQuote = \Illuminate\Support\Arr::random($quotes);
         @endphp
 
         <div x-data="dashboardData" x-init="initCharts()" class="space-y-8">
             {{-- ===== HERO BANNER ===== --}}
-            <div class="rounded-3xl border border-sky-100 bg-linear-to-r from-sky-50 via-white to-cyan-50 shadow-lg shadow-sky-100/60 p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-6 ring-1 ring-white/70">
-                <div class="space-y-2">
-                    <div class="text-2xl md:text-3xl font-bold text-gray-900">{{ $greeting }}</div>
-                    <div class="text-gray-600 text-base md:text-lg">{{ __('Chúc bạn làm việc năng suất và theo dõi hệ thống thật hiệu quả.') }}</div>
-{{--                    <div class="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm text-gray-600 shadow-sm border border-white">--}}
-{{--                        <x-icon name="o-calendar-days" class="w-4 h-4 text-sky-500" />--}}
-{{--                        <span>{{ __('Hôm nay là') }} {{ now()->format('d/m/Y') }}</span>--}}
-{{--                    </div>--}}
-                </div>
-                <div class="shrink-0 rounded-2xl bg-white/90 border border-sky-100 shadow-sm px-5 py-4 text-center min-w-32 backdrop-blur-sm">
-                    <div class="mx-auto w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center mb-3">
-                        <x-icon name="o-beaker" class="w-7 h-7 text-amber-500" />
-                    </div>
-{{--                    <div class="text-sm text-gray-500">{{ __('Cập nhật') }}</div>--}}
-                    <div class="text-lg font-semibold text-gray-900">{{ now()->format('d/m/Y') }}</div>
-                </div>
-            </div>
+            <header class="relative overflow-hidden rounded-3xl border border-sky-100 bg-linear-to-r from-sky-200 via-cyan-100 to-cyan-200 p-4 md:p-6 shadow-lg shadow-sky-100/60 ring-1 ring-white/70">
 
+                <!-- Background Decoration (Hiệu ứng ánh sáng góc mờ ảo) -->
+                <div class="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-cyan-200/40 blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-sky-200/40 blur-3xl pointer-events-none"></div>
+
+                <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                    <div class="space-y-4 max-w-2xl">
+                        <!-- Lời chào cá nhân hóa -->
+                        <h1 class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+                            {{ $greeting }}, <span class="text-sky-600">{{ $userName }}!</span> 👋
+                        </h1>
+
+                        <p class="text-gray-800 text-base md:text-lg">
+                            {{ $randomQuote }}
+                        </p>
+
+{{--                        <!-- Badge trạng thái hệ thống -->--}}
+{{--                        <div class="inline-flex items-center gap-2 rounded-full bg-white/80 px-4 py-1.5 text-sm font-medium text-sky-700 shadow-sm border border-sky-100 backdrop-blur-md">--}}
+{{--                            <span class="relative flex h-2.5 w-2.5">--}}
+{{--                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>--}}
+{{--                              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>--}}
+{{--                            </span>--}}
+{{--                            <span>{{ __('Hệ thống hoạt động ổn định') }}</span>--}}
+{{--                        </div>--}}
+                    </div>
+
+                    <!-- Khối hiển thị Ngày/Tháng (Thiết kế dạng lịch xé hiện đại) -->
+                    <div class="shrink-0 flex flex-col items-center justify-center rounded-2xl bg-white/90 border border-sky-50 shadow-sm px-7 py-4 min-w-[140px] backdrop-blur-md transition-transform hover:scale-105 duration-300">
+                        <div class="text-sm font-bold text-sky-600 mb-1 uppercase tracking-widest">
+                            {{ now()->locale('vi')->isoFormat('dddd') }}
+                        </div>
+                        <div class="text-4xl font-black  leading-none mb-1">
+                            {{ now()->format('d') }}
+                        </div>
+                        <div class="text-sm font-medium text-gray-600">
+                            {{ __('Tháng') }} {{ now()->format('m, Y') }}
+                        </div>
+                    </div>
+                </div>
+            </header>
             {{-- ===== CHỈ SỐ ===== --}}
             <section class="space-y-4">
                 <div class="flex items-center justify-between gap-3">
