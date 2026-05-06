@@ -321,44 +321,73 @@ class extends Component {
         <div class="h-1.25 bg-[#066140] w-full"></div>
         <div class="h-1.25 bg-[#4E3636] w-full shadow-[0_0_6px_#4E3636]"></div>
     </div>
-    <div class="mt-5">
-{{--        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">--}}
-{{--            {{__('Quick links')}}--}}
-{{--        </h1>--}}
+    <div class="mt-8 mb-12 font-sans">
         <div class="container mx-auto px-4 lg:px-0"
              x-data="{
         menus: [
-            { title: 'ST-Care Hỏi đáp', link: 'https://st-dse.vnua.edu.vn:6896', color: '#0961AA', btnText: 'XEM THÔNG TIN', img: 'assets/images/question-and-answer.png' },
-            { title: 'Tư vấn chọn hướng chuyên sâu', link: 'https://st-dse.vnua.edu.vn:6879', color: '#F6A309', btnText: 'XEM THÔNG TIN', img: 'assets/images/health.png' },
-            { title: 'Đăng ký TTNN và KLTN', link: 'https://st-dse.vnua.edu.vn:6875', color: '#066140', btnText: 'XEM THÔNG TIN', img: 'assets/images/register.png' },
-            { title: 'Quản lý phòng lab', link: 'https://st-dse.vnua.edu.vn:6888', color: '#4E3636', btnText: 'CLICK HERE', img: 'assets/images/calendar.png' },
+            {
+                app: 'ST-CARE',
+                desc: 'Hỏi đáp & Hỗ trợ sinh viên',
+                link: 'https://st-dse.vnua.edu.vn:6896',
+                color: '#0961AA',
+                img: 'assets/images/question-and-answer.png'
+            },
+            {
+                app: 'TƯ VẤN',
+                desc: 'Chọn hướng chuyên sâu',
+                link: 'https://st-dse.vnua.edu.vn:6879',
+                color: '#F6A309',
+                img: 'assets/images/health.png'
+            },
+            {
+                app: 'ĐĂNG KÝ',
+                desc: 'Thực tập nghề nghiệp & KLTN',
+                link: 'https://st-dse.vnua.edu.vn:6875',
+                color: '#066140',
+                img: 'assets/images/register.png'
+            },
+            {
+                app: 'QUẢN LÝ',
+                desc: 'Hoạt động phòng lab',
+                link: 'https://st-dse.vnua.edu.vn:6888',
+                color: '#4E3636',
+                img: 'assets/images/calendar.png'
+            },
         ]
      }">
 
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            <!-- Tăng khoảng cách lưới (gap-6 thay vì gap-4) để giao diện "dễ thở" hơn -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
                 <template x-for="(item, index) in menus" :key="index">
                     <a :href="item.link"
-                       class="relative flex items-center justify-between h-14 md:h-16 lg:h-20 px-4 overflow-hidden rounded-md transition-all duration-300 hover:-translate-y-1 hover:shadow-xl shadow-md group"
-                       :style="`background: linear-gradient(135deg, ${item.color} 0%, ${item.color}CC 100%);`"
                        target="_blank"
+                       class="relative flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl shadow-md group overflow-hidden"
+                       :style="`border-top: 4px solid ${item.color};`"
                     >
-
-                        <div class="z-10 text-white uppercase flex flex-col justify-center pb-1 mr-2">
-                            <h2 class="text-[15px] md:text-[16px] lg:text-[17px] font-semibold leading-tight drop-shadow-sm" x-text="item.title"></h2>
-{{--                            <div class="mt-2 flex items-center text-[10px] font-bold tracking-wider opacity-90 group-hover:opacity-100">--}}
-{{--                                <span x-text="item.btnText"></span>--}}
-{{--                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 ml-1 transform group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">--}}
-{{--                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />--}}
-{{--                                </svg>--}}
-{{--                            </div>--}}
+                        <!-- Lớp nền mờ khi hover để tăng tương tác UX -->
+                        <div class="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none"
+                             :style="`background-color: ${item.color};`">
                         </div>
 
-                        <div class="relative z-10 size-14 md:size-15 lg:size-16 object-fill p-1 shrink-0 backdrop-blur-sm group-hover:rotate-2 transition-transform duration-300">
-                            <img :src="item.img" alt="Thumbnail" class="w-full h-full object-cover">
+                        <!-- Icon được đưa ra giữa, kích thước đồng nhất, phóng to khi hover -->
+                        <div class="w-16 h-16 md:w-20 md:h-20 mb-3 relative transition-transform duration-500 group-hover:scale-110 drop-shadow-sm">
+                            <img :src="item.img" alt="App Icon" class="w-full h-full object-contain">
                         </div>
 
-                        <div class="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        <!-- Typography: Tách bạch rõ ràng App name (In hoa) và Description (Chữ thường) -->
+                        <div class="text-center z-10">
+                            <h2 class="text-[16px] lg:text-[18px] font-bold text-gray-800 tracking-wide mb-1" x-text="item.app"></h2>
+                            <p class="text-[13px] lg:text-[16px] text-gray-500 line-clamp-2" x-text="item.desc"></p>
+                        </div>
+
+                        <!-- Mũi tên điều hướng nhỏ hiện ra khi hover (chỉ báo có thể click) -->
+                        <div class="absolute bottom-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0"
+                             :style="`color: ${item.color};`">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                        </div>
                     </a>
                 </template>
 
