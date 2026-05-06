@@ -139,7 +139,7 @@
             $greeting = $hour < 11 ? __('Chào buổi sáng') : ($hour < 14 ? __('Chào buổi trưa') : ($hour < 18 ? __('Chào buổi chiều') : __('Chào buổi tối')));
         @endphp
 
-        <div x-data="dashboardData()" x-init="initCharts()" class="space-y-8">
+        <div x-data="dashboardData" x-init="initCharts()" class="space-y-8">
             {{-- ===== HERO BANNER ===== --}}
             <div class="rounded-3xl border border-sky-100 bg-linear-to-r from-sky-50 via-white to-cyan-50 shadow-lg shadow-sky-100/60 p-4 md:p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-6 ring-1 ring-white/70">
                 <div class="space-y-2">
@@ -418,11 +418,9 @@
                 </div>
             </section>
         </div>
-        {{-- ===== CHART.JS SCRIPTS ===== --}}
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script>
-            function dashboardData() {
-                return {
+            document.addEventListener('alpine:init', () => {
+                Alpine.data('dashboardData', () => ({
                     userPeriod: 'daily',
                     postPeriod: 'daily',
                     usersChart: null,
@@ -592,8 +590,8 @@
                             }
                         });
                     }
-                }
-            }
+                }));
+            });
         </script>
     </div>
 
