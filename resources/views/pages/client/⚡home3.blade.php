@@ -365,61 +365,61 @@ class extends Component {
             </div>
         </div>
     </div>
-    <div class="container mx-auto px-4 lg:px-0">
-        <h1 class="uppercase lg:text-[32px] md:text-[28px] text-[24px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 md:mt-8 lg:mt-10">
-            {{__('Faculty of Information Technology')}}
-        </h1>
-        <div class="flex gap-8 flex-col lg:flex-row mb-10 mt-6">
+{{--    <div class="container mx-auto px-4 lg:px-0">--}}
+{{--        <h1 class="uppercase lg:text-[32px] md:text-[28px] text-[24px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 md:mt-8 lg:mt-10">--}}
+{{--            {{__('Faculty of Information Technology')}}--}}
+{{--        </h1>--}}
+{{--        <div class="flex gap-8 flex-col lg:flex-row mb-10 mt-6">--}}
 
-            <div class=" w-full lg:w-1/2 space-y-4">
-                <div class="text-[17px]/[24px] text-justify space-y-2 leading-relaxed">
-                    Khoa Công nghệ thông tin mới được thành lập từ 10/10/2005 theo QĐ số 839/QĐ – NNI của Hiệu trưởng.
-                    Khoa hiện nay bao gồm 05 Bộ môn (Công nghệ phần mềm, Khoa học máy tính, Toán, Toán-Tin ứng dụng, Vật lý) và 01 Tổ Văn phòng, trong đó có một số bộ môn của Khoa đã có bề dày truyền thống như các Bộ môn Toán và Vật lý được thành lập từ ngày thành lập trường, và bộ môn CNPM và KHMT được phát triển từ Trung tâm Tin học thành lập từ đầu những năm 1980.
-                </div>
-                <ul class="space-y-4 mt-3">
-                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">
-                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">
-                            <x-icon name="o-check" class="w-4 h-4 text-white"/>
-                        </div>
-                        Đào tạo cử nhân Công nghệ thông tin
-                    </li>
-                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">
-                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">
-                            <x-icon name="o-check" class="w-4 h-4 text-white"/>
-                        </div>
-                        Đào tạo cử nhân Công nghệ phần mềm
-                    </li>
-                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">
-                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">
-                            <x-icon name="o-check" class="w-4 h-4 text-white"/>
-                        </div>
-                        Đào tạo cử nhân Hệ thống thông tính
-                    </li>
-                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">
-                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">
-                            <x-icon name="o-check" class="w-4 h-4 text-white"/>
-                        </div>
-                        Đào tạo cử nhân Mạng máy tính
-                    </li>
-                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">
-                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">
-                            <x-icon name="o-check" class="w-4 h-4 text-white"/>
-                        </div>
-                        Đào tạo cử nhân Truyền thông
-                    </li>
-                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">
-                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">
-                            <x-icon name="o-check" class="w-4 h-4 text-white"/>
-                        </div>
-                        Đào tạo cử nhân Trí tuệ nhân tạo
-                    </li>
-                </ul>
-            </div>
-            <div class=" w-full lg:w-1/2">
-                <img src="{{asset('assets/images/fita-info.jpg')}}" class="object-cover md:h-110 mx-auto rounded-lg" alt="">
-            </div>
-        </div>
-    </div>
+{{--            <div class=" w-full lg:w-1/2 space-y-4">--}}
+{{--                <div class="text-[17px]/[24px] text-justify space-y-2 leading-relaxed">--}}
+{{--                    Khoa Công nghệ thông tin mới được thành lập từ 10/10/2005 theo QĐ số 839/QĐ – NNI của Hiệu trưởng.--}}
+{{--                    Khoa hiện nay bao gồm 05 Bộ môn (Công nghệ phần mềm, Khoa học máy tính, Toán, Toán-Tin ứng dụng, Vật lý) và 01 Tổ Văn phòng, trong đó có một số bộ môn của Khoa đã có bề dày truyền thống như các Bộ môn Toán và Vật lý được thành lập từ ngày thành lập trường, và bộ môn CNPM và KHMT được phát triển từ Trung tâm Tin học thành lập từ đầu những năm 1980.--}}
+{{--                </div>--}}
+{{--                <ul class="space-y-4 mt-3">--}}
+{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
+{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
+{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
+{{--                        </div>--}}
+{{--                        Đào tạo cử nhân Công nghệ thông tin--}}
+{{--                    </li>--}}
+{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
+{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
+{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
+{{--                        </div>--}}
+{{--                        Đào tạo cử nhân Công nghệ phần mềm--}}
+{{--                    </li>--}}
+{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
+{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
+{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
+{{--                        </div>--}}
+{{--                        Đào tạo cử nhân Hệ thống thông tính--}}
+{{--                    </li>--}}
+{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
+{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
+{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
+{{--                        </div>--}}
+{{--                        Đào tạo cử nhân Mạng máy tính--}}
+{{--                    </li>--}}
+{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
+{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
+{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
+{{--                        </div>--}}
+{{--                        Đào tạo cử nhân Truyền thông--}}
+{{--                    </li>--}}
+{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
+{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
+{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
+{{--                        </div>--}}
+{{--                        Đào tạo cử nhân Trí tuệ nhân tạo--}}
+{{--                    </li>--}}
+{{--                </ul>--}}
+{{--            </div>--}}
+{{--            <div class=" w-full lg:w-1/2">--}}
+{{--                <img src="{{asset('assets/images/fita-info.jpg')}}" class="object-cover md:h-110 mx-auto rounded-lg" alt="">--}}
+{{--            </div>--}}
+{{--        </div>--}}
+{{--    </div>--}}
     <div >
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
             {{__('News and events')}}
@@ -717,153 +717,10 @@ class extends Component {
             </div>
         </div>
     </div>
-    {{-- Why Choose Us Section --}}
-    <section class="py-12 lg:py-16 bg-linear-to-b from-blue-50 to-blue-100">
-        <div class="container mx-auto px-4 lg:px-0">
-            <div class="text-center mb-12">
-                {{--                <p class="text-fita font-semibold text-[14px] lg:text-[16px] uppercase tracking-wide mb-2">{{ __('Distinguishing features') }}</p>--}}
-                {{--                <h2 class="text-[28px] lg:text-[36px] font-bold text-fita  font-barlow uppercase">{{ __('Why choose us?') }}</h2>--}}
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 lg:gap-8">
-                {{-- Card 1: Đội ngũ giảng viên --}}
-                <div
-                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
-                    x-data="{ revealed: false }"
-                    x-intersect="
-                        if (!revealed) {
-                            revealed = true;
-                            $el.classList.add('animate-fade-in-up');
-                        }
-                    "
-                    style="--why-main: var(--why-blue-main); --why-soft: var(--why-blue-soft); --why-border: var(--why-blue-border); --why-badge-bg: var(--why-blue-badge-bg); --why-badge-text: var(--why-blue-badge-text); --why-title-hover: var(--why-blue-title); animation-delay: 0ms"
-                >
-                    <div class="absolute -top-8 left-6">
-                        <div class="relative">
-                            <div
-                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-academic-cap" class="w-6 h-6 text-white"/>
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                        01
-                    </div>
-
-                    <div class="mt-6">
-                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Faculty of lecturers') }}</h3>
-                        <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Experienced instructors and industry experts with strong practical backgrounds, dedicated to supporting learners throughout their journey.') }}</p>
-                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
-                    </div>
-                </div>
-
-                {{-- Card 2: Cơ sở vật chất --}}
-                <div
-                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
-                    x-data="{ revealed: false }"
-                    x-intersect="
-                        if (!revealed) {
-                            revealed = true;
-                            $el.classList.add('animate-fade-in-up');
-                        }
-                    "
-                    style="--why-main: var(--why-yellow-main); --why-soft: var(--why-yellow-soft); --why-border: var(--why-yellow-border); --why-badge-bg: var(--why-yellow-badge-bg); --why-badge-text: var(--why-yellow-badge-text); --why-title-hover: var(--why-yellow-title); animation-delay: 80ms"
-                >
-                    <div class="absolute -top-8 left-6">
-                        <div class="relative">
-                            <div
-                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-building-office" class="w-6 h-6 text-white"/>
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                        02
-                    </div>
-
-                    <div class="mt-6">
-                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Quality facilities') }}</h3>
-                        <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Modern lab facilities with high-performance equipment, regularly upgraded to meet learning and practice needs.') }}</p>
-                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
-                    </div>
-                </div>
-
-                {{-- Card 3: Chương trình đào tạo --}}
-                <div
-                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
-                    x-data="{ revealed: false }"
-                    x-intersect="
-                        if (!revealed) {
-                            revealed = true;
-                            $el.classList.add('animate-fade-in-up');
-                        }
-                    "
-                    style="--why-main: var(--why-green-main); --why-soft: var(--why-green-soft); --why-border: var(--why-green-border); --why-badge-bg: var(--why-green-badge-bg); --why-badge-text: var(--why-green-badge-text); --why-title-hover: var(--why-green-title); animation-delay: 160ms"
-                >
-                    <div class="absolute -top-8 left-6">
-                        <div class="relative">
-                            <div
-                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-book-open" class="w-6 h-6 text-white"/>
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                        03
-                    </div>
-
-                    <div class="mt-6">
-                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Training Programs') }}</h3>
-                        <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Curriculum updated to international standards, aligned with the latest technology trends to prepare learners for the job market.') }}</p>
-                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
-                    </div>
-                </div>
-
-                {{-- Card 4: Phương pháp giảng dạy --}}
-                <div
-                    class="why-card group relative bg-white/80 backdrop-blur-sm rounded-2xl p-6 lg:p-8 shadow-lg hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 border"
-                    x-data="{ revealed: false }"
-                    x-intersect="
-                        if (!revealed) {
-                            revealed = true;
-                            $el.classList.add('animate-fade-in-up');
-                        }
-                    "
-                    style="--why-main: var(--why-brown-main); --why-soft: var(--why-brown-soft); --why-border: var(--why-brown-border); --why-badge-bg: var(--why-brown-badge-bg); --why-badge-text: var(--why-brown-badge-text); --why-title-hover: var(--why-brown-title); animation-delay: 240ms"
-                >
-                    <div class="absolute -top-8 left-6">
-                        <div class="relative">
-                            <div
-                                class="why-icon-glow absolute inset-0 blur opacity-75 group-hover:opacity-100 transition duration-300 rounded-xl"></div>
-                            <div class="why-icon-bg relative rounded-xl p-3">
-                                <x-icon name="o-light-bulb" class="w-6 h-6 text-white"/>
-                            </div>
-                        </div>
-                    </div>
-                    <div
-                        class="why-badge absolute top-4 right-4 rounded-full w-8 h-8 flex items-center justify-center font-bold text-sm">
-                        04
-                    </div>
-
-                    <div class="mt-6">
-                        <h3 class="why-title text-[18px] lg:text-[20px] font-bold text-slate-900 mb-3 transition-colors">{{ __('Teaching method') }}</h3>
-                        <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed">{{ __('Practice-oriented approach through real-world projects, enabling learners to gain experience and meet IT industry demands.') }}</p>
-                        <div class="why-accent mt-4 h-1 w-12 group-hover:w-full transition-all duration-300"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
 
     <div>
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-5">
-            {{__('Training Pathways & Programs')}}
+            {{__('Training programs')}}
         </h1>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 container mx-auto px-4 lg:px-0">
             <div class="flex flex-col relative rounded-2xl overflow-hidden border border-slate-300 group hover:-translate-y-1.5 hover:shadow-lg transition-all duration-300"
@@ -1040,14 +897,6 @@ class extends Component {
         <livewire:client.list-of-partners/>
     </div>
 
-    <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mb-2">
-            {{--            <svg fill="#0071BD" width="38px" height="38px" viewBox="0 -32 576 576" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M480 416v16c0 26.51-21.49 48-48 48H48c-26.51 0-48-21.49-48-48V176c0-26.51 21.49-48 48-48h16v48H54a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6v-10h48zm42-336H150a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6V86a6 6 0 0 0-6-6zm6-48c26.51 0 48 21.49 48 48v256c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V80c0-26.51 21.49-48 48-48h384zM264 144c0 22.091-17.909 40-40 40s-40-17.909-40-40 17.909-40 40-40 40 17.909 40 40zm-72 96l39.515-39.515c4.686-4.686 12.284-4.686 16.971 0L288 240l103.515-103.515c4.686-4.686 12.284-4.686 16.971 0L480 208v80H192v-48z"></path></g></svg>--}}
-            {{__('Photo library')}}
-        </h1>
-        <livewire:client.image-gallery :images="$images" class="h-40 rounded-box"/>
-    </div>
-
     <section class="bg-blue-100/40 pb-16 pt-2 font-sans" x-data="{
         activeSlide: 1,
         slides: [
@@ -1074,8 +923,10 @@ class extends Component {
             }
         ],
         next() { this.activeSlide = this.activeSlide === this.slides.length ? 1 : this.activeSlide + 1 },
-        prev() { this.activeSlide = this.activeSlide === 1 ? this.slides.length : this.activeSlide - 1 }
-    }">
+        prev() { this.activeSlide = this.activeSlide === 1 ? this.slides.length : this.activeSlide - 1 },
+    }"
+         x-init="setInterval(() => next(), 7000)"
+    >
         <div class="max-w-6xl mx-auto">
             <div class="text-center mb-6">
                 <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10">
@@ -1131,4 +982,13 @@ class extends Component {
             </template>
         </div>
     </section>
+
+    <div>
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mb-2">
+            {{--            <svg fill="#0071BD" width="38px" height="38px" viewBox="0 -32 576 576" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M480 416v16c0 26.51-21.49 48-48 48H48c-26.51 0-48-21.49-48-48V176c0-26.51 21.49-48 48-48h16v48H54a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6v-10h48zm42-336H150a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6V86a6 6 0 0 0-6-6zm6-48c26.51 0 48 21.49 48 48v256c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V80c0-26.51 21.49-48 48-48h384zM264 144c0 22.091-17.909 40-40 40s-40-17.909-40-40 17.909-40 40-40 40 17.909 40 40zm-72 96l39.515-39.515c4.686-4.686 12.284-4.686 16.971 0L288 240l103.515-103.515c4.686-4.686 12.284-4.686 16.971 0L480 208v80H192v-48z"></path></g></svg>--}}
+            {{__('Photo library')}}
+        </h1>
+        <livewire:client.image-gallery :images="$images" class="h-40 rounded-box"/>
+    </div>
+
 </div>
