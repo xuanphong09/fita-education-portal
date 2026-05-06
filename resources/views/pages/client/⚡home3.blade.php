@@ -1039,6 +1039,11 @@ class extends Component {
         </div>
 
         <div class="flex justify-center mt-8 gap-2">
+            <template x-for="slide in slides" :key="slide.id">
+                <button @click="activeSlide = slide.id"
+                        class="h-1.5 transition-all duration-300 rounded-full"
+                        :class="activeSlide === slide.id ? 'w-8 bg-fita2' : 'w-8 bg-blue-300'"></button>
+            </template>
         </div>
     </section>
 
