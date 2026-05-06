@@ -28,7 +28,7 @@ new class extends Component
 };
 ?>
 
-<section class="pb-16 pt-2 font-sans" x-data="{
+<section class="pb-10 pt-2 font-sans" x-data="{
     swiper: null,
     init() {
         if (typeof Swiper === 'undefined') {
