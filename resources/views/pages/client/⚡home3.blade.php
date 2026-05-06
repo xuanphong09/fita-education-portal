@@ -148,7 +148,7 @@ class extends Component {
             ->limit($locale === 'en' ? 20 : 4)
             ->get()
             ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
-            ->take(4)
+            ->take(3)
             ->values();
 
         $latestPosts = (clone $baseQuery)
@@ -161,7 +161,7 @@ class extends Component {
             ->limit($locale === 'en' ? 24 : 4)
             ->get()
             ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
-            ->take(4)
+            ->take(3)
             ->values();
 
         $notificationPosts = (clone $baseQuery)
@@ -173,7 +173,7 @@ class extends Component {
             ->limit($locale === 'en' ? 24 : 4)
             ->get()
             ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
-            ->take(4)
+            ->take(3)
             ->values();
 
         $featuredAlbum = Album::query()
@@ -425,93 +425,128 @@ class extends Component {
             {{__('News and events')}}
         </h1>
         <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-10">
-            <div class="lg:w-[50%] w-full relative h-60 lg:h-140">
+            <div class="lg:w-[50%] w-full relative h-60 lg:h-140" wire:key="slider-{{ $tabSelected }}">
                 @php
-                    $leftHighlightPost = $tabSelected === 'tab-feature-post'
-                        ? $featuredPosts->first()
-                        : ($tabSelected === 'tab-new-post' ? $latestPosts->first(): $notificationPosts->first());
+                    // Lấy tất cả các bài viết tương ứng với tab đang chọn
+                    $currentTabPosts = match($tabSelected) {
+                        'tab-feature-post' => $featuredPosts,
+                        'tab-new-post' => $latestPosts,
+                        default => $notificationPosts,
+                    };
 
-                    // Avoid disk I/O checks in view; let browser handle missing image fallback.
-                    $leftHighlightImage = $leftHighlightPost?->thumbnail
-                        ? Storage::url($leftHighlightPost->thumbnail)
-                        : null;
+                    // Chuyển đổi collection thành mảng dữ liệu để truyền cho Javascript (Alpine)
+                    $sliderData = $currentTabPosts->map(function($post) {
+                        return [
+                            'url' => $post->client_url,
+                            'image' => $post->thumbnail
+                                ? Storage::url($post->thumbnail)
+                                : asset('assets/images/post-7.jpg'),
+                            'is_featured' => $post->is_featured,
+                            'is_new' => $this->isNewPost($post),
+                            'day' => $post->published_at?->isoFormat('DD'),
+                            'month' => app()->getLocale() === 'vi'
+                                ? 'tháng ' . $post->published_at?->isoFormat('M')
+                                : $post->published_at?->isoFormat('MMMM'),
+                            'title' => $post->getTranslation('title', app()->getLocale()),
+//                            'excerpt' => $post->getExcerptOrAuto(app()->getLocale(), 170),
+                        ];
+                    })->values()->toArray();
                 @endphp
 
-                @if($leftHighlightPost)
-                    <a
-                        href="{{ $leftHighlightPost->client_url }}"
-                        wire:navigate
-                        class="group relative block h-full overflow-hidden border border-base-300 bg-slate-900 rounded-2xl"
-                    >
-                        @if($leftHighlightImage)
+                <div
+                    x-data="{
+            posts: @js($sliderData),
+            currentIndex: 0,
+            interval: null,
+            init() {
+                // Nếu có nhiều hơn 1 bài viết thì mới cho chạy auto
+                if (this.posts.length > 1) {
+                    this.start();
+                }
+            },
+            start() {
+                this.interval = setInterval(() => {
+                    this.currentIndex = (this.currentIndex + 1) % this.posts.length;
+                }, 7000); // Tự động chuyển bài mỗi 7 giây
+            },
+            pause() {
+                clearInterval(this.interval);
+            }
+        }"
+                    @mouseenter="pause"
+                    @mouseleave="if(posts.length > 1) start()"
+                    class="relative h-full w-full rounded-2xl overflow-hidden bg-slate-900 border border-base-300"
+                >
+                    <!-- Vòng lặp in ra các slide -->
+                    <template x-for="(post, index) in posts" :key="index">
+                        <a
+                            x-show="currentIndex === index"
+                            x-transition.opacity.duration.700ms
+                            :href="post.url"
+                            wire:navigate
+                            class="absolute inset-0 group block h-full w-full"
+                        >
                             <img
-                                src="{{ $leftHighlightImage }}"
-                                alt="{{ $leftHighlightPost->getTranslation('title', app()->getLocale()) }}"
+                                :src="post.image"
+                                :alt="post.title"
                                 loading="eager"
-                                fetchpriority="high"
-                                decoding="async"
-                                width="1280"
-                                height="720"
                                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 onerror="this.onerror=null;this.src='{{ asset('assets/images/post-7.jpg') }}'"
                             >
-                        @else
-                            <img
-                                src="{{ asset('assets/images/post-7.jpg') }}"
-                                alt="No image"
-                                loading="eager"
-                                fetchpriority="high"
-                                decoding="async"
-                                width="1280"
-                                height="720"
-                                class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            >
-                        @endif
 
-                        @if($leftHighlightPost->is_featured)
-                            <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-white shadow">
-                                <x-icon name="s-star" class="w-3 h-3" />
-                                {{ __('Featured News') }}
-                            </div>
-                        @elseif($this->isNewPost($leftHighlightPost))
-                            <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
-                                <span class="h-2 w-2 rounded-full bg-white"></span>
-                                {{ __('New') }}
-                            </div>
-                        @endif
+                            <!-- Tag bài viết nổi bật -->
+                            <template x-if="post.is_featured">
+                                <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-white shadow">
+                                    <x-icon name="s-star" class="w-3 h-3" />
+                                    {{ __('Featured News') }}
+                                </div>
+                            </template>
 
-                        <div
-                            class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
-                            <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold">
-                                {{ $leftHighlightPost->published_at?->isoFormat('DD') }}
-                            </div>
-                            <div class="text-[18px]/[30px] lg:text-[24px]/[26px] font-bold mt-0 lg:mt-3">
-                                {{ app()->getLocale() === 'vi'
-                                    ? 'tháng ' . $leftHighlightPost->published_at?->isoFormat('M')
-                                    : $leftHighlightPost->published_at?->isoFormat('MMMM') }}
-                            </div>
-                        </div>
+                            <!-- Tag bài viết mới -->
+                            <template x-if="!post.is_featured && post.is_new">
+                                <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
+                                    <span class="h-2 w-2 rounded-full bg-white"></span>
+                                    {{ __('New') }}
+                                </div>
+                            </template>
 
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+                            <!-- Box Ngày tháng -->
+                            <div class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
+                                <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold" x-text="post.day"></div>
+                                <div class="text-[18px]/[30px] lg:text-[24px]/[26px] font-bold mt-0 lg:mt-3" x-text="post.month"></div>
+                            </div>
 
-                        <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
-                            <h3 class="line-clamp-2 text-[18px]/[20px] lg:text-[20px]/[24px] font-bold">
-                                {{ $leftHighlightPost->getTranslation('title', app()->getLocale()) }}
-                            </h3>
-                            <p class="mt-3 line-clamp-2 text-[16px]/[18px] lg:text-[18px]/[22px] text-white/90">
-                                {{ $leftHighlightPost->getExcerptOrAuto(app()->getLocale(), 170) }}
-                            </p>
-                        </div>
-                    </a>
-                @else
-                    <div
-                        class="flex h-140 items-center justify-center rounded-xl border border-dashed border-base-300 bg-base-100 text-base-content/60">
+                            <!-- Lớp gradient tạo độ tương phản cho text -->
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
+
+                            <!-- Tiêu đề và trích dẫn -->
+                            <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+                                <h3 class="line-clamp-2 text-[18px]/[20px] lg:text-[20px]/[24px] font-bold" x-text="post.title"></h3>
+{{--                                <p class="mt-3 line-clamp-2 text-[16px]/[18px] lg:text-[18px]/[22px] text-white/90" x-text="post.excerpt"></p>--}}
+                            </div>
+                        </a>
+                    </template>
+
+                    <!-- (Tùy chọn) Các dấu chấm điều hướng ở góc dưới bên phải -->
+                    <div x-show="posts.length > 1" class="absolute bottom-4 right-4 z-20 flex gap-2">
+                        <template x-for="(post, index) in posts" :key="'dot-'+index">
+                            <button
+                                @click="currentIndex = index"
+                                class="w-2.5 h-2.5 rounded-full transition-all duration-300 shadow-sm"
+                                :class="currentIndex === index ? 'bg-white w-6' : 'bg-white/50 hover:bg-white/80'"
+                            ></button>
+                        </template>
+                    </div>
+
+                    <!-- Màn hình dự phòng khi không có bài viết -->
+                    <div x-show="posts.length === 0" class="flex h-full items-center justify-center bg-base-100 text-base-content/60">
                         {{ __('No posts available') }}
                     </div>
-                @endif
+                </div>
 
+                <!-- Loading state của Livewire -->
                 <div wire:loading.flex wire:target="tabSelected"
-                     class="absolute inset-0 z-30 items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                     class="absolute inset-0 z-30 items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-2xl">
                     <x-loading class="text-primary loading-lg"/>
                 </div>
             </div>
@@ -536,7 +571,7 @@ class extends Component {
                         </span>
                         </x-slot:label>
                         <div class="flex flex-col gap-4">
-                            @forelse($featuredPosts->skip(1)->take(3) as $post)
+                            @forelse($featuredPosts as $post)
                                 <div
                                     class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
@@ -550,7 +585,7 @@ class extends Component {
                                                  class="w-full h-full object-cover" alt="No image" loading="lazy"
                                                  decoding="async">
                                         @endif
-                                        @if($leftHighlightPost->is_featured)
+                                        @if($post->is_featured)
                                             <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
                                                 <x-icon name="s-star" class="w-3 h-3" />
                                                 {{ __('Featured News') }}
@@ -604,7 +639,7 @@ class extends Component {
                         </span>
                         </x-slot:label>
                         <div class="flex flex-col gap-4">
-                            @forelse($latestPosts->skip(1)->take(3) as $post)
+                            @forelse($latestPosts as $post)
                                 <div
                                     class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
@@ -663,7 +698,7 @@ class extends Component {
                         </span>
                         </x-slot:label>
                         <div class="flex flex-col gap-4">
-                            @forelse($notificationPosts->skip(1)->take(3) as $post)
+                            @forelse($notificationPosts as $post)
                                 <div
                                     class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
@@ -892,25 +927,25 @@ class extends Component {
 
     <div>
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
-            {{__('OUR PARTNERS')}}
+            {{__('NETWORK OF BUSINESS PARTNERS')}}
         </h1>
         <livewire:client.list-of-partners/>
     </div>
 
-    <section class="bg-blue-100/40 pb-16 pt-2 font-sans" x-data="{
+    <section class="bg-blue-100/40 pb-10 pt-2 font-sans" x-data="{
         activeSlide: 1,
         slides: [
             {
                 id: 1,
-                name: 'Nguyễn Ngọc Trường Khang',
-                role: 'Cựu sinh viên Khoa Công nghệ thông tin',
-                content: 'Học tại Khoa Công nghệ thông tin là hành trình đáng nhớ. Học tập, làm việc nhóm, tham gia dự án thực tế và kết nối với bạn bè – tất cả đều giúp tôi trưởng thành hơn',
-                avatar: 'assets/images/avatar-dep-9.jpg'
+                name: 'Ông Lê Doãn Phước',
+                role: 'Giám đốc Công ty TNHH Công nghệ Mai A',
+                content: 'Các thầy cô Khoa CNTT rất kiên trì dìu dắt sinh viên, giúp các em có niềm tin để tiến bộ. Nhờ nền tảng và sự rèn giũa này, khi gia nhập MaiA Tech, các em đều thể hiện thái độ làm việc cầu thị, ý chí vươn lên và thích ứng rất nhanh với dự án thực tế.',
+                avatar: 'assets/images/ldphuoc.jpg'
             },
             {
                 id: 2,
                 name: 'Trần Thị Mỹ Linh',
-                role: 'Sinh viên ngành Công nghệ thông tin',
+                role: 'Kỹ sư Phần mềm tại VNPT',
                 content: 'Môi trường năng động và các thầy cô cực kỳ tâm huyết đã giúp mình khai phá được khả năng sáng tạo của bản thân.',
                 avatar: 'assets/images/avatar-dep-8.jpg'
             },
@@ -930,7 +965,7 @@ class extends Component {
         <div class="max-w-6xl mx-auto">
             <div class="text-center mb-6">
                 <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10">
-                    Mọi người nói gì về Khoa
+                {{__('Perspectives from businesses and alumni')}}
                 </h1>
             </div>
 
@@ -940,7 +975,7 @@ class extends Component {
                     <x-icon name="s-chevron-left"></x-icon>
                 </button>
 
-                <div class="bg-white rounded-[40px] shadow-sm p-8 md:p-12 max-w-4xl w-full mx-8 relative min-h-[250px]">
+                <div class="bg-white rounded-[40px] shadow-sm p-8 md:p-12 max-w-4xl w-full mx-8 relative md:h-72.5 sm:h-100 h-114">
                     <template x-for="slide in slides" :key="slide.id">
                         <div x-show="activeSlide === slide.id"
                              x-transition:enter="transition ease-out duration-300"
@@ -961,7 +996,7 @@ class extends Component {
 
                                 <h4 class="text-xl font-bold text-black mb-1" x-text="slide.name"></h4>
                                 <p class="text-gray-600 italic mb-6 text-sm md:text-base" x-text="slide.role"></p>
-                                <p class="text-gray-700 leading-relaxed text-base md:text-lg" x-text="slide.content"></p>
+                                <p class="text-gray-700 leading-relaxed text-base md:text-lg md:line-clamp-4 line-clamp-6" x-text="slide.content"></p>
                             </div>
                         </div>
                     </template>
@@ -975,16 +1010,11 @@ class extends Component {
         </div>
 
         <div class="flex justify-center mt-8 gap-2">
-            <template x-for="slide in slides" :key="slide.id">
-                <button @click="activeSlide = slide.id"
-                        class="h-1.5 transition-all duration-300 rounded-full"
-                        :class="activeSlide === slide.id ? 'w-8 bg-fita2' : 'w-8 bg-blue-300'"></button>
-            </template>
         </div>
     </section>
 
     <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mb-2">
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mb-2 mt-5">
             {{--            <svg fill="#0071BD" width="38px" height="38px" viewBox="0 -32 576 576" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"><path d="M480 416v16c0 26.51-21.49 48-48 48H48c-26.51 0-48-21.49-48-48V176c0-26.51 21.49-48 48-48h16v48H54a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6v-10h48zm42-336H150a6 6 0 0 0-6 6v244a6 6 0 0 0 6 6h372a6 6 0 0 0 6-6V86a6 6 0 0 0-6-6zm6-48c26.51 0 48 21.49 48 48v256c0 26.51-21.49 48-48 48H144c-26.51 0-48-21.49-48-48V80c0-26.51 21.49-48 48-48h384zM264 144c0 22.091-17.909 40-40 40s-40-17.909-40-40 17.909-40 40-40 40 17.909 40 40zm-72 96l39.515-39.515c4.686-4.686 12.284-4.686 16.971 0L288 240l103.515-103.515c4.686-4.686 12.284-4.686 16.971 0L480 208v80H192v-48z"></path></g></svg>--}}
             {{__('Photo library')}}
         </h1>
