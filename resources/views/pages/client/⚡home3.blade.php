@@ -316,77 +316,69 @@ class extends Component {
         </div>
         @endscope
     </x-carousel>
+
     <div class="my-0.125">
         <div class="h-1.25 bg-[#F6A309] w-full"></div>
         <div class="h-1.25 bg-[#066140] w-full"></div>
         <div class="h-1.25 bg-[#4E3636] w-full shadow-[0_0_6px_#4E3636]"></div>
     </div>
-    <div class="mt-8 mb-12 font-sans">
-        <div class="container mx-auto px-4 lg:px-0"
-             x-data="{
-        menus: [
-            {
-                app: 'ST-CARE',
-                desc: 'Hỏi đáp & Hỗ trợ sinh viên',
-                link: 'https://st-dse.vnua.edu.vn:6896',
-                color: '#0961AA',
-                img: 'assets/images/question-and-answer.png'
-            },
-            {
-                app: 'TƯ VẤN',
-                desc: 'Chọn hướng chuyên sâu',
-                link: 'https://st-dse.vnua.edu.vn:6879',
-                color: '#F6A309',
-                img: 'assets/images/health.png'
-            },
-            {
-                app: 'ĐĂNG KÝ',
-                desc: 'Thực tập nghề nghiệp & KLTN',
-                link: 'https://st-dse.vnua.edu.vn:6875',
-                color: '#066140',
-                img: 'assets/images/register.png'
-            },
-            {
-                app: 'QUẢN LÝ',
-                desc: 'Hoạt động phòng lab',
-                link: 'https://st-dse.vnua.edu.vn:6888',
-                color: '#4E3636',
-                img: 'assets/images/calendar.png'
-            },
-        ]
-     }">
 
-            <!-- Tăng khoảng cách lưới (gap-6 thay vì gap-4) để giao diện "dễ thở" hơn -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="relative z-20  -mt-6 md:-mt-8 lg:-mt-8 mb-12 font-sans">
+        <div class="container mx-auto px-4 lg:px-8 max-w-6xl"
+             x-data="{
+            menus: [
+                {
+                    app: 'ST-CARE',
+                    desc: 'Hỏi đáp & Hỗ trợ sinh viên',
+                    link: 'https://st-dse.vnua.edu.vn:6896',
+                    color: '#0961AA',
+                    img: 'assets/images/question-and-answer.png'
+                },
+                {
+                    app: 'TƯ VẤN',
+                    desc: 'Chọn hướng chuyên sâu',
+                    link: 'https://st-dse.vnua.edu.vn:6879',
+                    color: '#F6A309',
+                    img: 'assets/images/health.png'
+                },
+                {
+                    app: 'ĐĂNG KÝ',
+                    desc: 'Thực tập nghề nghiệp & KLTN',
+                    link: 'https://st-dse.vnua.edu.vn:6875',
+                    color: '#066140',
+                    img: 'assets/images/register.png'
+                },
+                {
+                    app: 'QUẢN LÝ',
+                    desc: 'Hoạt động phòng lab',
+                    link: 'https://st-dse.vnua.edu.vn:6888',
+                    color: '#4E3636',
+                    img: 'assets/images/calendar1.png'
+                }
+            ]
+         }">
+
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 p-2 lg:py-2 lg:px-3 flex flex-wrap lg:flex-nowrap gap-2">
 
                 <template x-for="(item, index) in menus" :key="index">
                     <a :href="item.link"
                        target="_blank"
-                       class="relative flex flex-col items-center justify-center p-6 bg-white border border-gray-100 rounded-xl transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl shadow-md group overflow-hidden"
-                       :style="`border-top: 4px solid ${item.color};`"
+                       class="relative group flex-1 min-w-[45%] md:min-w-0 flex items-center justify-center lg:justify-start gap-3 lg:gap-4 p-2 lg:p-3 rounded-xl hover:bg-blue-100/50 transition-all duration-300 cursor-pointer"
                     >
-                        <!-- Lớp nền mờ khi hover để tăng tương tác UX -->
-                        <div class="absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-300 pointer-events-none"
-                             :style="`background-color: ${item.color};`">
+                        <div class="w-10 h-10 lg:w-12 lg:h-12 shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1">
+                            <img :src="item.img" alt="App Icon" class="w-full h-full object-contain drop-shadow-sm">
                         </div>
 
-                        <!-- Icon được đưa ra giữa, kích thước đồng nhất, phóng to khi hover -->
-                        <div class="w-16 h-16 md:w-20 md:h-20 mb-3 relative transition-transform duration-500 group-hover:scale-110 drop-shadow-sm">
-                            <img :src="item.img" alt="App Icon" class="w-full h-full object-contain">
+                        <div class="text-left flex-1 min-w-0">
+                            <h2 class="text-[14px] lg:text-[17px] font-bold text-gray-800 tracking-wide truncate transition-colors duration-300"
+                                :style="`group-hover:color: ${item.color};`"
+                                x-text="item.app">
+                            </h2>
                         </div>
 
-                        <!-- Typography: Tách bạch rõ ràng App name (In hoa) và Description (Chữ thường) -->
-                        <div class="text-center z-10">
-                            <h2 class="text-[16px] lg:text-[18px] font-bold text-gray-800 tracking-wide mb-1" x-text="item.app"></h2>
-                            <p class="text-[13px] lg:text-[16px] text-gray-500 line-clamp-2" x-text="item.desc"></p>
-                        </div>
-
-                        <!-- Mũi tên điều hướng nhỏ hiện ra khi hover (chỉ báo có thể click) -->
-                        <div class="absolute bottom-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0"
-                             :style="`color: ${item.color};`">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 bg-gray-900/90 backdrop-blur text-white text-[12px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl scale-95 group-hover:scale-100 origin-bottom invisible lg:visible">
+                            <span x-text="item.desc"></span>
+                            <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800/90"></div>
                         </div>
                     </a>
                 </template>
@@ -394,61 +386,7 @@ class extends Component {
             </div>
         </div>
     </div>
-{{--    <div class="container mx-auto px-4 lg:px-0">--}}
-{{--        <h1 class="uppercase lg:text-[32px] md:text-[28px] text-[24px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 md:mt-8 lg:mt-10">--}}
-{{--            {{__('Faculty of Information Technology')}}--}}
-{{--        </h1>--}}
-{{--        <div class="flex gap-8 flex-col lg:flex-row mb-10 mt-6">--}}
 
-{{--            <div class=" w-full lg:w-1/2 space-y-4">--}}
-{{--                <div class="text-[17px]/[24px] text-justify space-y-2 leading-relaxed">--}}
-{{--                    Khoa Công nghệ thông tin mới được thành lập từ 10/10/2005 theo QĐ số 839/QĐ – NNI của Hiệu trưởng.--}}
-{{--                    Khoa hiện nay bao gồm 05 Bộ môn (Công nghệ phần mềm, Khoa học máy tính, Toán, Toán-Tin ứng dụng, Vật lý) và 01 Tổ Văn phòng, trong đó có một số bộ môn của Khoa đã có bề dày truyền thống như các Bộ môn Toán và Vật lý được thành lập từ ngày thành lập trường, và bộ môn CNPM và KHMT được phát triển từ Trung tâm Tin học thành lập từ đầu những năm 1980.--}}
-{{--                </div>--}}
-{{--                <ul class="space-y-4 mt-3">--}}
-{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
-{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
-{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
-{{--                        </div>--}}
-{{--                        Đào tạo cử nhân Công nghệ thông tin--}}
-{{--                    </li>--}}
-{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
-{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
-{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
-{{--                        </div>--}}
-{{--                        Đào tạo cử nhân Công nghệ phần mềm--}}
-{{--                    </li>--}}
-{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
-{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
-{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
-{{--                        </div>--}}
-{{--                        Đào tạo cử nhân Hệ thống thông tính--}}
-{{--                    </li>--}}
-{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
-{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
-{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
-{{--                        </div>--}}
-{{--                        Đào tạo cử nhân Mạng máy tính--}}
-{{--                    </li>--}}
-{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
-{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
-{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
-{{--                        </div>--}}
-{{--                        Đào tạo cử nhân Truyền thông--}}
-{{--                    </li>--}}
-{{--                    <li class="flex items-center gap-3 text-[17px]/[24px] font-medium">--}}
-{{--                        <div class="bg-fita2 rounded-full w-7 h-7 flex items-center justify-center">--}}
-{{--                            <x-icon name="o-check" class="w-4 h-4 text-white"/>--}}
-{{--                        </div>--}}
-{{--                        Đào tạo cử nhân Trí tuệ nhân tạo--}}
-{{--                    </li>--}}
-{{--                </ul>--}}
-{{--            </div>--}}
-{{--            <div class=" w-full lg:w-1/2">--}}
-{{--                <img src="{{asset('assets/images/fita-info.jpg')}}" class="object-cover md:h-110 mx-auto rounded-lg" alt="">--}}
-{{--            </div>--}}
-{{--        </div>--}}
-{{--    </div>--}}
     <div >
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
             {{__('News and events')}}
@@ -472,10 +410,12 @@ class extends Component {
                                 : asset('assets/images/post-7.jpg'),
                             'is_featured' => $post->is_featured,
                             'is_new' => $this->isNewPost($post),
+                            'is_notif' => $post->categories->contains(fn($cat) => $cat->slug === 'thong-bao'),
                             'day' => $post->published_at?->isoFormat('DD'),
                             'month' => app()->getLocale() === 'vi'
-                                ? 'tháng ' . $post->published_at?->isoFormat('M')
+                                ? $post->published_at?->isoFormat('MM').'/'.$post->published_at?->isoFormat('YYYY')
                                 : $post->published_at?->isoFormat('MMMM'),
+                            'year' => $post->published_at?->isoFormat('YYYY'),
                             'title' => $post->getTranslation('title', app()->getLocale()),
 //                            'excerpt' => $post->getExcerptOrAuto(app()->getLocale(), 170),
                         ];
@@ -525,24 +465,52 @@ class extends Component {
 
                             <!-- Tag bài viết nổi bật -->
                             <template x-if="post.is_featured">
-                                <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-warning px-2.5 py-1 text-xs font-semibold text-white shadow">
-                                    <x-icon name="s-star" class="w-3 h-3" />
+{{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#F6A309] px-2.5 py-1 text-xs font-semibold text-white shadow">--}}
+{{--                                    <x-icon name="s-star" class="w-3 h-3" />--}}
+{{--                                    {{ __('Featured') }}--}}
+{{--                                </div>--}}
+                                <div
+                                    class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl"
+                                >
                                     {{ __('Featured News') }}
                                 </div>
                             </template>
 
                             <!-- Tag bài viết mới -->
                             <template x-if="!post.is_featured && post.is_new">
-                                <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
-                                    <span class="h-2 w-2 rounded-full bg-white"></span>
+
+{{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-[#F6A309] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg font-sans">--}}
+{{--                                    NEW--}}
+{{--                                </div>--}}
+{{--                                <div class="absolute top-0 left-0 z-10 inline-flex items-center justify-center rounded-full">--}}
+{{--                                    <img src="{{asset('assets/images/new2.png')}}" alt="" class="h-8 object-contain">--}}
+{{--                                </div>--}}
+                                <div
+                                    class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl"
+                                >
                                     {{ __('New') }}
+                                </div>
+                            </template>
+
+                            <template x-if="!post.is_featured && post.is_notif">
+
+                                {{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-[#F6A309] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg font-sans">--}}
+                                {{--                                    NEW--}}
+                                {{--                                </div>--}}
+                                {{--                                <div class="absolute top-0 left-0 z-10 inline-flex items-center justify-center rounded-full">--}}
+                                {{--                                    <img src="{{asset('assets/images/new2.png')}}" alt="" class="h-8 object-contain">--}}
+                                {{--                                </div>--}}
+                                <div
+                                    class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-success px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl"
+                                >
+                                    {{ __('Notification') }}
                                 </div>
                             </template>
 
                             <!-- Box Ngày tháng -->
                             <div class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
                                 <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold" x-text="post.day"></div>
-                                <div class="text-[18px]/[30px] lg:text-[24px]/[26px] font-bold mt-0 lg:mt-3" x-text="post.month"></div>
+                                <div class="text-[18px]/[30px] lg:text-[25px]/[26px] font-bold mt-0 lg:mt-3" x-text="post.month"></div>
                             </div>
 
                             <!-- Lớp gradient tạo độ tương phản cho text -->
@@ -615,16 +583,19 @@ class extends Component {
                                                  decoding="async">
                                         @endif
                                         @if($post->is_featured)
-                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
-                                                <x-icon name="s-star" class="w-3 h-3" />
+{{--                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-warning px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">--}}
+{{--                                                <x-icon name="s-star" class="w-3 h-3" />--}}
+{{--                                                {{ __('Featured News') }}--}}
+{{--                                            </div>--}}
+                                            <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[9px] font-bold text-white shadow-md rounded-br-xl">
                                                 {{ __('Featured News') }}
                                             </div>
 
                                         @elseif($this->isNewPost($post) && !$post->is_featured)
-                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
-                                                <span class="h-1 w-1 rounded-full bg-white"></span>
-                                                {{ __('New') }}
-                                            </div>
+{{--                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">--}}
+{{--                                                <span class="h-1 w-1 rounded-full bg-white"></span>--}}
+{{--                                                {{ __('New') }}--}}
+{{--                                            </div>--}}
                                         @endif
                                     </div>
                                     <div class="flex-1 font-barlow">
@@ -654,11 +625,7 @@ class extends Component {
                     <x-tab name="tab-new-post">
                         <x-slot:label>
                             <span class="relative inline-flex items-center h-6">
-                                {{ __('News & Events') }}
-
-{{--                                <span class="absolute -top-0.5 -right-7 bg-amber-500 text-white text-[12px] font-bold px-1.5 py-1 flex items-center justify-center rounded-full shadow-sm leading-none">--}}
-{{--                                    Cập nhật--}}
-{{--                                </span>--}}
+                                {{ __('Latest News') }}
                                 @if($tabSelected !== 'tab-new-post')
 {{--                                <span class="absolute -top-0.5 -right-4 flex h-2.5 w-2.5">--}}
 {{--                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>--}}
@@ -684,9 +651,15 @@ class extends Component {
                                         @endif
 
                                         @if($this->isNewPost($post) && !$post->is_featured)
-                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
-                                                <span class="h-1 w-1 rounded-full bg-white"></span>
-                                                {{ __('New') }}
+{{--                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">--}}
+{{--                                                <span class="h-1 w-1 rounded-full bg-white"></span>--}}
+{{--                                                {{ __('New') }}--}}
+{{--                                            </div>--}}
+                                                <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] pe-2 ps-1 py-0.5 text-[9px] font-bold text-white shadow-md rounded-br-xl">
+                                                    {{ __('New') }}
+                                                </div>
+                                            <div class="absolute top-1 left-1">
+                                                <img src="{{asset('assets/images/new2.png')}}" alt="" class="h-4 object-contain">
                                             </div>
                                         @endif
                                     </div>
@@ -742,12 +715,15 @@ class extends Component {
                                                  decoding="async">
                                         @endif
 
-                                        @if($this->isNewPost($post) && !$post->is_featured)
-                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
-                                                <span class="h-1 w-1 rounded-full bg-white"></span>
-                                                {{ __('New') }}
-                                            </div>
-                                        @endif
+{{--                                        @if($this->isNewPost($post) && !$post->is_featured)--}}
+{{--                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">--}}
+{{--                                                <span class="h-1 w-1 rounded-full bg-white"></span>--}}
+{{--                                                {{ __('New') }}--}}
+{{--                                            </div>--}}
+                                                <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-success pe-2 ps-1 py-0.5 text-[9px] font-bold text-white shadow-md rounded-br-xl">
+                                                    {{ __('Notification') }}
+                                                </div>
+{{--                                        @endif--}}
                                     </div>
                                     <div class="flex-1 font-barlow">
                                         <a href="{{ $post->client_url }}" wire:navigate

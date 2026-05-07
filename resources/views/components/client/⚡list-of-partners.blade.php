@@ -81,7 +81,7 @@ new class extends Component
 
                                 {{-- Vẫn giữ nguyên hiệu ứng Grayscale xịn xò --}}
                                 @php
-                                    $imageClasses = "w-[80%] h-[80%] object-contain transition-all duration-500 grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110";
+                                    $imageClasses = "w-[80%] h-[80%] object-contain transition-all duration-500 grayscale opacity-90 brightness-120 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110 group-hover:brightness-100";
                                 @endphp
 
                                 @if(!empty($partner->url))
