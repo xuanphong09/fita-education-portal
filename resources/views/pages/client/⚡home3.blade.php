@@ -492,7 +492,7 @@ class extends Component {
                                 </div>
                             </template>
 
-                            <template x-if="!post.is_featured && post.is_notif">
+                            <template x-if="!post.is_featured && post.is_notif && !post.is_new">
 
                                 {{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-[#F6A309] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg font-sans">--}}
                                 {{--                                    NEW--}}
