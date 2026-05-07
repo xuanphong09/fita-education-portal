@@ -477,35 +477,38 @@ class extends Component {
                             </template>
 
                             <!-- Tag bài viết mới -->
-                            <template x-if="!post.is_featured && post.is_new && !post.is_notif">
+                            @if($tabSelected === 'tab-new-post')
+                                <template x-if="!post.is_featured && post.is_new">
 
-{{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-[#F6A309] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg font-sans">--}}
-{{--                                    NEW--}}
-{{--                                </div>--}}
-{{--                                <div class="absolute top-0 left-0 z-10 inline-flex items-center justify-center rounded-full">--}}
-{{--                                    <img src="{{asset('assets/images/new2.png')}}" alt="" class="h-8 object-contain">--}}
-{{--                                </div>--}}
-                                <div
-                                    class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl"
-                                >
-                                    {{ __('New') }}
-                                </div>
-                            </template>
+    {{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-[#F6A309] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg font-sans">--}}
+    {{--                                    NEW--}}
+    {{--                                </div>--}}
+    {{--                                <div class="absolute top-0 left-0 z-10 inline-flex items-center justify-center rounded-full">--}}
+    {{--                                    <img src="{{asset('assets/images/new2.png')}}" alt="" class="h-8 object-contain">--}}
+    {{--                                </div>--}}
+                                    <div
+                                        class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl"
+                                    >
+                                        {{ __('New') }}
+                                    </div>
+                                </template>
+                            @endif
+                            @if($tabSelected === 'tab-notification-post')
+                                <template x-if="!post.is_featured && post.is_notif">
 
-                            <template x-if="!post.is_featured && post.is_notif && !post.is_new">
-
-                                {{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-[#F6A309] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg font-sans">--}}
-                                {{--                                    NEW--}}
-                                {{--                                </div>--}}
-                                {{--                                <div class="absolute top-0 left-0 z-10 inline-flex items-center justify-center rounded-full">--}}
-                                {{--                                    <img src="{{asset('assets/images/new2.png')}}" alt="" class="h-8 object-contain">--}}
-                                {{--                                </div>--}}
-                                <div
-                                    class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-success px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl"
-                                >
-                                    {{ __('Notification') }}
-                                </div>
-                            </template>
+                                    {{--                                <div class="absolute top-3 left-3 z-10 inline-flex items-center justify-center rounded-full bg-[#F6A309] px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-white shadow-lg font-sans">--}}
+                                    {{--                                    NEW--}}
+                                    {{--                                </div>--}}
+                                    {{--                                <div class="absolute top-0 left-0 z-10 inline-flex items-center justify-center rounded-full">--}}
+                                    {{--                                    <img src="{{asset('assets/images/new2.png')}}" alt="" class="h-8 object-contain">--}}
+                                    {{--                                </div>--}}
+                                    <div
+                                        class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-success px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl"
+                                    >
+                                        {{ __('Notification') }}
+                                    </div>
+                                </template>
+                            @endif
 
                             <!-- Box Ngày tháng -->
                             <div class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
