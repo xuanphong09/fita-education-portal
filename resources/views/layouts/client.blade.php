@@ -355,11 +355,11 @@
         {{--  end navbar right  --}}
 
         {{--  start navbar left  --}}
-        <x-slot:actions class="gap-0!">
+        <x-slot:actions class="gap-0! flex flex-nowrap justify-end content-start overflow-visible h-full">
             @if($useDynamicHeader)
                 @foreach($headerMenuItems as $item)
                     @if(!empty($item['children']))
-                        <div class="dropdown dropdown-hover h-full group auto-flip-bottom">
+                        <div class="shrink-0 dropdown dropdown-hover h-full group auto-flip-bottom">
                             <x-button
                                 tabindex="0"
                                 :link="!str_starts_with($item['url'], '#') ? $item['url'] : ''"
@@ -419,7 +419,7 @@
                             link="{{ $item['url'] }}"
                             :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                             :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
-                            class="relative px-2 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 hover:before:w-full"
+                            class="shrink-0 relative px-2 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 hover:before:w-full"
                             responsive
                             x-data="{ isScrolled: false }"
                             @scroll.window="isScrolled = (window.pageYOffset > 50)"
@@ -429,74 +429,6 @@
                         </x-button>
                     @endif
                 @endforeach
-            @else
-{{--                <div class="dropdown dropdown-hover h-full group">--}}
-{{--                    <x-button--}}
-{{--                        tabindex="0"--}}
-{{--                        class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"--}}
-{{--                        responsive--}}
-{{--                    >--}}
-{{--                        {{__('Introduction')}}--}}
-{{--                    </x-button>--}}
-
-{{--                    <ul tabindex="0" class="text-black dropdown-content z-50 px-0  menu shadow-lg bg-base-100 rounded-b-box border border-gray-300 border-t-transparent w-max min-w-full">--}}
-{{--                        <li class="w-full">--}}
-{{--                            <x-button--}}
-{{--                                class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"--}}
-{{--                                label="{{__('Faculty of Information Technology')}}"--}}
-{{--                                link="{{route('client.information')}}"--}}
-{{--                            ></x-button>--}}
-{{--                            <x-button--}}
-{{--                                class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"--}}
-{{--                                label="{{__('Lecturers - Staff')}}"--}}
-{{--                                link="{{route('client.lecturers.index')}}"--}}
-{{--                            ></x-button>--}}
-{{--                            <x-button--}}
-{{--                                link="{{route('client.contact')}}"--}}
-{{--                                class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"--}}
-{{--                                label="{{__('Contact')}}"--}}
-{{--                            >--}}
-{{--                            </x-button>--}}
-{{--                        </li>--}}
-{{--                    </ul>--}}
-{{--                </div>--}}
-
-{{--                <div class="dropdown dropdown-hover h-full group">--}}
-{{--                    <x-button--}}
-{{--                        tabindex="0"--}}
-{{--                        class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full group-hover:bg-fita2 group-hover:text-white uppercase font-barlow after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"--}}
-{{--                        responsive--}}
-{{--                    >--}}
-{{--                        {{__('Programs')}}--}}
-{{--                    </x-button>--}}
-
-{{--                    <ul tabindex="0" class="text-black dropdown-content z-50 px-0 menu shadow-lg bg-base-100 rounded-b-box border border-gray-300 border-t-transparent w-max min-w-full max-h-80 overflow-auto">--}}
-{{--                        @forelse($trainingMajors as $major)--}}
-{{--                            @php--}}
-{{--                                $majorLabel = $major->getTranslation('name', app()->getLocale(), false)--}}
-{{--                                    ?: $major->getTranslation('name', 'vi', false)--}}
-{{--                                    ?: $major->getTranslation('name', 'en', false)--}}
-{{--                                    ?: $major->slug;--}}
-{{--                            @endphp--}}
-{{--                            <li class="w-full">--}}
-{{--                                <x-button--}}
-{{--                                    class="btn-ghost text-black text-[15px] py-4 px-5 border-transparent justify-start font-medium rounded-none hover:bg-fita hover:text-white whitespace-nowrap"--}}
-{{--                                    label="{{ $majorLabel }}"--}}
-{{--                                    link="{{ route('client.training-programs.major', $major) }}"--}}
-{{--                                />--}}
-{{--                            </li>--}}
-{{--                        @empty--}}
-{{--                        @endforelse--}}
-{{--                    </ul>--}}
-{{--                </div>--}}
-
-{{--                <x-button--}}
-{{--                    link="{{route('client.posts.index',['danh-muc' => 'tin-tuc'])}}"--}}
-{{--                    class="btn-ghost text-black text-[18px]/[76px] border-transparent font-medium rounded-none h-full hover:bg-fita2 hover:text-white uppercase font-barlow"--}}
-{{--                    responsive--}}
-{{--                >--}}
-{{--                    {{__('News')}}--}}
-{{--                </x-button>--}}
             @endif
         </x-slot:actions>
         {{--  end navbar left  --}}

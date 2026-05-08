@@ -323,7 +323,7 @@ class extends Component {
         <div class="h-1.25 bg-[#4E3636] w-full shadow-[0_0_6px_#4E3636]"></div>
     </div>
 
-    <div class="relative z-20  -mt-6 md:-mt-8 lg:-mt-8 mb-12 font-sans">
+    <div class="relative z-20  -mt-5 md:-mt-7 mb-12 font-sans">
         <div class="container mx-auto px-4 lg:px-8 max-w-6xl"
              x-data="{
             menus: [
@@ -358,14 +358,14 @@ class extends Component {
             ]
          }">
 
-            <div class="bg-white/95 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 p-2 lg:py-2 lg:px-3 flex flex-wrap lg:flex-nowrap gap-2">
+            <div class="bg-white/95 backdrop-blur-md rounded-2xl border border-gray-100 p-2 lg:py-2 lg:px-3 flex flex-wrap lg:flex-nowrap gap-2 shadow-lg">
 
                 <template x-for="(item, index) in menus" :key="index">
                     <a :href="item.link"
                        target="_blank"
-                       class="relative group flex-1 min-w-[45%] md:min-w-0 flex items-center justify-center lg:justify-start gap-3 lg:gap-4 p-2 lg:p-3 rounded-xl hover:bg-blue-100/50 transition-all duration-300 cursor-pointer"
+                       class="relative group flex-1 min-w-[45%] md:min-w-0 flex items-center justify-center lg:justify-start gap-3 lg:gap-4 p-2 lg:p-3 rounded-xl hover:shadow-md hover:bg-blue-100/50 transition-all duration-300 cursor-pointer hover:-translate-y-1"
                     >
-                        <div class="w-10 h-10 lg:w-12 lg:h-12 shrink-0 transition-transform duration-300 group-hover:scale-110 group-hover:-translate-y-1">
+                        <div class="w-10 h-10 lg:w-12 lg:h-12 shrink-0 transition-transform duration-300 group-hover:scale-105 group-hover:-translate-y-1">
                             <img :src="item.img" alt="App Icon" class="w-full h-full object-contain drop-shadow-sm">
                         </div>
 
@@ -376,9 +376,9 @@ class extends Component {
                             </h2>
                         </div>
 
-                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 bg-gray-900/90 backdrop-blur text-white text-[12px] font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl scale-95 group-hover:scale-100 origin-bottom invisible lg:visible">
-                            <span x-text="item.desc"></span>
-                            <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-gray-800/90"></div>
+                        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-1.5 bg-white backdrop-blur rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 pointer-events-none whitespace-nowrap z-50 shadow-xl scale-95 group-hover:scale-100 origin-bottom invisible lg:visible">
+                            <span class="text-[14px] font-semibold" x-text="item.desc"></span>
+                            <div class="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-white"></div>
                         </div>
                     </a>
                 </template>
@@ -413,7 +413,7 @@ class extends Component {
                             'is_notif' => $post->categories->contains(fn($cat) => $cat->slug === 'thong-bao'),
                             'day' => $post->published_at?->isoFormat('DD'),
                             'month' => app()->getLocale() === 'vi'
-                                ? $post->published_at?->isoFormat('MM').'/'.$post->published_at?->isoFormat('YYYY')
+                                ? 'Tháng '.$post->published_at?->isoFormat('MM').'/'.$post->published_at?->isoFormat('YYYY')
                                 : $post->published_at?->isoFormat('MMMM'),
                             'year' => $post->published_at?->isoFormat('YYYY'),
                             'title' => $post->getTranslation('title', app()->getLocale()),
@@ -460,7 +460,7 @@ class extends Component {
                                 :alt="post.title"
                                 loading="eager"
                                 class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                onerror="this.onerror=null;this.src='{{ asset('assets/images/post-7.jpg') }}'"
+                                onerror="this.onerror=null;this.src='{{ asset('assets/images/post-11.jpg') }}'"
                             >
 
                             <!-- Tag bài viết nổi bật -->
@@ -512,8 +512,8 @@ class extends Component {
 
                             <!-- Box Ngày tháng -->
                             <div class="absolute right-0 top-0 z-10 bg-black/45 px-3 py-2 text-center text-white backdrop-blur-sm">
-                                <div class="text-[30px]/[34px] lg:text-[40px]/[44px] font-bold" x-text="post.day"></div>
-                                <div class="text-[18px]/[30px] lg:text-[25px]/[26px] font-bold mt-0 lg:mt-3" x-text="post.month"></div>
+                                <div class="text-[40px]/[34px] lg:text-[54px]/[44px] font-bold" x-text="post.day"></div>
+                                <div class="text-[18px]/[30px] lg:text-[20px]/[24px] font-bold mt-0 lg:mt-3" x-text="post.month"></div>
                             </div>
 
                             <!-- Lớp gradient tạo độ tương phản cho text -->
@@ -821,7 +821,7 @@ class extends Component {
                     <div class="px-6 py-4">
                         <a href="https://st-dse.vnua.edu.vn:6889/dai-hoc/nganh-mang-may-tinh-va-truyen-thong-du-lieu" wire:navigate
                             class="why-title text-[18px] lg:text-[22px] font-bold text-slate-900 mb-2 transition-colors uppercase line-clamp-2 group-hover:text-fita">
-                           Mạng máy tính và truyền thông dữ liệu
+                           Mạng máy tính và TTDL
                         </a>
                         <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed line-clamp-4">
                             Chương trình đào tạo ngành mạng máy tính và truyền thông dữ liệu (MMT&TTDL) nhằm đào tạo cử nhân có phẩm chất chính trị vững vàng, có sức khỏe tốt; có kiến thức và kỹ năng vững vàng về lĩnh vực máy tính và công nghệ thông tin (CNTT); có khả năng tự học, tự nghiên cứu nhằm đáp ứng được yêu cầu công việc tại các cơ quan, các công ty liên quan đến lĩnh vực máy tính và CNTT.
@@ -858,7 +858,7 @@ class extends Component {
                     <div class="px-6 py-4">
                         <a  href="https://st-dse.vnua.edu.vn:6889/dai-hoc/nganh-khoa-hoc-du-lieu-va-tri-tue-nhan-tao" wire:navigate
                             class="why-title text-[18px] lg:text-[22px] font-bold text-slate-900 mb-2 transition-colors uppercase line-clamp-2 group-hover:text-fita">
-                            Khoa học dữ liệu và Trí tuệ nhân tạo
+                            Khoa học dữ liệu và TTNT
                         </a>
                         <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed line-clamp-4">
                             Chương trình đào tạo ngành Khoa học dữ liệu và Trí tuệ nhân tạo (KHDL&TTNT) nhằm đào tạo ra cử nhân có phẩm chất chính trị vững vàng, có đạo đức nghề nghiệp, có trách nhiệm cao và sức khỏe tốt; có kiến thức chuyên sâu và thành thạo kỹ năng nghề nghiệp; có năng lực sáng tạo, tự học, tự nghiên cứu nhằm không ngừng nâng cao trình độ; có tinh thần lập nghiệp,  hội nhập quốc tế; đóng góp nguồn nhân lực chất lượng cao trong lĩnh vực KHDL&TTNT và lĩnh vực nông nghiệp hiện đại.

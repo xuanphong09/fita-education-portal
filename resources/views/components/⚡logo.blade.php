@@ -27,7 +27,7 @@ new class extends Component
          :class="isScrolled ? 'size-13' : 'md:size-18 size-13'"
     />
     <div class="xl:flex hidden flex-col ms-2 wow fadeInDown transition-all duration-300 @if($this->layout == "footer")flex! @endif @if(app()->getLocale() == 'en' && $this->layout == "client") ms-0! @endif">
-        <h1 class="transition-all duration-300 font-bold tracking-wider uppercase text-white font-barlow overflow-hidden @if($this->layout == "client") text-fita! @endif @if($this->layout == "admin") md:text-[20px]/[26px]! text-[18px]/[24px]! @endif"
+        <h1 class="whitespace-nowrap transition-all duration-300 font-bold tracking-wider uppercase text-white font-barlow overflow-hidden @if($this->layout == "client") text-fita! @endif @if($this->layout == "admin") md:text-[20px]/[26px]! text-[18px]/[24px]! @endif"
             x-data="{
             isScrolled: false,
             handleScroll() {
@@ -44,7 +44,7 @@ new class extends Component
             x-on:scroll.window.throttle.50ms="handleScroll()"
             :class="isScrolled ? 'md:text-[20px]/[26px] text-[19px]/[24px]' : 'md:text-[26px]/[32px] text-[19px]/[24px]'"
         >{{__('Faculty of Information Technology')}}</h1>
-        <h1 class="transition-all duration-300 font-semibold tracking-wider uppercase overflow-hidde md:text-[16px]/[20px] text-[13px]/[16px] text-white font-barlow @if(app()->getLocale() == 'en') text-[15px]/[17px] @endif @if($this->layout == "client") text-black! @endif @if($this->layout == "admin") md:text-[16px]/[20px]! text-[13px]/[16px]! @endif"
+        <h1 class="whitespace-nowrap transition-all duration-300 font-semibold tracking-wider uppercase overflow-hidden md:text-[16px]/[20px] text-[13px]/[16px] text-white font-barlow @if(app()->getLocale() == 'en') text-[15px]/[17px] @endif @if($this->layout == "client") text-black! @endif @if($this->layout == "admin") md:text-[16px]/[20px]! text-[13px]/[16px]! @endif"
             x-data="{
             isScrolled: false,
             handleScroll() {
