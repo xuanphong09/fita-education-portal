@@ -107,14 +107,15 @@ class extends Component {
                      class="w-16 h-16 object-contain">
                 <img src="{{asset('assets/images/FITA.png')}}" alt="FITA logo" class="w-16 h-16 object-contain">
             </div>
+            <div class="space-y-0">
+                <h2 class="font-extrabold text-[19px] tracking-tight uppercase">
+                    {{__('Faculty of Information Technology')}}
+                </h2>
+                <p class="font-medium text-[15px] text-gray-700 uppercase tracking-wide">
+                    {{__('Vietnam National University of Agriculture')}}
+                </p>
+            </div>
 
-            <h2 class="font-semibold text-xl whitespace-nowrap">
-                {{__('Vietnam National University of Agriculture')}}
-            </h2>
-
-            <p class="text-gray-900 font-medium text-lg">
-                {{__('Faculty of Information Technology')}}
-            </p>
             <div class="absolute -top-5 -left-4 p-2">
                 <x-button class="btn-ghost text-fita btn-xs" link="{{route('client.home')}}" tooltip="Trang chủ" icon="o-arrow-uturn-left"></x-button>
             </div>
@@ -193,7 +194,7 @@ class extends Component {
             class="w-full bg-white text-blue-500 border border-blue-500 btn hover:bg-blue-50"
             href="{{route('sso.redirect')}}"
         >
-            {{__('Login with ST SSO')}}
+            ST SSO | OFFICE 365 SSO
         </a>
 
     </x-card>
