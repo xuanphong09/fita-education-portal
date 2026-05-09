@@ -323,8 +323,8 @@ class extends Component {
         <div class="h-1.25 bg-[#4E3636] w-full shadow-[0_0_6px_#4E3636]"></div>
     </div>
 
-    <div class="relative z-20  -mt-5 md:-mt-7 mb-12 font-sans">
-        <div class="container mx-auto px-4 lg:px-8 max-w-6xl"
+    <div class="relative z-20 -mt-4 mb-6 font-sans">
+        <div class="container mx-auto px-3 lg:px-4 max-w-6xl"
              x-data="{
             menus: [
                 {
@@ -358,12 +358,12 @@ class extends Component {
             ]
          }">
 
-            <div class="bg-white/95 backdrop-blur-md rounded-2xl border border-gray-100 p-2 lg:py-2 lg:px-3 flex flex-wrap lg:flex-nowrap gap-2 shadow-lg">
+            <div class="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-100 p-2 lg:py-2 lg:px-3 flex flex-wrap lg:flex-nowrap gap-2 shadow-[0_15px_35px_rgba(0,0,0,0.22)]">
 
                 <template x-for="(item, index) in menus" :key="index">
                     <a :href="item.link"
                        target="_blank"
-                       class="relative group flex-1 min-w-[45%] md:min-w-0 flex items-center justify-center lg:justify-start gap-3 lg:gap-4 p-2 lg:p-3 rounded-xl hover:shadow-md hover:bg-blue-100/50 transition-all duration-300 cursor-pointer hover:-translate-y-1"
+                       class="relative group flex-1 min-w-[45%] md:min-w-0 flex items-center justify-center lg:justify-start gap-3 lg:gap-4 p-2 rounded-xl hover:shadow-md hover:bg-blue-100/50 transition-all duration-300 cursor-pointer hover:-translate-y-1"
                     >
                         <div class="w-10 h-10 lg:w-12 lg:h-12 shrink-0 transition-transform duration-300 group-hover:scale-105 group-hover:-translate-y-1">
                             <img :src="item.img" alt="App Icon" class="w-full h-full object-contain drop-shadow-sm">
@@ -388,7 +388,7 @@ class extends Component {
     </div>
 
     <div >
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 lg:mt-8 mb-4">
             {{__('News and events')}}
         </h1>
         <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-10">
