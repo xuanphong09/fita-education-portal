@@ -26,7 +26,7 @@ class AuthenticateController extends Controller
         Auth::logout();
         session()->invalidate();
         session()->regenerateToken();
-        return redirect()->route('login');
+        return redirect()->route('client.home');
     }
 
     public function redirectToSSO()

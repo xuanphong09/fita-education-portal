@@ -311,8 +311,20 @@
                 </div>
             @else
                 <span class="separator text-[18px] mx-2 text-white">|</span>
-                <x-button
-                    link="{{route('login')}}"
+{{--                <x-button--}}
+{{--                    link="{{route('login')}}"--}}
+{{--                    class="btn btn-ghost btn-sm--}}
+{{--                       bg-transparent border-0 shadow-none--}}
+{{--                       hover:bg-transparent hover:border-0 hover:shadow-none--}}
+{{--                       focus:bg-transparent focus:border-0 focus:shadow-none focus:outline-none--}}
+{{--                       active:bg-transparent active:border-0 active:shadow-none--}}
+{{--                       transition-none w-6 h-6 p-0 z-100"--}}
+{{--                    tooltipLeft="{{__('Login')}}"--}}
+{{--                >--}}
+{{--                    <img src="{{asset('assets/images/login.png')}}" alt="login" class="w-6 h-6 inline-block">--}}
+{{--                </x-button>--}}
+                <a
+                    href="{{route('sso.redirect')}}"
                     class="btn btn-ghost btn-sm
                        bg-transparent border-0 shadow-none
                        hover:bg-transparent hover:border-0 hover:shadow-none
@@ -322,7 +334,7 @@
                     tooltipLeft="{{__('Login')}}"
                 >
                     <img src="{{asset('assets/images/login.png')}}" alt="login" class="w-6 h-6 inline-block">
-                </x-button>
+                </a>
             @endauth
 
         </div>
