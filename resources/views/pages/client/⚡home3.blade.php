@@ -950,20 +950,20 @@ class extends Component {
                 content: 'Các thầy cô Khoa CNTT rất kiên trì dìu dắt sinh viên, giúp các em có niềm tin để tiến bộ. Nhờ nền tảng và sự rèn giũa này, khi gia nhập MaiA Tech, các em đều thể hiện thái độ làm việc cầu thị, ý chí vươn lên và thích ứng rất nhanh với dự án thực tế.',
                 avatar: 'assets/images/ldphuoc.jpg'
             },
-            {
-                id: 2,
-                name: 'Trần Thị Mỹ Linh',
-                role: 'Kỹ sư Phần mềm tại VNPT',
-                content: 'Môi trường năng động và các thầy cô cực kỳ tâm huyết đã giúp mình khai phá được khả năng sáng tạo của bản thân.',
-                avatar: 'assets/images/avatar-dep-8.jpg'
-            },
-            {
-                id: 3,
-                name: 'Nguyễn Bình Minh',
-                role: ' Cựu sinh viên ngành Công nghệ thông tin',
-                content: 'Khoa Công nghệ thông tin không chỉ dạy mình kiến thức chuyên môn mà còn giúp mình phát triển kỹ năng mềm và tư duy phản biện.',
-                avatar: 'assets/images/avatar-dep-10.jpg'
-            }
+{{--            {--}}
+{{--                id: 2,--}}
+{{--                name: 'Trần Thị Mỹ Linh',--}}
+{{--                role: 'Kỹ sư Phần mềm tại VNPT',--}}
+{{--                content: 'Môi trường năng động và các thầy cô cực kỳ tâm huyết đã giúp mình khai phá được khả năng sáng tạo của bản thân.',--}}
+{{--                avatar: 'assets/images/avatar-dep-8.jpg'--}}
+{{--            },--}}
+{{--            {--}}
+{{--                id: 3,--}}
+{{--                name: 'Nguyễn Bình Minh',--}}
+{{--                role: ' Cựu sinh viên ngành Công nghệ thông tin',--}}
+{{--                content: 'Khoa Công nghệ thông tin không chỉ dạy mình kiến thức chuyên môn mà còn giúp mình phát triển kỹ năng mềm và tư duy phản biện.',--}}
+{{--                avatar: 'assets/images/avatar-dep-10.jpg'--}}
+{{--            }--}}
         ],
         next() { this.activeSlide = this.activeSlide === this.slides.length ? 1 : this.activeSlide + 1 },
         prev() { this.activeSlide = this.activeSlide === 1 ? this.slides.length : this.activeSlide - 1 },
