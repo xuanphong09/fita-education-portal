@@ -354,20 +354,6 @@ class extends Component {
                     link: 'https://st-dse.vnua.edu.vn:6888',
                     color: '#4E3636',
                     img: 'assets/images/calendar1.png'
-                },
-                {
-                    app: 'QUẢN LÝ',
-                    desc: 'Hoạt động phòng lab',
-                    link: 'https://st-dse.vnua.edu.vn:6888',
-                    color: '#4E3636',
-                    img: 'assets/images/calendar1.png'
-                },
-                {
-                    app: 'QUẢN LÝ',
-                    desc: 'Hoạt động phòng lab',
-                    link: 'https://st-dse.vnua.edu.vn:6888',
-                    color: '#4E3636',
-                    img: 'assets/images/calendar1.png'
                 }
             ]
          }">
