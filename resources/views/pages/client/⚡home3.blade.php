@@ -324,7 +324,7 @@ class extends Component {
     </div>
 
     <div class="relative z-20 -mt-4 mb-6 font-sans">
-        <div class="container mx-auto px-3 lg:px-4 max-w-6xl"
+        <div class="container mx-auto px-3 lg:px-4 max-w-5xl"
              x-data="{
             menus: [
                 {
@@ -347,6 +347,20 @@ class extends Component {
                     link: 'https://st-dse.vnua.edu.vn:6875',
                     color: '#066140',
                     img: 'assets/images/register.png'
+                },
+                {
+                    app: 'QUẢN LÝ',
+                    desc: 'Hoạt động phòng lab',
+                    link: 'https://st-dse.vnua.edu.vn:6888',
+                    color: '#4E3636',
+                    img: 'assets/images/calendar1.png'
+                },
+                {
+                    app: 'QUẢN LÝ',
+                    desc: 'Hoạt động phòng lab',
+                    link: 'https://st-dse.vnua.edu.vn:6888',
+                    color: '#4E3636',
+                    img: 'assets/images/calendar1.png'
                 },
                 {
                     app: 'QUẢN LÝ',
@@ -388,7 +402,7 @@ class extends Component {
     </div>
 
     <div >
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 lg:mt-8 mb-4">
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 lg:mt-4 mb-4">
             {{__('News and events')}}
         </h1>
         <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-10">
