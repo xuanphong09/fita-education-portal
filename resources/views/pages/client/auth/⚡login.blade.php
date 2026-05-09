@@ -194,7 +194,7 @@ class extends Component {
             class="w-full bg-white text-blue-500 border border-blue-500 btn hover:bg-blue-50"
             href="{{route('sso.redirect')}}"
         >
-            ST SSO | OFFICE 365 SSO
+            {{__('Login with ST SSO')}}
         </a>
 
     </x-card>

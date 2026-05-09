@@ -61,6 +61,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     // ---- Cấu hình giao diện ----
     Route::middleware('permission:cai_dat_giao_dien')->group(function () {
         Route::livewire('/configuration/introduction-page', 'pages::admin.configuration.introduction')->name('admin.configuration.introduction');
+        Route::livewire('/configuration/home3', 'pages::admin.configuration.home3')->name('admin.configuration.home3');
         Route::livewire('/configuration/header', 'pages::admin.configuration.header')->name('admin.configuration.header');
         Route::livewire('/configuration/footer', 'pages::admin.configuration.footer')->name('admin.configuration.footer');
         Route::livewire('/banner/index', 'pages::admin.banner.index')->name('admin.banner.index');
