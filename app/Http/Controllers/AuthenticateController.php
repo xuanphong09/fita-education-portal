@@ -129,7 +129,20 @@ class AuthenticateController extends Controller
             throw new Exception('Dữ liệu người dùng từ SSO không hợp lệ.');
         }
 
-        $userType = $this->determineUserType((string) ($userData['role'] ?? ''));
+        $email = $userData['email'];
+        $code = trim((string) ($userData['code'] ?? ''));
+
+        // --- THÊM BƯỚC KIỂM TRA ĐUÔI EMAIL ---
+        $isLecturerEmail = Str::endsWith($email, '@vnua.edu.vn');
+        $isStudentEmail = Str::endsWith($email, '@sv.vnua.edu.vn');
+
+        if (!$isLecturerEmail && !$isStudentEmail) {
+            throw new Exception('Truy cập bị từ chối. Vui lòng sử dụng email do nhà trường cấp (@vnua.edu.vn hoặc @sv.vnua.edu.vn).');
+        }
+        if ($code === '') {
+            throw new Exception('Đăng nhập bị từ chối: Tài khoản của bạn bị thiếu thông tin Mã sinh viên / Mã giảng viên từ hệ thống.');
+        }
+        $userType = $this->determineUserType((string) ($userData['role'] ?? ''), $email);
 
         $user = User::where('sso_id', $userData['id'])->first();
 
@@ -157,12 +170,10 @@ class AuthenticateController extends Controller
                 throw new Exception('Tài khoản SSO này đã liên kết với người dùng khác.');
             }
 
-            // Email đã thuộc user khác có sso_id khác -> chặn để tránh liên kết sai danh tính.
             if (!empty($user->sso_id) && (string) $user->sso_id !== (string) $userData['id']) {
                 throw new Exception('Email này đã liên kết với một tài khoản SSO khác. Vui lòng đăng nhập bằng đúng tài khoản SSO đã liên kết.');
             }
 
-            // Liên kết tài khoản cũ (đăng nhập email/password) với SSO.
             if (empty($user->sso_id)) {
                 $user->update([
                     'sso_id' => $userData['id'],
@@ -179,7 +190,6 @@ class AuthenticateController extends Controller
             return $user;
         }
 
-        // Tạo mới nếu chưa có theo sso_id và email.
         $user = User::create([
             'name' => $userData['full_name'],
             'email' => $userData['email'],
@@ -209,7 +219,7 @@ class AuthenticateController extends Controller
             // students.student_code: NOT NULL, unique, max 10
             $studentCode = Str::upper(Str::limit($code, 10, ''));
 
-            Student::updateOrCreate(
+            Student::firstOrCreate(
                 ['user_id' => $user->id],
                 [
                     'student_code' => $studentCode,
@@ -226,10 +236,10 @@ class AuthenticateController extends Controller
 
             $suffix = '-'.Str::lower($staffCode);
 
-            Lecturer::updateOrCreate(
+            Lecturer::firstOrCreate(
                 ['user_id' => $user->id],
                 [
-                    'staff_code' => $staffCode,
+                    'staff_code' => $staffCode ,
                     'slug' => Str::slug($userData['full_name']).$suffix,
                     'phone' => $userData['phone'] ?? null,
                 ]
@@ -259,8 +269,16 @@ class AuthenticateController extends Controller
             $user->assignRole($role->name);
         }
     }
-    private function determineUserType(string $role): string
+    private function determineUserType(string $role, string $email): string
     {
+        if (Str::endsWith($email, '@vnua.edu.vn')) {
+            return 'lecturer';
+        }
+
+        if (Str::endsWith($email, '@sv.vnua.edu.vn')) {
+            return 'student';
+        }
+
         return match ($role) {
             'superAdmin', 'officer', 'teacher',  => 'lecturer',
             default => 'student',

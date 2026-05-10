@@ -188,12 +188,12 @@ new class extends Component {
                     link="{{route('admin.user.edit', $user->id)}}"
                 />
 
-                <x-button
-                    icon="o-trash"
-                    class="btn-sm btn-ghost text-danger [&]:hover:bg-gray-200/40 [&]:hover:border-gray-400/70"
-                    tooltip="Xóa"
-                    wire:click="delete({{ $user->id }})"
-                />
+{{--                <x-button--}}
+{{--                    icon="o-trash"--}}
+{{--                    class="btn-sm btn-ghost text-danger [&]:hover:bg-gray-200/40 [&]:hover:border-gray-400/70"--}}
+{{--                    tooltip="Xóa"--}}
+{{--                    wire:click="delete({{ $user->id }})"--}}
+{{--                />--}}
             </div>
             @endscope
 
