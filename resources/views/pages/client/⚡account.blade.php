@@ -107,6 +107,12 @@ class extends Component {
     public function getIntakesProperty()
     {
         return Intake::query()
+            // CHỈ lấy các Khóa có CTĐT đã xuất bản
+            ->whereHas('trainingPrograms', function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            })
             ->orderBy('name')
             ->get(['id', 'name'])
             ->map(fn(Intake $intake) => [
@@ -115,17 +121,33 @@ class extends Component {
             ]);
     }
 
-    public function getMajorsProperty()
+    public function getProgramMajorsProperty()
     {
-        if (!$this->program_major_id) {
-            return collect(); // trả về empty collection
-        }
-        return Major::query()
-            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
-            ->where('program_major_id', $this->program_major_id)
+        $intakeId = $this->intake_id;
+
+        return ProgramMajor::query()
             ->where('is_active', true)
-            ->get(['id', 'name', 'slug'])
-            ->map(function (Major $major) {
+            // CHỈ lấy các Ngành có CTĐT (chung của ngành HOẶC của các chuyên ngành con)
+            ->where(function ($q) use ($intakeId) {
+                $q->whereHas('trainingPrograms', function ($query) use ($intakeId) {
+                    $query->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                    if ($intakeId) {
+                        $query->where('intake_id', $intakeId);
+                    }
+                })->orWhereHas('majors.trainingPrograms', function ($query) use ($intakeId) {
+                    $query->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                    if ($intakeId) {
+                        $query->where('intake_id', $intakeId);
+                    }
+                });
+            })
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get()
+            ->map(function ($major) {
                 return [
                     'id' => $major->id,
                     'name' => $major->getTranslation('name', app()->getLocale(), false)
@@ -136,13 +158,29 @@ class extends Component {
             });
     }
 
-    public function getProgramMajorsProperty()
+    public function getMajorsProperty()
     {
-        return ProgramMajor::query()
-            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+        if (!$this->program_major_id) {
+            return collect();
+        }
+
+        $intakeId = $this->intake_id;
+
+        return Major::query()
+            ->where('program_major_id', $this->program_major_id)
             ->where('is_active', true)
-            ->get(['id', 'name', 'slug'])
-            ->map(function ($major) {
+            // CHỈ lấy các Chuyên ngành có CTĐT cho Khóa tương ứng
+            ->whereHas('trainingPrograms', function ($query) use ($intakeId) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+                if ($intakeId) {
+                    $query->where('intake_id', $intakeId);
+                }
+            })
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get()
+            ->map(function (Major $major) {
                 return [
                     'id' => $major->id,
                     'name' => $major->getTranslation('name', app()->getLocale(), false)
@@ -155,6 +193,12 @@ class extends Component {
 
     public function updatedProgramMajorId()
     {
+        $this->major_id = null;
+    }
+
+    public function updatedIntakeId()
+    {
+        $this->program_major_id = null;
         $this->major_id = null;
     }
 
@@ -419,11 +463,11 @@ class extends Component {
                                      placeholder="{{ __('Enter class') }}" required/>
                             <x-select
                                 label="{{ __('Intake') }}"
-                                wire:model.defer="intake_id"
+                                wire:model.live="intake_id"
                                 :options="$this->intakes"
                                 option-value="id"
                                 option-label="name"
-                                placeholder="{{ __('Select intake') }}"
+                                placeholder="{{ __('No intake selected') }}"
                                 required
                             />
                             <x-input label="{{ __('Date of birth') }}" wire:model.defer="date_of_birth" type="date"/>
@@ -434,20 +478,21 @@ class extends Component {
                                 :options="$this->programMajors"
                                 option-value="id"
                                 option-label="name"
-                                placeholder="{{ __('Select major') }}"
+                                placeholder="{{!$intake_id? __('Select intake first') : __('Select major') }}"
                                 required
+                                :disabled="empty($intake_id)"
                             />
 
                             <x-select
                                 wire:key="select-major-{{ $program_major_id }}"
-                                label="{{ __('Specialized') }}"
+                                label="{{__('Specialization/Area of specialization')}}"
                                 wire:model="major_id"
                                 :options="$this->majors"
                                 option-value="id"
                                 option-label="name"
-                                placeholder="{{!$program_major_id?__('Select specialization first'):__('No major selected') }}"
+                                placeholder="{{!$program_major_id?__('Select specialization first'):__('No specialization selected') }}"
                                 {{-- Disable nếu chưa chọn chuyên ngành --}}
-                                :disabled="empty($program_major_id)"
+                                :disabled="empty($program_major_id) || $this->majors->isEmpty()"
                             />
                         </div>
                     </div>

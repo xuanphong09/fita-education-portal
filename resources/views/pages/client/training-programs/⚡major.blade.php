@@ -38,6 +38,8 @@ class extends Component {
     #[Url(as: 'loai')]
     public string $typeFilter = '';
 
+    public bool $isLockedProfile = false;
+
     public array $expanded = [];
     public bool $showSemesterTimelineModal = true;
     public bool $pendingOpenSemesterTimelineModal = true;
@@ -75,29 +77,51 @@ class extends Component {
         $user = Auth::user();
         $shouldRedirectToCanonical = false;
 
-        if ($user?->student && !$this->selectedMajorSlug) {
+        if ($user?->student) {
             $user->loadMissing('student.major.programMajor', 'student.programMajor');
-
             $student = $user->student;
 
-            if (!$this->intakeId && $student?->intake_id) {
-                $this->intakeId = (int) $student->intake_id;
-            }
+            // Kiểm tra xem hồ sơ sinh viên đã lưu Khóa và Ngành chưa
+            $hasProfileSetup = $student->intake_id && ($student->program_major_id || $student->major_id);
 
-            if (!$this->programMajorSlug) {
+            if ($hasProfileSetup) {
+                // BẬT CỜ KHÓA
+                $this->isLockedProfile = true;
+
+                // Ép cứng lấy theo profile, chặn mọi sửa đổi từ URL param
+                $this->intakeId = (int) $student->intake_id;
                 $this->programMajorSlug = (string) (
-                    $student?->major?->programMajor?->slug
-                    ?: $student?->programMajor?->slug
+                $student->major?->programMajor?->slug
+                    ?: $student->programMajor?->slug
                     ?: ''
                 );
-            }
 
-            if ($student?->major?->slug) {
-                $this->selectedMajorSlug = (string) $student->major->slug;
-                $shouldRedirectToCanonical = true;
+                if ($student->major?->slug) {
+                    $this->selectedMajorSlug = (string) $student->major->slug;
+                    $shouldRedirectToCanonical = true;
+                } else {
+                    $this->selectedMajorSlug = null;
+                }
+            } else {
+                // Fallback: nếu chưa thiết lập xong, tự fill nếu đang trống
+                if (!$this->intakeId && $student?->intake_id) {
+                    $this->intakeId = (int) $student->intake_id;
+                }
+                if (!$this->programMajorSlug) {
+                    $this->programMajorSlug = (string) (
+                    $student?->major?->programMajor?->slug
+                        ?: $student?->programMajor?->slug
+                        ?: ''
+                    );
+                }
+                if (!$this->selectedMajorSlug && $student?->major?->slug) {
+                    $this->selectedMajorSlug = (string) $student->major->slug;
+                    $shouldRedirectToCanonical = true;
+                }
             }
         }
 
+        // Đoạn code query Major gốc giữ nguyên
         if ($this->selectedMajorSlug) {
             $selectedMajor = Major::query()->where('slug', $this->selectedMajorSlug)->first();
             if ($selectedMajor) {
@@ -820,6 +844,12 @@ class extends Component {
         <div class="space-y-4">
             <x-card shadow>
                 <div class="grid grid-cols-5 gap-4">
+                    @if($isLockedProfile)
+                        <div class="col-span-5 text-[15px] text-fita2 font-medium flex items-center gap-2 bg-fita2/10 p-3 rounded-md">
+                            <x-icon name="o-information-circle" class="w-5 h-5" />
+                            <span>{{ __('The system automatically displays training programs based on your personal profile.') }}</span>
+                        </div>
+                    @endif
                     <div class="w-full md:col-span-1 col-span-5">
                         <x-select
                             label="{{__('Intake')}}"
@@ -828,7 +858,7 @@ class extends Component {
                             option-value="id"
                             option-label="name"
                             placeholder="{{ __('No intake selected') }}"
-                            :disabled="empty($intakeOptions)"
+                            :disabled="$isLockedProfile || empty($intakeOptions)"
                         />
                     </div>
 
@@ -843,7 +873,7 @@ class extends Component {
                         ])->values()->toArray()"
                             option-value="value"
                             option-label="label"
-                            :disabled="!$this->intakeId || $programMajorOptions->isEmpty()"
+                            :disabled="$isLockedProfile || !$this->intakeId || $programMajorOptions->isEmpty()"
                         />
                     </div>
 
@@ -858,7 +888,7 @@ class extends Component {
                         ])->values()->toArray()"
                             option-value="value"
                             option-label="label"
-                            :disabled="!$this->intakeId || !$this->programMajorSlug || $majorOptions->isEmpty()"
+                            :disabled="$isLockedProfile || !$this->intakeId || !$this->programMajorSlug || $majorOptions->isEmpty()"
                         />
                     </div>
                 </div>
