@@ -262,6 +262,28 @@ class extends Component {
             'configBanner' => $configBanner,
         ];
     }
+
+    public function mount(): void
+    {
+        $locale = app()->getLocale();
+
+        // Kiểm tra nhanh xem có bài viết nổi bật nào hợp lệ không
+        $hasFeatured = Post::query()
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->where('is_featured', true)
+            ->latest('published_at')
+            ->limit($locale === 'en' ? 20 : 4)
+            ->get()
+            ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
+            ->isNotEmpty();
+
+        // Nếu không có bài nổi bật, đổi tab mặc định sang Tin mới
+        if (!$hasFeatured) {
+            $this->tabSelected = 'tab-new-post';
+        }
+    }
 };
 ?>
 
@@ -274,10 +296,32 @@ class extends Component {
     {{--    <x-carousel :slides="$slides"  interval="5000" class="custom-carousel h-65 lg:h-100 2xl:h-150 w-full aspect-[16/9] md:aspect-[3/1] overflow-hidden--}}
     {{--            bg-cover bg-center bg-no-repeat">--}}
 {{--    @dd($configBanner->content_data['autoplay'])--}}
-    <x-carousel
+    <div
+        x-data="{
+            paused: false,
+            autoplay: {{ !empty($configBanner->content_data['autoplay']) ? 'true' : 'false' }},
+            interval: {{ (int) ($configBanner->content_data['interval'] ?? 5000) }},
+            startCustomAutoplay() {
+                if (this.autoplay) {
+                    setInterval(() => {
+                        // Nếu chuột không nằm trong vùng banner thì mới bấm nút Next
+                        if (!this.paused) {
+                            let nextBtn = this.$el.querySelector(`button[aria-label='Next image']`);
+                            if (nextBtn) nextBtn.click();
+                        }
+                    }, this.interval);
+                }
+            }
+        }"
+        x-init="startCustomAutoplay()"
+        @mouseenter="paused = true"
+        @mouseleave="paused = false"
+        class="relative w-full"
+    >
+        <x-carousel
         :slides="$slides"
-        :autoplay="$configBanner->content_data['autoplay'] ?? false"
-        :interval="$configBanner->content_data['interval'] ?? 5000"
+{{--        :autoplay="$configBanner->content_data['autoplay'] ?? false"--}}
+{{--        :interval="$configBanner->content_data['interval'] ?? 5000"--}}
         class="h-[40vw] md:h-65 lg:h-91 2xl:h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
     >
         @scope('content', $slide)
@@ -316,7 +360,7 @@ class extends Component {
         </div>
         @endscope
     </x-carousel>
-
+    </div>
     <div class="my-0.125">
         <div class="h-1.25 bg-[#F6A309] w-full"></div>
         <div class="h-1.25 bg-[#066140] w-full"></div>
@@ -620,7 +664,7 @@ class extends Component {
                                 @endif
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
+                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}"
                                   icon-right="o-arrow-right"
                                   class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4">
                         </x-button>

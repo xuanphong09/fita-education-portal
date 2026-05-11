@@ -411,6 +411,27 @@ class extends Component {
             'configBanner' => $configBanner,
         ];
     }
+    public function mount(): void
+    {
+        $locale = app()->getLocale();
+
+        // Kiểm tra nhanh xem có bài viết nổi bật nào hợp lệ không
+        $hasFeatured = Post::query()
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->where('is_featured', true)
+            ->latest('published_at')
+            ->limit($locale === 'en' ? 20 : 4)
+            ->get()
+            ->filter(fn(Post $post) => $this->isVisibleInLocale($post, $locale))
+            ->isNotEmpty();
+
+        // Nếu không có bài nổi bật, đổi tab mặc định sang Tin mới
+        if (!$hasFeatured) {
+            $this->tabSelected = 'tab-new-post';
+        }
+    }
 };
 ?>
 
@@ -423,48 +444,71 @@ class extends Component {
     {{--    <x-carousel :slides="$slides"  interval="5000" class="custom-carousel h-65 lg:h-100 2xl:h-150 w-full aspect-[16/9] md:aspect-[3/1] overflow-hidden--}}
     {{--            bg-cover bg-center bg-no-repeat">--}}
     {{--    @dd($configBanner->content_data['autoplay'])--}}
-    <x-carousel
-        :slides="$slides"
-        :autoplay="data_get($configBanner, 'content_data.autoplay', false)"
-        :interval="data_get($configBanner, 'content_data.interval', 5000)"
-        class="h-[40vw] md:h-65 lg:h-91 2xl:h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
+    <div
+        x-data="{
+            paused: false,
+            autoplay: {{ !empty($configBanner->content_data['autoplay']) ? 'true' : 'false' }},
+            interval: {{ (int) ($configBanner->content_data['interval'] ?? 5000) }},
+            startCustomAutoplay() {
+                if (this.autoplay) {
+                    setInterval(() => {
+                        // Nếu chuột không nằm trong vùng banner thì mới bấm nút Next
+                        if (!this.paused) {
+                            let nextBtn = this.$el.querySelector(`button[aria-label='Next image']`);
+                            if (nextBtn) nextBtn.click();
+                        }
+                    }, this.interval);
+                }
+            }
+        }"
+        x-init="startCustomAutoplay()"
+        @mouseenter="paused = true"
+        @mouseleave="paused = false"
+        class="relative w-full"
     >
-        @scope('content', $slide)
-        <div
-            @class([
-                "absolute inset-0 z-[1] flex flex-col gap-2 px-20 py-12",
-                 "bg-gradient-to-b justify-start text-left" => data_get($slide, 'position') === 'top left',
-                 "bg-gradient-to-b justify-start items-center text-center" => data_get($slide, 'position') === 'top center',
-                 "bg-gradient-to-b justify-start items-end text-right" => data_get($slide, 'position') === 'top right',
-
-                 "bg-gradient-to-t justify-center items-center text-center" => data_get($slide, 'position') === 'center center',
-                 "bg-gradient-to-t justify-center items-end text-right" => data_get($slide, 'position') === 'center right',
-                 "bg-gradient-to-t justify-center text-left" => data_get($slide, 'position') === 'center left',
-
-                 "bg-gradient-to-t justify-end text-left" => data_get($slide, 'position') === 'bottom left',
-                 "bg-gradient-to-t justify-end items-center text-center" => data_get($slide, 'position') === 'bottom center',
-                 "bg-gradient-to-t justify-end items-end text-right" => data_get($slide, 'position') === 'bottom right',
-
-                 "from-slate-900/45" => data_get($slide, 'urlText') || data_get($slide, 'title') || data_get($slide, 'description')
-            ])
+        <x-carousel
+            :slides="$slides"
+    {{--        :autoplay="data_get($configBanner, 'content_data.autoplay', false)"--}}
+    {{--        :interval="data_get($configBanner, 'content_data.interval', 5000)"--}}
+            class="h-[40vw] md:h-65 lg:h-91 2xl:h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
         >
+            @scope('content', $slide)
+            <div
+                @class([
+                    "absolute inset-0 z-[1] flex flex-col gap-2 px-20 py-12",
+                     "bg-gradient-to-b justify-start text-left" => data_get($slide, 'position') === 'top left',
+                     "bg-gradient-to-b justify-start items-center text-center" => data_get($slide, 'position') === 'top center',
+                     "bg-gradient-to-b justify-start items-end text-right" => data_get($slide, 'position') === 'top right',
 
-            <!-- Title 1 -->
-            <h1 class="w-[60%] text-2xl lg:text-[64px]/[68px] font-bold text-white">{{ data_get($slide, 'title') }}</h1>
-            <!-- Title 2 -->
-            <h5 class="w-[60%] text-[16px] lg:text-[30px] font-bold text-white">{{ data_get($slide, 'description') }}</h5>
+                     "bg-gradient-to-t justify-center items-center text-center" => data_get($slide, 'position') === 'center center',
+                     "bg-gradient-to-t justify-center items-end text-right" => data_get($slide, 'position') === 'center right',
+                     "bg-gradient-to-t justify-center text-left" => data_get($slide, 'position') === 'center left',
+
+                     "bg-gradient-to-t justify-end text-left" => data_get($slide, 'position') === 'bottom left',
+                     "bg-gradient-to-t justify-end items-center text-center" => data_get($slide, 'position') === 'bottom center',
+                     "bg-gradient-to-t justify-end items-end text-right" => data_get($slide, 'position') === 'bottom right',
+
+                     "from-slate-900/45" => data_get($slide, 'urlText') || data_get($slide, 'title') || data_get($slide, 'description')
+                ])
+            >
+
+                <!-- Title 1 -->
+                <h1 class="w-[60%] text-2xl lg:text-[64px]/[68px] font-bold text-white">{{ data_get($slide, 'title') }}</h1>
+                <!-- Title 2 -->
+                <h5 class="w-[60%] text-[16px] lg:text-[30px] font-bold text-white">{{ data_get($slide, 'description') }}</h5>
 
 
-            <!-- Button-->
-            @if(data_get($slide, 'urlText'))
-                <div class="hidden md:block">
-                    <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right"
-                              class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">{{ __(data_get($slide, 'urlText')) }}</x-button>
-                </div>
-            @endif
-        </div>
-        @endscope
-    </x-carousel>
+                <!-- Button-->
+                @if(data_get($slide, 'urlText'))
+                    <div class="hidden md:block">
+                        <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right"
+                                  class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">{{ __(data_get($slide, 'urlText')) }}</x-button>
+                    </div>
+                @endif
+            </div>
+            @endscope
+        </x-carousel>
+    </div>
 
     <div class="my-0.125">
         <div class="h-1.25 bg-[#F6A309] w-full"></div>
@@ -734,7 +778,7 @@ class extends Component {
                                 @endif
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}"
+                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}"
                                   icon-right="o-arrow-right"
                                   class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4">
                         </x-button>
