@@ -3,6 +3,7 @@
 use App\Models\Department;
 use App\Models\Intake;
 use App\Models\Major;
+use App\Models\ProgramMajor;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -62,6 +63,7 @@ new class extends Component {
     public $class_name;
     public $intake_id;
     public $major_id;
+    public $program_major_id = null;
 //    lecturer
     public $staff_code;
     public $department_id;
@@ -86,6 +88,7 @@ new class extends Component {
         'phone' => 'nullable|regex:/^0[0-9]{9}$/',
         'intake_id' => 'exclude_unless:user_type,student|nullable|exists:intakes,id',
         'major_id' => 'exclude_unless:user_type,student|nullable|exists:majors,id',
+        'program_major_id' => 'exclude_unless:user_type,student|nullable|exists:program_majors,id',
 
         'staff_code' => 'exclude_unless:user_type,lecturer|required|string|max:100|unique:lecturers,staff_code',
         'department_id' => 'exclude_unless:user_type,lecturer|nullable|exists:departments,id',
@@ -137,12 +140,13 @@ new class extends Component {
 
             'intake_id.exists' => 'Khóa học không tồn tại.',
             'major_id.exists' => 'Ngành học không tồn tại.',
+            'program_major_id.exists' => 'Chuyên ngành không tồn tại.',
 
             // LECTURER
-            'staff_code.required' => 'Mã giảng viên không được để trống.',
-            'staff_code.string' => 'Mã giảng viên phải là một chuỗi.',
-            'staff_code.max' => 'Mã giảng viên không được vượt quá 100 ký tự.',
-            'staff_code.unique' => 'Mã giảng viên đã tồn tại trong hệ thống.',
+            'staff_code.required' => 'Mã giảng viên/cán bộ không được để trống.',
+            'staff_code.string' => 'Mã giảng viên/cán bộ phải là một chuỗi.',
+            'staff_code.max' => 'Mã giảng viên/cán bộ không được vượt quá 100 ký tự.',
+            'staff_code.unique' => 'Mã giảng viên/cán bộ đã tồn tại trong hệ thống.',
 
             'department_id.exists' => 'Bộ môn không tồn tại.',
 
@@ -167,25 +171,106 @@ new class extends Component {
         return Role::select('id', 'name', 'display_name')->get();
     }
 
+//    public function getMajorsProperty()
+//    {
+//        return Major::query()
+//            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+//            ->get(['id', 'name', 'slug'])
+//            ->map(function (Major $major) {
+//                return [
+//                    'id' => $major->id,
+//                    'name' => $major->getTranslation('name', app()->getLocale(), false)
+//                        ?: $major->getTranslation('name', 'vi', false)
+//                        ?: $major->getTranslation('name', 'en', false)
+//                        ?: $major->slug,
+//                ];
+//            });
+//    }
+    public function getIntakesProperty()
+    {
+        return Intake::query()
+            // CHỈ lấy các Khóa có CTĐT đã xuất bản
+            ->whereHas('trainingPrograms', function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            })
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn(Intake $intake) => [
+                'id' => $intake->id,
+                'name' => $intake->name,
+            ]);
+    }
+
+    public function getProgramMajorsProperty()
+    {
+        $intakeId = $this->intake_id;
+
+        return ProgramMajor::query()
+            ->where('is_active', true)
+            // CHỈ lấy các Ngành có CTĐT (chung của ngành HOẶC của các chuyên ngành con)
+            ->where(function ($q) use ($intakeId) {
+                $q->whereHas('trainingPrograms', function ($query) use ($intakeId) {
+                    $query->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                    if ($intakeId) {
+                        $query->where('intake_id', $intakeId);
+                    }
+                })->orWhereHas('majors.trainingPrograms', function ($query) use ($intakeId) {
+                    $query->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+                    if ($intakeId) {
+                        $query->where('intake_id', $intakeId);
+                    }
+                });
+            })
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get()
+            ->map(function ($major) {
+                return [
+                    'id' => $major->id,
+                    'name' => $major->getTranslation('name', app()->getLocale(), false)
+                        ?: $major->getTranslation('name', 'vi', false)
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
+                ];
+            });
+    }
+
     public function getMajorsProperty()
     {
+        if (!$this->program_major_id) {
+            return collect();
+        }
+
+        $intakeId = $this->intake_id;
+
         return Major::query()
+            ->where('program_major_id', $this->program_major_id)
+            ->where('is_active', true)
+            // CHỈ lấy các Chuyên ngành có CTĐT cho Khóa tương ứng
+            ->whereHas('trainingPrograms', function ($query) use ($intakeId) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+                if ($intakeId) {
+                    $query->where('intake_id', $intakeId);
+                }
+            })
             ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
-            ->get(['id', 'name', 'slug'])
+            ->get()
             ->map(function (Major $major) {
                 return [
                     'id' => $major->id,
                     'name' => $major->getTranslation('name', app()->getLocale(), false)
                         ?: $major->getTranslation('name', 'vi', false)
-                        ?: $major->getTranslation('name', 'en', false)
-                        ?: $major->slug,
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
                 ];
             });
-    }
-
-    public function getIntakesProperty()
-    {
-        return Intake::select('id', 'name')->get();
     }
 
     public function getDepartmentsProperty()
@@ -227,10 +312,21 @@ new class extends Component {
 
     }
 
+    public function updatedProgramMajorId()
+    {
+        $this->major_id = null;
+    }
+
+    public function updatedIntakeId()
+    {
+        $this->program_major_id = null;
+        $this->major_id = null;
+    }
+
     protected function buildPositionsPayload(): ?array
     {
-        $vi = trim((string) ($this->position_vi ?? ''));
-        $en = trim((string) ($this->position_en ?? ''));
+        $vi = trim((string)($this->position_vi ?? ''));
+        $en = trim((string)($this->position_en ?? ''));
 
         if ($vi === '' && $en === '') {
             return null;
@@ -291,7 +387,8 @@ new class extends Component {
                         'date_of_birth' => $this->date_of_birth,
                         'phone' => $this->phone,
                         'intake_id' => $this->intake_id,
-                        'major_id' => $this->major_id
+                        'major_id' => $this->major_id,
+                        'program_major_id' => $this->program_major_id,
                     ]);
                 }
 
@@ -302,11 +399,11 @@ new class extends Component {
                 */
                 if ($this->user_type === 'lecturer') {
                     $academicTitleValue = $this->academic_title === 'other'
-                        ? trim((string) $this->academic_title_other)
+                        ? trim((string)$this->academic_title_other)
                         : $this->academic_title;
 
                     $degreeValue = $this->degree === 'other'
-                        ? trim((string) $this->degree_other)
+                        ? trim((string)$this->degree_other)
                         : $this->degree;
 
                     Lecturer::create([
@@ -321,6 +418,7 @@ new class extends Component {
                         'degree' => $degreeValue ?: null,
                     ]);
                 }
+
 
             });
 
@@ -382,17 +480,19 @@ new class extends Component {
                 {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                 <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
                     <x-input label="Họ và tên" wire:model.live.debounce.500ms="name" required
-                        placeholder="Nhập họ và tên người dùng"
+                             placeholder="Nhập họ và tên người dùng"
                     />
-                    <x-input label="Email" wire:model.live.debounce.500ms="email" required placeholder="Nhập email người dùng"/>
-                    <x-input label="Mật khẩu" wire:model.live.debounce.500ms="password" required
-                        placeholder="Nhập mật khẩu người dùng"
+                    <x-input label="Email" wire:model.live.debounce.500ms="email" required
+                             placeholder="Nhập email người dùng"/>
+                    <x-password  label="Mật khẩu" wire:model.live.debounce.500ms="password" required
+                             placeholder="Nhập mật khẩu người dùng"
                     />
                     <x-file
                         wire:model.live.debounce.500ms="avatar"
                         accept="image/png, image/jpeg" label="Ảnh đại diện"
                         change-text="Thay đổi ảnh">
-                        <img src="{{ $avatar ?? asset('/assets/images/default-user-image.png') }}" class="size-32 rounded-lg object-cover" alt="ảnh đại diện"/>
+                        <img src="{{ $avatar ?? asset('/assets/images/default-user-image.png') }}"
+                             class="size-32 rounded-lg object-cover" alt="ảnh đại diện"/>
                     </x-file>
                     <x-select
                         label="Loại người dùng"
@@ -425,26 +525,44 @@ new class extends Component {
 
                         {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input label="Mã sinh viên" wire:model.live.debounce.500ms="student_code" placeholder="Nhập mã sinh viên"/>
-                            <x-input label="Lớp" wire:model.live.debounce.500ms="class_name" placeholder="Nhập tên lớp"/>
+                            <x-input label="Mã sinh viên" wire:model.live.debounce.500ms="student_code"
+                                     placeholder="Nhập mã sinh viên"/>
+                            <x-input label="Lớp" wire:model.live.debounce.500ms="class_name"
+                                     placeholder="Nhập tên lớp"/>
                             <x-datetime label="Ngày sinh" wire:model.live.debounce.500ms="date_of_birth"/>
                             <x-radio label="Giới tính" wire:model.live.debounce.500ms="gender" :options="$genders"
                                      inline
                                      class="radio-primary radio-sm"/>
-                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone" placeholder="Nhập số điện thoại "/>
+                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone"
+                                     placeholder="Nhập số điện thoại "/>
                             <x-select
-                                label="Khóa"
-                                wire:model.live.debounce.500ms="intake_id"
+                                label="{{ __('Intake') }}"
+                                wire:model.live="intake_id"
                                 :options="$this->intakes"
-                                placeholder="Chọn Khóa"
-                                required
+                                option-value="id"
+                                option-label="name"
+                                placeholder="{{ __('No intake selected') }}"
                             />
                             <x-select
-                                label="Chuyên ngành"
-                                wire:model.live.debounce.500ms="major_id"
+                                wire:key="select-program-major"
+                                label="{{ __('Major') }}"
+                                wire:model.live="program_major_id"
+                                :options="$this->programMajors"
+                                option-value="id"
+                                option-label="name"
+                                placeholder="{{!$intake_id? __('Select intake first') : __('Select major') }}"
+                                :disabled="empty($intake_id)"
+                            />
+
+                            <x-select
+                                wire:key="select-major-{{ $program_major_id }}"
+                                label="{{__('Specialization/Area of specialization')}}"
+                                wire:model="major_id"
                                 :options="$this->majors"
-                                placeholder="{{ __('Select major') }}"
-                                required
+                                option-value="id"
+                                option-label="name"
+                                placeholder="{{!$program_major_id?__('Select specialization first'):__('No specialization selected') }}"
+                                :disabled="empty($program_major_id) || $this->majors->isEmpty()"
                             />
                         </div>
                     </div>
@@ -470,7 +588,8 @@ new class extends Component {
 
                         {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input label="Mã giảng viên" wire:model.live.debounce.500ms="staff_code" placeholder="Nhập mã giảng viên"/>
+                            <x-input label="Mã giảng viên/cán bộ" wire:model.live.debounce.500ms="staff_code"
+                                     placeholder="Nhập mã giảng viên/cán bộ"/>
                             <x-select
                                 label="Bộ môn"
                                 wire:model.live.debounce.500ms="department_id"
@@ -478,14 +597,17 @@ new class extends Component {
                                 placeholder="Chọn Bộ môn"
                                 required
                             />
-                            <x-datetime label="Ngày sinh" wire:model.live.debounce.500ms="date_of_birth"/>
+{{--                            <x-datetime label="Ngày sinh" wire:model.live.debounce.500ms="date_of_birth"/>--}}
                             <x-radio label="Giới tính" wire:model.live.debounce.500ms="gender" :options="$genders"
                                      inline
                                      class="radio-primary radio-sm"/>
-                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone" placeholder="Nhập số điện thoại"/>
+                            <x-input label="Số điện thoại" wire:model.live.debounce.500ms="phone"
+                                     placeholder="Nhập số điện thoại"/>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <x-input label="Chức vụ (Tiếng Việt)" wire:model.live.debounce.500ms="position_vi" placeholder="Nhập chức vụ Tiếng Việt"/>
-                                <x-input label="Chức vụ (Tiếng Anh)" wire:model.live.debounce.500ms="position_en" placeholder="Nhập chức vụ Tiếng Anh"/>
+                                <x-input label="Chức vụ (Tiếng Việt)" wire:model.live.debounce.500ms="position_vi"
+                                         placeholder="Nhập chức vụ Tiếng Việt"/>
+                                <x-input label="Chức vụ (Tiếng Anh)" wire:model.live.debounce.500ms="position_en"
+                                         placeholder="Nhập chức vụ Tiếng Anh"/>
 
                             </div>
                             <x-select
@@ -495,7 +617,8 @@ new class extends Component {
                                 placeholder="Chọn học hàm"
                             />
                             @if($academic_title === 'other')
-                                <x-input label="Học hàm (khác)" wire:model.live.debounce.300ms="academic_title_other" placeholder="Nhập học hàm khác"/>
+                                <x-input label="Học hàm (khác)" wire:model.live.debounce.300ms="academic_title_other"
+                                         placeholder="Nhập học hàm khác"/>
                             @endif
 
                             <x-select
@@ -505,7 +628,8 @@ new class extends Component {
                                 placeholder="Chọn học vị"
                             />
                             @if($degree === 'other')
-                                <x-input label="Học vị (khác)" wire:model.live.debounce.300ms="degree_other" placeholder="Nhập học vị khác"/>
+                                <x-input label="Học vị (khác)" wire:model.live.debounce.300ms="degree_other"
+                                         placeholder="Nhập học vị khác"/>
                             @endif
                         </div>
                     </div>
