@@ -14,6 +14,8 @@ new class extends Component {
     public int $perPage = 10;
     #[Url(as: 'search')]
     public string $search = '';
+    #[Url(as: 'user-type')]
+    public string $filterUserType = '';
 
     public function getUsersProperty()
     {
@@ -35,6 +37,9 @@ new class extends Component {
                             $subQuery->where('staff_code', 'like', '%' . $this->search . '%');
                         });
                 });
+            })
+            ->when($this->filterUserType !== '', function ($query) {
+                $query->where('user_type', $this->filterUserType);
             })
             ->orderBy(...array_values($this->sortBy))
             ->paginate($this->perPage);
@@ -64,6 +69,11 @@ new class extends Component {
     {
         $this->resetPage();
     }
+
+    public function updatedFilterUserType()
+    {
+        $this->resetPage();
+    }
 }
 ?>
 
@@ -84,13 +94,28 @@ new class extends Component {
     <x-header title="Danh sách người dùng"
               class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
         <x-slot:middle class="justify-end!">
-            <x-input
-                icon="o-magnifying-glass"
-                placeholder="Tìm tên, email, mã SV/CB..."
-                wire:model.live.debounce.300ms="search"
-                clearable="true"
-                class="w-full lg:w-96"
-            />
+            <div class=" flex flex-col md:flex-row gap-3">
+                <x-select
+                    wire:model.live="filterUserType"
+                    placeholder="Tất cả người dùng"
+                    placeholder-value=""
+                    :options="[
+                        ['id' => 'admin', 'name' => 'Admin'],
+                        ['id' => 'lecturer', 'name' => 'Giảng viên'],
+                        ['id' => 'student', 'name' => 'Sinh viên'],
+                    ]"
+                    option-value="id"
+                    option-label="name"
+                    class="w-full md:w-48"
+                />
+                <x-input
+                    icon="o-magnifying-glass"
+                    placeholder="Tìm tên, email, mã SV/CB..."
+                    wire:model.live.debounce.300ms="search"
+                    clearable="true"
+                    class="w-full lg:w-96"
+                />
+            </div>
         </x-slot:middle>
         <x-slot:actions>
             <x-button icon="o-plus" class="btn-primary text-white" label="{{__('Create new')}}"
