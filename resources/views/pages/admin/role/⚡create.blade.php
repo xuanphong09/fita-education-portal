@@ -18,6 +18,11 @@ new class extends Component {
     public array $selectedPermissions = [];
     public string $searchCategory = '';
 
+    // Thêm các biến trạng thái giao diện (UI State)
+    public bool $selectAllWrite = false;
+    public bool $selectAllReview = false;
+    public bool $selectAllManage = false;
+
     protected function rules()
     {
         return [
@@ -39,79 +44,120 @@ new class extends Component {
     public function updated($property)
     {
         $this->validateOnly($property);
+    }
 
-        // Bắt sự kiện cập nhật mảng checkbox để ép hệ thống dọn dẹp ngay lập tức
-        if (Str::startsWith($property, 'selectedPermissions')) {
-            $this->updatedSelectedPermissions();
+    // Khi người dùng bấm "Tất cả Viết bài"
+    public function updatedSelectAllWrite($value)
+    {
+        $writePerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'viet_bai_viet:'))->pluck('name')->toArray();
+        if ($value) {
+            $this->selectedPermissions = array_values(array_unique(array_merge($this->selectedPermissions, $writePerms)));
+        } else {
+            $this->selectedPermissions = array_values(array_diff($this->selectedPermissions, $writePerms));
+        }
+        $this->syncSelectAllManage();
+    }
+
+    // Khi người dùng bấm "Tất cả Duyệt bài"
+    public function updatedSelectAllReview($value)
+    {
+        $reviewPerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'duyet_bai_viet:'))->pluck('name')->toArray();
+        if ($value) {
+            $this->selectedPermissions = array_values(array_unique(array_merge($this->selectedPermissions, $reviewPerms)));
+        } else {
+            $this->selectedPermissions = array_values(array_diff($this->selectedPermissions, $reviewPerms));
+        }
+        $this->syncSelectAllManage();
+    }
+
+    // Khi người dùng bấm "Quản lý bài viết"
+    public function updatedSelectAllManage($value)
+    {
+        $writePerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'viet_bai_viet:'))->pluck('name')->toArray();
+        $reviewPerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'duyet_bai_viet:'))->pluck('name')->toArray();
+
+        if ($value) {
+            $this->selectedPermissions = array_values(array_unique(array_merge($this->selectedPermissions, $writePerms, $reviewPerms)));
+            $this->selectAllWrite = true;
+            $this->selectAllReview = true;
+        } else {
+            $this->selectedPermissions = array_values(array_diff($this->selectedPermissions, array_merge($writePerms, $reviewPerms)));
+            $this->selectAllWrite = false;
+            $this->selectAllReview = false;
         }
     }
 
-    /**
-     * Tự động dọn dẹp các quyền con nếu người dùng chọn Quyền Tất Cả
-     */
+    // Khi người dùng bấm vào các ô con lẻ tẻ
     public function updatedSelectedPermissions()
     {
-        // 1. Tự động thêm Viết bài & Duyệt bài (tất cả) nếu chọn Quản lý bài viết
-        if (in_array('quan_ly_bai_viet', $this->selectedPermissions)) {
-            if (!in_array('viet_bai_viet', $this->selectedPermissions)) {
-                $this->selectedPermissions[] = 'viet_bai_viet';
-            }
-            if (!in_array('duyet_bai_viet', $this->selectedPermissions)) {
-                $this->selectedPermissions[] = 'duyet_bai_viet';
-            }
-        }
+        $writePerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'viet_bai_viet:'))->pluck('name')->toArray();
+        $reviewPerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'duyet_bai_viet:'))->pluck('name')->toArray();
 
-        $hasWriteAll = in_array('viet_bai_viet', $this->selectedPermissions);
-        $hasReviewAll = in_array('duyet_bai_viet', $this->selectedPermissions);
+        // Kiểm tra xem đã tích full chưa để bật/tắt ô Tất cả
+        $this->selectAllWrite = count($writePerms) > 0 && count(array_intersect($writePerms, $this->selectedPermissions)) === count($writePerms);
+        $this->selectAllReview = count($reviewPerms) > 0 && count(array_intersect($reviewPerms, $this->selectedPermissions)) === count($reviewPerms);
 
-        // 2. Dọn dẹp quyền con nếu đã có quyền Tất cả
-        if ($hasWriteAll || $hasReviewAll) {
-            $this->selectedPermissions = array_values(array_filter($this->selectedPermissions, function ($perm) use ($hasWriteAll, $hasReviewAll) {
-                // Nếu đã có quyền "Viết bài (Tất cả)", loại bỏ các quyền viết bài theo danh mục
-                if ($hasWriteAll && Str::startsWith($perm, 'viet_bai_viet:')) return false;
+        $this->syncSelectAllManage();
+    }
+    public function getHasCategoryPermissionsProperty()
+    {
+        $writePerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'viet_bai_viet:'))->pluck('name')->toArray();
+        $reviewPerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'duyet_bai_viet:'))->pluck('name')->toArray();
+        $managePerms = ['viet_bai_viet', 'duyet_bai_viet', 'quan_ly_bai_viet'];
 
-                // Nếu đã có quyền "Duyệt bài (Tất cả)", loại bỏ các quyền duyệt bài theo danh mục
-                if ($hasReviewAll && Str::startsWith($perm, 'duyet_bai_viet:')) return false;
+        $allArticlePerms = array_merge($writePerms, $reviewPerms, $managePerms);
 
-                return true;
-            }));
-        }
+        return count(array_intersect($this->selectedPermissions, $allArticlePerms)) > 0;
     }
 
-    /**
-     * Get all permissions (both general and category-scoped)
-     */
+    public function deselectAll()
+    {
+        $writePerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'viet_bai_viet:'))->pluck('name')->toArray();
+        $reviewPerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'duyet_bai_viet:'))->pluck('name')->toArray();
+
+        // 2. Gộp lại và xóa sạch khỏi mảng đang chọn
+        $allCategoryPerms = array_merge($writePerms, $reviewPerms);
+        $this->selectedPermissions = array_values(array_diff($this->selectedPermissions, $allCategoryPerms));
+
+        // 3. Xóa luôn các quyền tổng liên quan
+        $this->selectedPermissions = array_values(array_diff($this->selectedPermissions, ['viet_bai_viet', 'duyet_bai_viet', 'quan_ly_bai_viet']));
+
+        // 4. Tắt ô Checkbox "Quản lý bài viết" ở trên cùng
+        $this->selectAllManage = false;
+        $this->selectAllReview = false;
+        $this->selectAllWrite = false;
+
+        $this->success('Đã xóa bỏ toàn bộ quyền danh mục!');
+    }
+
+    private function syncSelectAllManage()
+    {
+        $this->selectAllManage = $this->selectAllWrite && $this->selectAllReview;
+    }
+
     public function getPermissionsProperty()
     {
         return Permission::select('id','name','display_name')->get();
     }
 
-    /**
-     * Get only general permissions (those without ':' in the name)
-     */
     public function getGeneralPermissionsProperty()
     {
         return $this->permissions->filter(function($p) {
-            // Loại trừ 2 quyền lớn và quyền truy cập quản trị khỏi danh sách phía trên
+            // Loại trừ các quyền đặc biệt để hiển thị tay trên Blade
             return !Str::contains($p->name, ':') && !in_array($p->name, [
                     'viet_bai_viet',
                     'duyet_bai_viet',
-                    'trang_quan_tri'
+                    'trang_quan_tri',
+                    'quan_ly_bai_viet' // <--- Đã loại trừ khỏi vòng lặp
                 ]);
         });
     }
 
-    /**
-     * Get only category-scoped permissions (those with ':' in the name)
-     */
     public function getCategoryScopedPermissionsProperty()
     {
         return $this->permissions->filter(fn($p) => Str::contains($p->name, ':'));
     }
 
-    /**
-     * Lấy danh sách quyền và sắp xếp theo thứ tự Cha - Con
-     */
     public function getCategoryPermissionsProperty()
     {
         $grouped = [];
@@ -147,9 +193,6 @@ new class extends Component {
         return collect($allCategoryPermissions);
     }
 
-    /**
-     * Hàm đệ quy để sắp xếp permission theo cấu trúc cha-con
-     */
     private function buildRecursivePermissions($categories, $parentId, $groupedPermissions, $depth = 0): array
     {
         $results = [];
@@ -166,16 +209,12 @@ new class extends Component {
             }
 
             $children = $this->buildRecursivePermissions($categories, $category->id, $groupedPermissions, $depth + 1);
-
             $results = array_merge($results, $children);
         }
 
         return $results;
     }
 
-    /**
-     * Get all active categories
-     */
     public function getActiveCategoriesProperty()
     {
         return Category::where('is_active', true)->orderBy('order')->get();
@@ -195,25 +234,40 @@ new class extends Component {
         $count = Role::where('name', 'like', "{$slug}%")->count();
         $this->name = $count ? "{$slug}_{$count}" : $slug;
 
-        // Dọn dẹp quyền rác trước khi lưu
-        $this->updatedSelectedPermissions();
+        $finalPermissions = $this->selectedPermissions;
+
+        // DỌN DẸP TRƯỚC KHI LƯU DB ĐỂ TỐI ƯU
+        $writePerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'viet_bai_viet:'))->pluck('name')->toArray();
+        $reviewPerms = $this->categoryScopedPermissions->filter(fn($p) => Str::startsWith($p->name, 'duyet_bai_viet:'))->pluck('name')->toArray();
+
+        if ($this->selectAllManage) {
+            $finalPermissions = array_diff($finalPermissions, array_merge($writePerms, $reviewPerms));
+            $finalPermissions[] = 'quan_ly_bai_viet';
+        } else {
+            if ($this->selectAllWrite) {
+                $finalPermissions = array_diff($finalPermissions, $writePerms);
+                $finalPermissions[] = 'viet_bai_viet';
+            }
+            if ($this->selectAllReview) {
+                $finalPermissions = array_diff($finalPermissions, $reviewPerms);
+                $finalPermissions[] = 'duyet_bai_viet';
+            }
+        }
 
         // Bắt buộc đẩy quyền truy cập trang quản trị vào danh sách
         $mandatoryPermission = 'trang_quan_tri';
-        if (!in_array($mandatoryPermission, $this->selectedPermissions)) {
-            $this->selectedPermissions[] = $mandatoryPermission;
+        if (!in_array($mandatoryPermission, $finalPermissions)) {
+            $finalPermissions[] = $mandatoryPermission;
         }
 
         $role = Role::create([
             'display_name' => $this->display_name,
             'name' => $this->name,
         ]);
-        $role->syncPermissions($this->selectedPermissions);
 
-        $this->success(
-            'Tạo vai trò và cấp quyền thành công!',
-            redirectTo: route('admin.role.index')
-        );
+        $role->syncPermissions(array_unique($finalPermissions));
+
+        $this->success('Tạo vai trò và cấp quyền thành công!', redirectTo: route('admin.role.index'));
     }
 };
 ?>
@@ -223,7 +277,6 @@ new class extends Component {
     <x-slot:title>
         {{ __('Create new roles') }}
     </x-slot:title>
-    {{--  end - title  --}}
 
     {{-- start - breadcrumb --}}
     <x-slot:breadcrumb>
@@ -232,12 +285,9 @@ new class extends Component {
         <span class="mx-1">/</span>
         <span>{{__('Create new roles')}}</span>
     </x-slot:breadcrumb>
-    {{-- end - breadcrumb --}}
 
-    {{--    start - header--}}
-    <x-header title="{{__('Create new roles')}}"
-              class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300"></x-header>
-    {{--    end - header--}}
+    {{-- start - header --}}
+    <x-header title="{{__('Create new roles')}}" class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300"></x-header>
 
     <div class="grid lg:grid-cols-12 gap-5 custom-form-admin text-[14px]!">
         <x-card class="col-span-10 flex flex-col p-3!">
@@ -248,6 +298,17 @@ new class extends Component {
                 <label class="font-semibold text-gray-700 mb-3 block">Quyền hạn chung</label>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm">
+
+                    {{-- Quyền: Quản lý bài viết (Được tách riêng ra để liên kết logic với bảng dưới) --}}
+                    <div class="select-none">
+                        <x-checkbox
+                            label="Quản lý bài viết"
+                            wire:model.live="selectAllManage"
+                            class="checkbox-primary checkbox-sm font-semibold"
+                        />
+                    </div>
+
+                    {{-- Các quyền chung khác --}}
                     @forelse($this->generalPermissions as $permission)
                         <div class="select-none" wire:key="permission-{{ $permission->id }}">
                             <x-checkbox
@@ -258,9 +319,6 @@ new class extends Component {
                             />
                         </div>
                     @empty
-                        <div class="col-span-full text-center py-4 text-gray-400 text-sm">
-                            Không có quyền hạn chung nào.
-                        </div>
                     @endforelse
                 </div>
             </div>
@@ -269,13 +327,18 @@ new class extends Component {
             <div class="mt-8">
                 <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <label class="font-semibold mb-3 block">Quyền hạn theo danh mục bài viết</label>
-                    <x-input
-                        icon="o-magnifying-glass"
-                        placeholder="Tìm danh mục..."
-                        wire:model.live.debounce.300ms="searchCategory"
-                        class="w-full sm:w-82"
-                        clearable
-                    />
+                    <div class="flex gap-2">
+                        @if($this->has_category_permissions)
+                            <x-button label="Bỏ chọn tất cả" icon="o-x-mark" class="btn-md text-danger btn-ghost" wire:click="deselectAll" spinner="deselectAll"></x-button>
+                        @endif
+                        <x-input
+                            icon="o-magnifying-glass"
+                            placeholder="Tìm danh mục..."
+                            wire:model.live.debounce.300ms="searchCategory"
+                            class="w-full sm:w-82"
+                            clearable
+                        />
+                    </div>
                 </div>
 
                 @if($this->categoryPermissions->count() > 0)
@@ -288,11 +351,8 @@ new class extends Component {
                                     <div class="flex flex-col items-center justify-center gap-1">
                                         <span class="font-semibold">Viết bài</span>
                                         <label class="cursor-pointer text-[14px] font-normal text-primary flex items-center gap-1 hover:text-blue-700">
-                                            @if(in_array('quan_ly_bai_viet', $selectedPermissions))
-                                                <input wire:key="header-write-all-disabled" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
-                                            @else
-                                                <input wire:key="header-write-all-active" type="checkbox" wire:model.live="selectedPermissions" value="viet_bai_viet" class="checkbox checkbox-primary checkbox-sm" />
-                                            @endif
+                                            {{-- Đổi thành wire:model="selectAllWrite" --}}
+                                            <input type="checkbox" wire:model.live="selectAllWrite" class="checkbox checkbox-primary checkbox-sm" />
                                             (Tất cả)
                                         </label>
                                     </div>
@@ -301,11 +361,8 @@ new class extends Component {
                                     <div class="flex flex-col items-center justify-center gap-1">
                                         <span class="font-semibold">Duyệt bài</span>
                                         <label class="cursor-pointer text-[14px] font-normal text-primary flex items-center gap-1 hover:text-blue-700">
-                                            @if(in_array('quan_ly_bai_viet', $selectedPermissions))
-                                                <input wire:key="header-review-all-disabled" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
-                                            @else
-                                                <input wire:key="header-review-all-active" type="checkbox" wire:model.live="selectedPermissions" value="duyet_bai_viet" class="checkbox checkbox-primary checkbox-sm" />
-                                            @endif
+                                            {{-- Đổi thành wire:model="selectAllReview" --}}
+                                            <input type="checkbox" wire:model.live="selectAllReview" class="checkbox checkbox-primary checkbox-sm" />
                                             (Tất cả)
                                         </label>
                                     </div>
@@ -333,11 +390,8 @@ new class extends Component {
                                     <td class="px-4 py-2 text-center">
                                         @if($writePermission)
                                             <div class="flex justify-center">
-                                                @if(in_array('viet_bai_viet', $selectedPermissions) || in_array('quan_ly_bai_viet', $selectedPermissions))
-                                                    <input wire:key="write-all-{{ $category->id }}" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
-                                                @else
-                                                    <input wire:key="write-single-{{ $category->id }}" type="checkbox" wire:model="selectedPermissions" value="{{ $writePermission['name'] }}" class="checkbox checkbox-primary checkbox-sm" />
-                                                @endif
+                                                {{-- Đã xóa bỏ thuộc tính Disabled và Checked tĩnh --}}
+                                                <input wire:key="write-single-{{ $category->id }}" type="checkbox" wire:model.live="selectedPermissions" value="{{ $writePermission['name'] }}" class="checkbox checkbox-primary checkbox-sm" />
                                             </div>
                                         @else
                                             <span class="text-gray-400 text-xs">-</span>
@@ -346,11 +400,8 @@ new class extends Component {
                                     <td class="px-4 py-2 text-center">
                                         @if($reviewPermission)
                                             <div class="flex justify-center">
-                                                @if(in_array('duyet_bai_viet', $selectedPermissions) || in_array('quan_ly_bai_viet', $selectedPermissions))
-                                                    <input wire:key="review-all-{{ $category->id }}" type="checkbox" checked="checked" disabled="disabled" class="checkbox checkbox-primary checkbox-sm opacity-60 cursor-not-allowed" />
-                                                @else
-                                                    <input wire:key="review-single-{{ $category->id }}" type="checkbox" wire:model="selectedPermissions" value="{{ $reviewPermission['name'] }}" class="checkbox checkbox-primary checkbox-sm" />
-                                                @endif
+                                                {{-- Đã xóa bỏ thuộc tính Disabled và Checked tĩnh --}}
+                                                <input wire:key="review-single-{{ $category->id }}" type="checkbox" wire:model.live="selectedPermissions" value="{{ $reviewPermission['name'] }}" class="checkbox checkbox-primary checkbox-sm" />
                                             </div>
                                         @else
                                             <span class="text-gray-400 text-xs">-</span>

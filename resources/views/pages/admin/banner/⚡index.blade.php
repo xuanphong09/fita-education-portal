@@ -54,7 +54,7 @@ class extends Component {
             ['key' => 'image', 'label' => 'Ảnh', 'sortable' => false, 'class' => 'w-60'],
             ['key' => 'title_1', 'label' => 'Tiêu đề 1', 'sortable' => false],
             ['key' => 'title_2', 'label' => 'Tiêu đề 2', 'sortable' => false],
-            ['key' => 'position', 'label' => 'Vị trí nội dung', 'class' => 'w-36'],
+            ['key' => 'position', 'label' => 'Vị trí nội dung', 'class' => 'w-36','sortable' => false],
             ['key' => 'order', 'label' => 'Thứ tự', 'class' => 'w-20'],
             ['key' => 'is_active', 'label' => 'Trạng thái', 'sortable' => false, 'class' => 'w-24'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-32'],
@@ -77,6 +77,7 @@ class extends Component {
             $this->applySearchFilter($query, trim($this->search));
         }
 
+        $query->orderBy('is_active', 'desc');
         $query->orderBy(...array_values($this->sortBy));
 
         return $query->paginate($this->perPage);
@@ -217,7 +218,7 @@ class extends Component {
             'url' => trim($this->url) !== '' ? trim($this->url) : null,
             'image' => $imagePath,
             'position' => $this->position,
-            'order' => $this->order,
+            'order' => $this->is_active?$this->order: 0,
             'is_active' => $this->is_active,
         ]);
 
@@ -261,7 +262,7 @@ class extends Component {
             'url' => trim($this->url) !== '' ? trim($this->url) : null,
             'image' => $imagePath,
             'position' => $this->position,
-            'order' => $this->order,
+            'order' => $this->is_active? (Banner::max('order') ?? 0) + 1: 0,
             'is_active' => $this->is_active,
         ]);
 
