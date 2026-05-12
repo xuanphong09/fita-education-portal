@@ -292,48 +292,72 @@ new class extends Component {
     }
 
     protected $messages = [
-        'data.vi.section_titles.*.string' => 'Trường tiêu đề phải là chuỗi.',
-        'data.vi.section_titles.*.max' => 'Trường tiêu đề không được vượt quá :max ký tự.',
-        'data.en.section_titles.*.string' => 'Trường tiêu đề phải là chuỗi.',
-        'data.en.section_titles.*.max' => 'Trường tiêu đề không được vượt quá :max ký tự.',
+        // --- TIÊU ĐỀ CÁC KHỐI ---
+        'data.*.section_titles.*.string' => 'Trường tiêu đề phải là chuỗi.',
+        'data.*.section_titles.*.max'    => 'Trường tiêu đề không được vượt quá :max ký tự.',
 
-        'data.vi.quick_links.*.app.required' => 'Trường tiêu đề lối tắt là bắt buộc.',
-        'data.vi.quick_links.*.app.string' => 'Trường tiêu đề lối tắt phải là chuỗi.',
-        'data.vi.quick_links.*.app.max' => 'Trường tiêu đề lối tắt không được vượt quá :max ký tự.',
-        'data.vi.quick_links.*.desc.string' => 'Trường mô tả phải là chuỗi.',
-        'data.vi.quick_links.*.desc.max' => 'Trường mô tả không được vượt quá :max ký tự.',
-        'data.vi.quick_links.*.desc.required' => 'Trường liên kết là bắt buộc.',
-        'data.vi.quick_links.*.link.required' => 'Trường liên kết là bắt buộc.',
-        'data.vi.quick_links.*.link.string' => 'Trường liên kết phải là chuỗi.',
-        'data.vi.quick_links.*.link.max' => 'Trường liên kết không được vượt quá :max ký tự.',
-        'data.vi.quick_links.*.link.regex' => 'Trường liên kết phải bắt đầu bằng http://, https://, / hoặc #.',
-        'data.vi.quick_links.*.color.required' => 'Trường màu sắc là bắt buộc.',
-        'data.vi.quick_links.*.color.string' => 'Trường màu sắc phải là chuỗi.',
-        'data.vi.quick_links.*.color.max' => 'Trường màu sắc không được vượt quá :max ký tự.',
-        'data.vi.quick_links.*.img.string' => 'Trường hình ảnh phải là chuỗi.',
-        'data.vi.quick_links.*.img.max' => 'Trường hình ảnh không được vượt quá :max ký tự.',
-        'data.vi.quick_links.*.img_file.image' => 'Trường hình ảnh phải là một tệp hình ảnh.',
-        'data.vi.quick_links.*.img_file.mimes' => 'Trường hình ảnh phải là một tệp hình ảnh có định dạng: jpg, jpeg, png, webp.',
-        'data.vi.quick_links.*.img_file.max' => 'Trường hình ảnh không được vượt quá 2MB.',
+        // --- LỐI TẮT NHANH (QUICK LINKS) ---
+        'data.*.quick_links.*.app.required'   => 'Trường tiêu đề lối tắt là bắt buộc.',
+        'data.*.quick_links.*.app.string'     => 'Trường tiêu đề lối tắt phải là chuỗi.',
+        'data.*.quick_links.*.app.max'        => 'Trường tiêu đề lối tắt không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.desc.required'  => 'Trường mô tả là bắt buộc.',
+        'data.*.quick_links.*.desc.string'    => 'Trường mô tả phải là chuỗi.',
+        'data.*.quick_links.*.desc.max'       => 'Trường mô tả không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.link.required'  => 'Trường liên kết là bắt buộc.',
+        'data.*.quick_links.*.link.string'    => 'Trường liên kết phải là chuỗi.',
+        'data.*.quick_links.*.link.max'       => 'Trường liên kết không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.link.regex'     => 'Trường liên kết phải bắt đầu bằng http://, https://, / hoặc #.',
+        'data.*.quick_links.*.color.required' => 'Trường màu sắc là bắt buộc.',
+        'data.*.quick_links.*.color.string'   => 'Trường màu sắc phải là chuỗi.',
+        'data.*.quick_links.*.color.max'      => 'Trường màu sắc không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.img.string'     => 'Trường hình ảnh phải là chuỗi.',
+        'data.*.quick_links.*.img.max'        => 'Trường hình ảnh không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.img_file.image' => 'Tệp tải lên phải là một hình ảnh.',
+        'data.*.quick_links.*.img_file.mimes' => 'Hình ảnh phải có định dạng: jpg, jpeg, png, webp.',
+        'data.*.quick_links.*.img_file.max'   => 'Hình ảnh không được vượt quá 2MB.',
 
-        'data.en.quick_links.*.app.required' => 'Trường tiêu đề lối tắt là bắt buộc.',
-        'data.en.quick_links.*.app.string' => 'Trường tiêu đề lối tắt phải là chuỗi.',
-        'data.en.quick_links.*.app.max' => 'Trường tiêu đề lối tắt không được vượt quá :max ký tự.',
-        'data.en.quick_links.*.desc.string' => 'Trường mô tả phải là chuỗi.',
-        'data.en.quick_links.*.desc.max' => 'Trường mô tả không được vượt quá :max ký tự.',
-        'data.en.quick_links.*.desc.required' => 'Trường liên kết là bắt buộc.',
-        'data.en.quick_links.*.link.required' => 'Trường liên kết là bắt buộc.',
-        'data.en.quick_links.*.link.string' => 'Trường liên kết phải là chuỗi.',
-        'data.en.quick_links.*.link.max' => 'Trường liên kết không được vượt quá :max ký tự.',
-        'data.en.quick_links.*.link.regex' => 'Trường liên kết phải bắt đầu bằng http://, https://, / hoặc #.',
-        'data.en.quick_links.*.color.required' => 'Trường màu sắc là bắt buộc.',
-        'data.en.quick_links.*.color.string' => 'Trường màu sắc phải là chuỗi.',
-        'data.en.quick_links.*.color.max' => 'Trường màu sắc không được vượt quá :max ký tự.',
-        'data.en.quick_links.*.img.string' => 'Trường hình ảnh phải là chuỗi.',
-        'data.en.quick_links.*.img.max' => 'Trường hình ảnh không được vượt quá :max ký tự.',
-        'data.en.quick_links.*.img_file.image' => 'Trường hình ảnh phải là một tệp hình ảnh.',
-        'data.en.quick_links.*.img_file.mimes' => 'Trường hình ảnh phải là một tệp hình ảnh có định dạng: jpg, jpeg, png, webp.',
-        'data.en.quick_links.*.img_file.max' => 'Trường hình ảnh không được vượt quá 2MB.',
+        // --- CHƯƠNG TRÌNH ĐÀO TẠO (TRAINING PROGRAMS) ---
+        'data.*.training_programs.*.title.required'       => 'Trường tiêu đề thẻ là bắt buộc.',
+        'data.*.training_programs.*.title.string'         => 'Trường tiêu đề thẻ phải là chuỗi.',
+        'data.*.training_programs.*.title.max'            => 'Trường tiêu đề thẻ không được vượt quá :max ký tự.',
+        'data.*.training_programs.*.description.required' => 'Trường mô tả là bắt buộc.',
+        'data.*.training_programs.*.description.string'   => 'Trường mô tả phải là chuỗi.',
+        'data.*.training_programs.*.detail_url.required'  => 'Trường link chi tiết là bắt buộc.',
+        'data.*.training_programs.*.detail_url.string'    => 'Trường link chi tiết phải là chuỗi.',
+        'data.*.training_programs.*.detail_url.max'       => 'Trường link chi tiết không được vượt quá :max ký tự.',
+        'data.*.training_programs.*.roadmap_url.required' => 'Trường link lộ trình là bắt buộc.',
+        'data.*.training_programs.*.roadmap_url.string'   => 'Trường link lộ trình phải là chuỗi.',
+        'data.*.training_programs.*.roadmap_url.max'      => 'Trường link lộ trình không được vượt quá :max ký tự.',
+        'data.*.training_programs.*.image_file.image'     => 'Tệp tải lên phải là một hình ảnh.',
+        'data.*.training_programs.*.image_file.mimes'     => 'Hình ảnh phải có định dạng: jpg, jpeg, png, webp.',
+        'data.*.training_programs.*.image_file.max'       => 'Hình ảnh không được vượt quá 2MB.',
+
+        // --- CHỈ SỐ THỐNG KÊ (COUNTER STATS) ---
+        'data.*.counter_stats.*.label.required' => 'Trường nhãn chỉ số là bắt buộc.',
+        'data.*.counter_stats.*.label.string'   => 'Trường nhãn chỉ số phải là chuỗi.',
+        'data.*.counter_stats.*.label.max'      => 'Trường nhãn chỉ số không được vượt quá :max ký tự.',
+        'data.*.counter_stats.*.value.required' => 'Trường giá trị là bắt buộc.',
+        'data.*.counter_stats.*.value.integer'  => 'Trường giá trị phải là số nguyên.',
+        'data.*.counter_stats.*.value.min'      => 'Giá trị không được nhỏ hơn :min.',
+        'data.*.counter_stats.*.suffix.required'=> 'Trường hậu tố là bắt buộc.',
+        'data.*.counter_stats.*.suffix.string'  => 'Trường hậu tố phải là chuỗi.',
+        'data.*.counter_stats.*.suffix.max'     => 'Trường hậu tố không được vượt quá :max ký tự.',
+        'data.*.counter_stats.*.icon.required'  => 'Bạn chưa chọn Icon cho chỉ số.',
+        'data.*.counter_stats.*.icon.string'    => 'Icon phải là chuỗi hợp lệ.',
+        'data.*.counter_stats.*.icon.max'       => 'Icon không được vượt quá :max ký tự.',
+
+        // --- LỜI CHIA SẺ (TESTIMONIALS) ---
+        'data.*.testimonials.*.name.required'      => 'Trường họ tên là bắt buộc.',
+        'data.*.testimonials.*.name.string'        => 'Trường họ tên phải là chuỗi.',
+        'data.*.testimonials.*.name.max'           => 'Trường họ tên không được vượt quá :max ký tự.',
+        'data.*.testimonials.*.role.required'      => 'Trường chức danh là bắt buộc.',
+        'data.*.testimonials.*.role.string'        => 'Trường chức danh phải là chuỗi.',
+        'data.*.testimonials.*.role.max'           => 'Trường chức danh không được vượt quá :max ký tự.',
+        'data.*.testimonials.*.content.required'   => 'Trường nội dung chia sẻ là bắt buộc.',
+        'data.*.testimonials.*.content.string'     => 'Trường nội dung chia sẻ phải là chuỗi.',
+        'data.*.testimonials.*.avatar_file.image'  => 'Ảnh đại diện tải lên phải là hình ảnh.',
+        'data.*.testimonials.*.avatar_file.mimes'  => 'Ảnh đại diện phải có định dạng: jpg, jpeg, png, webp.',
+        'data.*.testimonials.*.avatar_file.max'    => 'Ảnh đại diện không được vượt quá 2MB.',
     ];
 
     protected function defaultData(string $locale): array
@@ -841,21 +865,21 @@ new class extends Component {
         foreach (['vi', 'en'] as $locale) {
             foreach ($this->data[$locale]['quick_links'] ?? [] as $index => $item) {
                 if (!empty($item['img_file']) && $this->isUpload($item['img_file'])) {
-                    $this->data[$locale]['quick_links'][$index]['img'] = $item['img_file']->store('uploads/home3/quick-links', 'public');
+                    $this->data[$locale]['quick_links'][$index]['img'] = $item['img_file']->store('uploads/home/quick-links', 'public');
                 }
                 $this->data[$locale]['quick_links'][$index]['img_file'] = null;
             }
 
             foreach ($this->data[$locale]['training_programs'] ?? [] as $index => $item) {
                 if (!empty($item['image_file']) && $this->isUpload($item['image_file'])) {
-                    $this->data[$locale]['training_programs'][$index]['image'] = $item['image_file']->store('uploads/home3/training-programs', 'public');
+                    $this->data[$locale]['training_programs'][$index]['image'] = $item['image_file']->store('uploads/home/training-programs', 'public');
                 }
                 $this->data[$locale]['training_programs'][$index]['image_file'] = null;
             }
 
             foreach ($this->data[$locale]['testimonials'] ?? [] as $index => $item) {
                 if (!empty($item['avatar_file']) && $this->isUpload($item['avatar_file'])) {
-                    $this->data[$locale]['testimonials'][$index]['avatar'] = $item['avatar_file']->store('uploads/home3/testimonials', 'public');
+                    $this->data[$locale]['testimonials'][$index]['avatar'] = $item['avatar_file']->store('uploads/home/testimonials', 'public');
                 }
                 $this->data[$locale]['testimonials'][$index]['avatar_file'] = null;
             }
@@ -966,7 +990,7 @@ new class extends Component {
         }
 
         $this->syncToPreviewCache();
-        $this->dispatch('open-new-tab', url: route('client.home2', ['preview_home3' => 1]));
+        $this->dispatch('open-new-tab', url: route('client.home', ['preview_home3' => 1]));
     }
 };
 ?>
