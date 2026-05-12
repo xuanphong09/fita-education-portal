@@ -54,6 +54,7 @@ new class extends Component {
             ['key' => 'user_code', 'label' => 'Mã định danh', 'sortable' => false],
             ['key' => 'roles', 'label' => 'Vai trò', 'sortable' => false, 'class' => 'w-48'],
             ['key' => 'is_active', 'label' => 'Trạng thái'],
+            ['key' => 'created_at', 'label' => 'Ngày tạo', 'class' => 'w-32'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-24'],
         ];
     }
@@ -201,6 +202,12 @@ new class extends Component {
             @else
                 <x-badge value="Đã khóa" class="badge-error badge-outline badge-md font-semibold"/>
             @endif
+            @endscope
+
+            @scope('cell_created_at', $user)
+                <span class="text-gray-700 whitespace-nowrap">
+                    {{ $user->created_at->format('d/m/Y H:i') }}
+                </span>
             @endscope
 
             {{-- Cột 6: Hành động --}}
