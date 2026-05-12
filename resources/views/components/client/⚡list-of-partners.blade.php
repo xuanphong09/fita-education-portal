@@ -43,7 +43,7 @@ new class extends Component
             loop: true,
             centerInsufficientSlides: true, // Căn giữa nếu ít logo
             autoplay: {
-                delay: 7000,
+                delay: 5000,
                 disableOnInteraction: false,
                 pauseOnMouseEnter: true,
             },
