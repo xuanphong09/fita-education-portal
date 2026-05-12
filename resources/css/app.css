@@ -59,6 +59,13 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     max-width: 65ch;
 }
 @layer components {
+    @media (min-width: 1536px) {
+        .container {
+            padding-left: 6rem !important;
+            padding-right: 6rem !important;
+        }
+    }
+
     /* Khung chuẩn chung */
     .tinymce-content {
         @apply text-base leading-relaxed break-words font-sans;

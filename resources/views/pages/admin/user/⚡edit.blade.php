@@ -604,12 +604,12 @@ new class extends Component {
                         [
                             'student_code' => $this->student_code,
                             'class_name' => $this->class_name,
-                            'gender' => $this->gender,
-                            'date_of_birth' => $this->date_of_birth,
-                            'phone' => $this->phone,
-                            'intake_id' => $this->intake_id,
-                            'program_major_id' => $this->program_major_id, // Bổ sung
-                            'major_id' => $this->major_id
+                            'gender' => $this->gender?: null,
+                            'date_of_birth' => $this->date_of_birth?: null,
+                            'phone' => $this->phone?: null,
+                            'intake_id' => $this->intake_id?: null,
+                            'program_major_id' => $this->program_major_id?: null, // Bổ sung
+                            'major_id' => $this->major_id?: null
                         ]
                     );
                 }
@@ -633,10 +633,10 @@ new class extends Component {
                         [
                             'staff_code' => $this->staff_code,
                             'slug' => Str::slug($this->name) . '-' . Str::lower($this->staff_code),
-                            'gender' => $this->gender,
+                            'gender' => $this->gender?: null,
 //                            'date_of_birth' => $this->date_of_birth, // Có cập nhật date_of_birth như tạo mới
-                            'department_id' => $this->department_id,
-                            'phone' => $this->phone,
+                            'department_id' => $this->department_id?: null,
+                            'phone' => $this->phone?: null,
                             'positions' => $this->buildPositionsPayload(),
                             'academic_title' => $academicTitleValue ?: null,
                             'degree' => $degreeValue ?: null,
@@ -753,7 +753,7 @@ new class extends Component {
                             <x-radio label="Giới tính" wire:model.live="gender" :options="$genders"
                                      inline
                                      class="radio-primary radio-sm"/>
-                            <x-input label="Số điện thoại" wire:model.blur="phone" placeholder="Nhập số điện thoại " autocomplete="off"/>
+                            <x-input label="Số điện thoại" wire:model.blur="phone" placeholder="Nhập số điện thoại "/>
 
                             {{-- CẬP NHẬT 3 DROPDOWN CHUẨN --}}
                             <x-select
