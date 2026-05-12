@@ -407,7 +407,7 @@ class extends Component {
         <div class="relative z-20 -mt-4 mb-6 font-sans">
             <div class="container mx-auto px-3 lg:px-4 max-w-5xl"
                  x-data="{ menus: @js($quickLinks) }">
-                <div class="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-100 p-2 lg:pt-2 lg:pb-1 lg:px-3 flex flex-wrap lg:flex-nowrap gap-2 shadow-[0_15px_35px_rgba(0,0,0,0.22)]">
+                <div class="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-100 p-2 lg:pt-2.75 lg:pb-1 lg:px-3 flex flex-wrap lg:flex-nowrap gap-2 shadow-[0_15px_35px_rgba(0,0,0,0.22)]">
                     <template x-for="(item, index) in menus" :key="index">
                         <a :href="item.link"
                            target="_blank"
