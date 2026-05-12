@@ -113,8 +113,8 @@
 
             @can('cai_dat_giao_dien')
                 <x-menu-sub title="{{__('Page configuration')}}" icon="o-document">
-                    <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
                     <x-menu-item title="{{__('Home page')}}" link="{{route('admin.configuration.home3')}}" :active="request()->routeIs('admin.configuration.home3')" />
+                    <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
                 </x-menu-sub>
                 <x-menu-sub title="{{__('Interface configuration')}}" icon="o-cog-6-tooth">
                     <x-menu-item title="Menu tiêu đề" link="{{route('admin.configuration.header')}}" :active="request()->routeIs('admin.configuration.header')"/>
