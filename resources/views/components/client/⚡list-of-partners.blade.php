@@ -40,7 +40,7 @@ new class extends Component
         this.swiper = new Swiper(this.$refs.container, {
             slidesPerView: 2,
             spaceBetween: 30,
-            loop: false,
+            loop: true,
             centerInsufficientSlides: true, // Căn giữa nếu ít logo
             autoplay: {
                 delay: 7000,
@@ -70,7 +70,7 @@ new class extends Component
         <div class="relative flex items-center justify-center">
 
             {{-- Nút Prev --}}
-            <button class="swiper-button-prev-partner absolute left-0 md:-left-8 z-10 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-gray-400 hover:text-fita transition cursor-pointer">
+            <button class="swiper-button-prev-partner absolute left-0 md:-left-8 z-10 w-10 h-10 bg-white rounded-full shadow-md hidden md:flex items-center justify-center text-gray-400 hover:text-fita transition cursor-pointer">
                 <x-icon name="s-chevron-left"></x-icon>
             </button>
 
@@ -81,7 +81,7 @@ new class extends Component
 
                                 {{-- Vẫn giữ nguyên hiệu ứng Grayscale xịn xò --}}
                                 @php
-                                    $imageClasses = "w-[80%] h-[80%] object-contain transition-all duration-500 grayscale opacity-90 brightness-120 group-hover:grayscale-0 group-hover:opacity-100 group-hover:scale-110 group-hover:brightness-100";
+                                    $imageClasses = "w-[80%] h-[80%] object-contain transition-all duration-500 lg:grayscale lg:opacity-90 lg:brightness-120 lg:group-hover:grayscale-0 lg:group-hover:opacity-100 lg:group-hover:scale-110 lg:group-hover:brightness-100";
                                 @endphp
 
                                 @if(!empty($partner->url))
@@ -100,7 +100,7 @@ new class extends Component
                 </div>
 
             {{-- Nút Next --}}
-            <button class="swiper-button-next-partner absolute right-0 md:-right-8 z-10 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-gray-400 hover:text-fita transition cursor-pointer">
+            <button class="swiper-button-next-partner absolute right-0 md:-right-8 z-10 w-10 h-10 bg-white rounded-full shadow-md items-center justify-center text-gray-400 hover:text-fita transition cursor-pointer hidden md:flex">
                 <x-icon name="s-chevron-right"></x-icon>
             </button>
         </div>
