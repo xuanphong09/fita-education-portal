@@ -58,7 +58,7 @@ new class extends Component
                 bulletActiveClass: '!bg-fita2'
             },
             breakpoints: {
-                400: { slidesPerView: 3, spaceBetween: 30 },
+                400: { slidesPerView: 2, spaceBetween: 30 },
                 640: { slidesPerView: 4, spaceBetween: 40 },
                 1024: { slidesPerView: 5, spaceBetween: 40 },
                 1280: { slidesPerView: 6, spaceBetween: 30 }
