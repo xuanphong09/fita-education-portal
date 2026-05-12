@@ -367,7 +367,7 @@
         {{--  end navbar right  --}}
 
         {{--  start navbar left  --}}
-        <x-slot:actions class="gap-0! flex flex-nowrap justify-end content-start overflow-visible h-full">
+        <x-slot:actions class="gap-0! flex flex-nowrap justify-end content-start overflow-visible h-full client-main-menu">
             @if($useDynamicHeader)
                 @foreach($headerMenuItems as $item)
                     @if(!empty($item['children']))
