@@ -40,7 +40,7 @@ new class extends Component
         this.swiper = new Swiper(this.$refs.container, {
             slidesPerView: 2,
             spaceBetween: 30,
-            loop: true,
+            loop: false,
             centerInsufficientSlides: true, // Căn giữa nếu ít logo
             autoplay: {
                 delay: 5000,
