@@ -351,13 +351,11 @@ class extends Component {
                                         @endif
 
                                         @if($related->is_featured)
-                                            <div class="absolute top-2 left-2 z-10 inline-flex items-center gap-1 rounded-full bg-warning px-2 py-1 text-xs font-semibold text-white shadow">
-                                                <x-icon name="s-star" class="w-3 h-3" />
+                                            <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[10px] font-bold text-white shadow-md rounded-br-xl">
                                                 {{ __('Featured News') }}
                                             </div>
                                         @elseif($this->isNewPost($related))
-                                            <div class="absolute top-1 left-1 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-1.5 py-0.5 text-[10px] font-semibold text-white shadow">
-                                                <span class="h-1 w-1 rounded-full bg-white"></span>
+                                            <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] pe-2 ps-1 py-0.5 text-[10px] font-bold text-white shadow-md rounded-br-xl">
                                                 {{ __('New') }}
                                             </div>
                                         @endif
@@ -403,13 +401,11 @@ class extends Component {
                                     @endif
 
                                     @if($recent->is_featured)
-                                        <div class="absolute top-0 left-0 inline-flex items-center gap-0.5 rounded-full bg-warning px-1.5 py-0.5 text-[8px] font-semibold text-white shadow">
-                                            <x-icon name="s-star" class="w-2.5 h-2.5" />
+                                        <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[9px] font-bold text-white shadow-md rounded-br-xl">
                                             {{ __('Featured News') }}
                                         </div>
                                     @elseif($this->isNewPost($recent))
-                                        <div class="absolute top-0 left-0 inline-flex items-center gap-0.5 rounded-full bg-[#22c55e] px-1 py-0.5 text-[8px] font-semibold text-white shadow">
-                                            <span class="h-0.5 w-0.5 rounded-full bg-white"></span>
+                                        <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] pe-2 ps-1 py-0.5 text-[9px] font-bold text-white shadow-md rounded-br-xl">
                                             {{ __('New') }}
                                         </div>
                                     @endif

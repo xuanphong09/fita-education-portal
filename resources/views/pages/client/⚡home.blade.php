@@ -712,7 +712,7 @@ class extends Component {
     @endif
 
     <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex text-center justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
             {{ !empty($sectionTitles['partners']) ? $sectionTitles['partners'] : __('NETWORK OF BUSINESS PARTNERS') }}
         </h1>
         <livewire:client.list-of-partners/>

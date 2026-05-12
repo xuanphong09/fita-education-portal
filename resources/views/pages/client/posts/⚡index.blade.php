@@ -288,174 +288,244 @@ class extends Component {
                     <p class="text-gray-500 text-lg">{{ __('No posts found') }}</p>
                 </div>
             @else
-                @if($featuredPosts->isNotEmpty())
-                    @php
-                        $featuredSlides = [];
-                        foreach ($featuredPosts as $post) {
-                            $featuredSlides[] = [
-                                'url' => $post->client_url,
-                                'title' => $post->getTranslation('title', app()->getLocale()),
-                                'excerpt' => $post->getExcerptOrAuto(app()->getLocale(), 220),
-                                'is_new' => $this->isNewPost($post),
-                                'categories' => $post->show_category ? $post->categories
-                                    ->map(fn ($c) => $c->getTranslation('name', app()->getLocale(), false))
-                                    ->filter()
-                                    ->values()
-                                    ->all() : [],
-                                'author' => $post->show_author ? optional($post->user)->name : null,
-                                'date' => $post->show_published_at ? optional($post->published_at)->format('d/m/Y') : null,
-                                'views' => $post->show_views ? number_format($post->views) : null,
-                                'thumbnail' => $post->thumbnail ? Storage::url($post->thumbnail) : null,
-                            ];
-                        }
-                    @endphp
+{{--                @if($featuredPosts->isNotEmpty())--}}
+{{--                    @php--}}
+{{--                        $featuredSlides = [];--}}
+{{--                        foreach ($featuredPosts as $post) {--}}
+{{--                            $featuredSlides[] = [--}}
+{{--                                'url' => $post->client_url,--}}
+{{--                                'title' => $post->getTranslation('title', app()->getLocale()),--}}
+{{--                                'excerpt' => $post->getExcerptOrAuto(app()->getLocale(), 220),--}}
+{{--                                'is_new' => $this->isNewPost($post),--}}
+{{--                                'categories' => $post->show_category ? $post->categories--}}
+{{--                                    ->map(fn ($c) => $c->getTranslation('name', app()->getLocale(), false))--}}
+{{--                                    ->filter()--}}
+{{--                                    ->values()--}}
+{{--                                    ->all() : [],--}}
+{{--                                'author' => $post->show_author ? optional($post->user)->name : null,--}}
+{{--                                'date' => $post->show_published_at ? optional($post->published_at)->format('d/m/Y') : null,--}}
+{{--                                'views' => $post->show_views ? number_format($post->views) : null,--}}
+{{--                                'thumbnail' => $post->thumbnail ? Storage::url($post->thumbnail) : null,--}}
+{{--                            ];--}}
+{{--                        }--}}
+{{--                    @endphp--}}
 
-                    <div
-                        wire:key="featured-slider-{{ $search }}-{{ $categorySlug }}"
-                        class="mb-6 relative"
-                        x-data="{
-                            slides: @js($featuredSlides),
-                            index: 0,
-                            hovered: false,
-                            timer: null,
-                            init() {
-                                this.startAuto();
-                            },
-                            startAuto() {
-                                this.stopAuto();
-                                this.timer = setInterval(() => {
-                                    if (!this.hovered && this.slides.length > 1) {
-                                        this.index = (this.index + 1) % this.slides.length;
-                                    }
-                                }, 5000);
-                            },
-                            stopAuto() {
-                                if (this.timer) {
-                                    clearInterval(this.timer);
-                                    this.timer = null;
-                                }
-                            },
-                            next() {
-                                if (this.index < this.slides.length - 1) this.index++;
-                            },
-                            prev() {
-                                if (this.index > 0) this.index--;
-                            },
-                            go(i) { this.index = i; },
-                            get canPrev() { return this.index > 0; },
-                            get canNext() { return this.index < this.slides.length - 1; },
-                            get current() { return this.slides[this.index] || null; }
-                        }"
-                        @mouseenter="hovered = true"
-                        @mouseleave="hovered = false"
-                    >
-                        <a :href="current?.url" class="group block" wire:navigate>
-                            <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 lg:grid lg:grid-cols-2 lg:h-70">
-                                <div class="aspect-video lg:aspect-auto bg-gray-200 overflow-hidden relative">
-                                    <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 bg-warning text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow">
-                                        <x-icon name="s-star" class="w-3.5 h-3.5" />
-                                        {{ __('Featured News') }}
-                                    </div>
-                                    <template x-if="current && current.is_new">
-                                        <div class="absolute top-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
-                                            <span class="h-2 w-2 rounded-full bg-white"></span>
-                                            {{ __('New') }}
-                                        </div>
-                                    </template>
-                                    <template x-if="current && current.thumbnail">
-                                        <img
-                                            :src="current.thumbnail"
-                                            alt="Featured post"
-                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                    </template>
-                                    <template x-if="!current || !current.thumbnail">
+{{--                    <div--}}
+{{--                        wire:key="featured-slider-{{ $search }}-{{ $categorySlug }}"--}}
+{{--                        class="mb-6 relative"--}}
+{{--                        x-data="{--}}
+{{--                            slides: @js($featuredSlides),--}}
+{{--                            index: 0,--}}
+{{--                            hovered: false,--}}
+{{--                            timer: null,--}}
+{{--                            init() {--}}
+{{--                                this.startAuto();--}}
+{{--                            },--}}
+{{--                            startAuto() {--}}
+{{--                                this.stopAuto();--}}
+{{--                                this.timer = setInterval(() => {--}}
+{{--                                    if (!this.hovered && this.slides.length > 1) {--}}
+{{--                                        this.index = (this.index + 1) % this.slides.length;--}}
+{{--                                    }--}}
+{{--                                }, 5000);--}}
+{{--                            },--}}
+{{--                            stopAuto() {--}}
+{{--                                if (this.timer) {--}}
+{{--                                    clearInterval(this.timer);--}}
+{{--                                    this.timer = null;--}}
+{{--                                }--}}
+{{--                            },--}}
+{{--                            next() {--}}
+{{--                                if (this.index < this.slides.length - 1) this.index++;--}}
+{{--                            },--}}
+{{--                            prev() {--}}
+{{--                                if (this.index > 0) this.index--;--}}
+{{--                            },--}}
+{{--                            go(i) { this.index = i; },--}}
+{{--                            get canPrev() { return this.index > 0; },--}}
+{{--                            get canNext() { return this.index < this.slides.length - 1; },--}}
+{{--                            get current() { return this.slides[this.index] || null; }--}}
+{{--                        }"--}}
+{{--                        @mouseenter="hovered = true"--}}
+{{--                        @mouseleave="hovered = false"--}}
+{{--                    >--}}
+{{--                        <a :href="current?.url" class="group block" wire:navigate>--}}
+{{--                            <div class="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 lg:grid lg:grid-cols-2 lg:h-70">--}}
+{{--                                <div class="aspect-video lg:aspect-auto bg-gray-200 overflow-hidden relative">--}}
+{{--                                    <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 bg-warning text-white px-2.5 py-1 rounded-full text-xs font-semibold shadow">--}}
+{{--                                        <x-icon name="s-star" class="w-3.5 h-3.5" />--}}
+{{--                                        {{ __('Featured News') }}--}}
+{{--                                    </div>--}}
+{{--                                    <template x-if="current && current.is_new">--}}
+{{--                                        <div class="absolute top-3 right-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">--}}
+{{--                                            <span class="h-2 w-2 rounded-full bg-white"></span>--}}
+{{--                                            {{ __('New') }}--}}
+{{--                                        </div>--}}
+{{--                                    </template>--}}
+{{--                                    <template x-if="current && current.thumbnail">--}}
+{{--                                        <img--}}
+{{--                                            :src="current.thumbnail"--}}
+{{--                                            alt="Featured post"--}}
+{{--                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"--}}
+{{--                                        />--}}
+{{--                                    </template>--}}
+{{--                                    <template x-if="!current || !current.thumbnail">--}}
 {{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
 {{--                                            <x-icon name="o-photo" class="w-16 h-16 text-white opacity-50" />--}}
 {{--                                        </div>--}}
-                                        <img
-                                            src="{{ asset('assets/images/post-5.jpg') }}"
-                                            alt="No image"
-                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-                                    </template>
-                                </div>
+{{--                                        <img--}}
+{{--                                            src="{{ asset('assets/images/post-5.jpg') }}"--}}
+{{--                                            alt="No image"--}}
+{{--                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"--}}
+{{--                                        />--}}
+{{--                                    </template>--}}
+{{--                                </div>--}}
 
-                                <div class="p-6 flex flex-col justify-between min-h-72">
-                                    <div class="mb-3 flex items-center gap-2 text-md text-gray-500 flex-wrap">
-                                        <template x-if="current && current.categories && current.categories.length">
-                                            <span class="inline-block bg-fita text-white px-2 py-1 rounded" x-text="current.categories[0]"></span>
-                                        </template>
-                                        <template x-if="current && current.author">
-                                            <span class="inline-flex items-center gap-1">
-                                                <x-icon name="o-user" class="w-3.5 h-3.5" />
-                                                <span x-text="current.author"></span>
-                                            </span>
-                                        </template>
-                                        <span x-text="current?.date"></span>
+{{--                                <div class="p-6 flex flex-col justify-between min-h-72">--}}
+{{--                                    <div class="mb-3 flex items-center gap-2 text-md text-gray-500 flex-wrap">--}}
+{{--                                        <template x-if="current && current.categories && current.categories.length">--}}
+{{--                                            <span class="inline-block bg-fita text-white px-2 py-1 rounded" x-text="current.categories[0]"></span>--}}
+{{--                                        </template>--}}
+{{--                                        <template x-if="current && current.author">--}}
+{{--                                            <span class="inline-flex items-center gap-1">--}}
+{{--                                                <x-icon name="o-user" class="w-3.5 h-3.5" />--}}
+{{--                                                <span x-text="current.author"></span>--}}
+{{--                                            </span>--}}
+{{--                                        </template>--}}
+{{--                                        <span x-text="current?.date"></span>--}}
+{{--                                    </div>--}}
+
+{{--                                    <h2 class="text-2xl font-bold mb-3 group-hover:text-fita transition-colors line-clamp-2" x-text="current?.title"></h2>--}}
+{{--                                    <p class="text-gray-600 mb-4 line-clamp-3" x-text="current?.excerpt"></p>--}}
+
+{{--                                    <div class="mt-auto flex items-center justify-between text-md text-gray-500 pt-4 border-t">--}}
+{{--                                        <span class="inline-flex items-center gap-1">--}}
+{{--                                            <x-icon name="o-eye" class="w-4 h-4" />--}}
+{{--                                            <span x-text="(current && current.views ? current.views : 0) + ' {{ __('views') }}'"></span>--}}
+{{--                                        </span>--}}
+{{--                                        <span class="font-semibold text-fita">{{ __('Read more') }}--}}
+{{--                                            <x-icon name="s-arrow-right"></x-icon>--}}
+{{--                                        </span>--}}
+{{--                                    </div>--}}
+{{--                                </div>--}}
+
+{{--                            </div>--}}
+{{--                        </a>--}}
+{{--                        <div--}}
+{{--                            class="absolute inset-y-0 left-0 right-0 z-20 pointer-events-none"--}}
+{{--                            x-show="hovered && slides.length > 1"--}}
+{{--                            x-cloak--}}
+{{--                        >--}}
+{{--                            <template x-if="canPrev">--}}
+{{--                                <div class="absolute left-1 top-2/5 -translate-y-1/2 pointer-events-auto">--}}
+{{--                                    <x-button--}}
+{{--                                        icon="s-chevron-left"--}}
+{{--                                        class="btn-sm btn-circle bg-fita text-white"--}}
+{{--                                        @click.stop.prevent="prev()"--}}
+{{--                                    />--}}
+{{--                                </div>--}}
+{{--                            </template>--}}
+
+{{--                            <template x-if="canNext">--}}
+{{--                                <div class="absolute right-1 top-2/5 -translate-y-1/2 pointer-events-auto">--}}
+{{--                                    <x-button--}}
+{{--                                        icon="s-chevron-right"--}}
+{{--                                        class="btn-sm btn-circle bg-fita text-white"--}}
+{{--                                        @click.stop.prevent="next()"--}}
+{{--                                    />--}}
+{{--                                </div>--}}
+{{--                            </template>--}}
+{{--                        </div>--}}
+
+{{--                        <div x-show="slides.length > 1" class="flex items-center justify-center mt-3">--}}
+{{--                            <div class="flex gap-1">--}}
+{{--                                <template x-for="(slide, i) in slides" :key="i">--}}
+{{--                                    <button--}}
+{{--                                        type="button"--}}
+{{--                                        @click="go(i)"--}}
+{{--                                        class="w-2.5 h-2.5 rounded-full transition"--}}
+{{--                                        :class="i === index ? 'bg-fita scale-115' : 'bg-gray-300'"--}}
+{{--                                    ></button>--}}
+{{--                                </template>--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    </div>--}}
+{{--                @endif--}}
+                @if($featuredPosts->isNotEmpty())
+                        <div class="bg-white rounded-2xl shadow-md divide-y mb-4">
+                            @foreach($featuredPosts as $post)
+                                <a href="{{ $post->client_url }}" wire:navigate class="group block p-4 sm:p-5 hover:bg-slate-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
+                                    <div class="flex flex-col sm:flex-row gap-4">
+                                        <div class="w-full sm:w-44 lg:h-28 h-50 bg-gray-200 rounded-lg overflow-hidden shrink-0 relative">
+                                            @if($post->thumbnail)
+                                                <img
+                                                    src="{{ Storage::url($post->thumbnail) }}"
+                                                    alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
+                                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                            @else
+                                                <img
+                                                    src="{{ asset('assets/images/post-6.jpg') }}"
+                                                    alt="No image"
+                                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                                />
+                                                {{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
+                                                {{--                                            <x-icon name="o-photo" class="w-10 h-10 text-white opacity-50" />--}}
+                                                {{--                                        </div>--}}
+                                            @endif
+
+                                            @if($post->is_featured)
+                                                <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[10px] font-bold text-white shadow-md rounded-br-xl">
+                                                    {{ __('Featured News') }}
+                                                </div>
+                                            @endif
+                                        </div>
+
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex flex-wrap items-center gap-2 text-md text-gray-500 mb-2">
+                                                @if($post->show_category && $post->categories->isNotEmpty())
+                                                    @foreach($post->categories as $postCategory)
+                                                        @if($postCategory->getTranslation('name', app()->getLocale(), false))
+                                                            <span class="inline-block bg-fita text-white px-2 py-1 rounded">
+                                                         {{ $postCategory->getTranslation('name', app()->getLocale()) }}
+                                                     </span>
+                                                        @endif
+                                                    @endforeach
+                                                @endif
+                                                @if($post->show_author && $post->user)
+                                                    <span class="inline-flex items-center gap-1">
+                                                 <x-icon name="o-user" class="w-4.5 h-4.5" />
+                                                 {{ $post->user->name }}
+                                             </span>
+                                                @endif
+                                                @if($post->show_published_at)
+                                                    <span>{{ $post->published_at->format('d/m/Y') }}</span>
+                                                @endif
+                                                @if($post->show_views)
+                                                    <span class="inline-flex items-center gap-1">
+                                                 <x-icon name="o-eye" class="w-4.5 h-4.5" />
+                                                 {{ number_format($post->views) }}
+                                             </span>
+                                                @endif
+                                            </div>
+
+                                            <h3 class="font-bold text-lg mb-2 line-clamp-2 group-hover:text-fita transition-colors">
+                                                {{ $post->getTranslation('title', app()->getLocale()) }}
+                                            </h3>
+
+                                            <p class="text-md text-gray-600 line-clamp-2">
+                                                {{ $post->getExcerptOrAuto(app()->getLocale(), 150) }}
+                                            </p>
+                                        </div>
                                     </div>
-
-                                    <h2 class="text-2xl font-bold mb-3 group-hover:text-fita transition-colors line-clamp-2" x-text="current?.title"></h2>
-                                    <p class="text-gray-600 mb-4 line-clamp-3" x-text="current?.excerpt"></p>
-
-                                    <div class="mt-auto flex items-center justify-between text-md text-gray-500 pt-4 border-t">
-                                        <span class="inline-flex items-center gap-1">
-                                            <x-icon name="o-eye" class="w-4 h-4" />
-                                            <span x-text="(current && current.views ? current.views : 0) + ' {{ __('views') }}'"></span>
-                                        </span>
-                                        <span class="font-semibold text-fita">{{ __('Read more') }}
-                                            <x-icon name="s-arrow-right"></x-icon>
-                                        </span>
-                                    </div>
-                                </div>
-
-                            </div>
-                        </a>
-                        <div
-                            class="absolute inset-y-0 left-0 right-0 z-20 pointer-events-none"
-                            x-show="hovered && slides.length > 1"
-                            x-cloak
-                        >
-                            <template x-if="canPrev">
-                                <div class="absolute left-1 top-2/5 -translate-y-1/2 pointer-events-auto">
-                                    <x-button
-                                        icon="s-chevron-left"
-                                        class="btn-sm btn-circle bg-fita text-white"
-                                        @click.stop.prevent="prev()"
-                                    />
-                                </div>
-                            </template>
-
-                            <template x-if="canNext">
-                                <div class="absolute right-1 top-2/5 -translate-y-1/2 pointer-events-auto">
-                                    <x-button
-                                        icon="s-chevron-right"
-                                        class="btn-sm btn-circle bg-fita text-white"
-                                        @click.stop.prevent="next()"
-                                    />
-                                </div>
-                            </template>
+                                </a>
+                            @endforeach
                         </div>
-
-                        <div x-show="slides.length > 1" class="flex items-center justify-center mt-3">
-                            <div class="flex gap-1">
-                                <template x-for="(slide, i) in slides" :key="i">
-                                    <button
-                                        type="button"
-                                        @click="go(i)"
-                                        class="w-2.5 h-2.5 rounded-full transition"
-                                        :class="i === index ? 'bg-fita scale-115' : 'bg-gray-300'"
-                                    ></button>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
                 @endif
-
                 @if($listPosts->isNotEmpty())
                 <div class="bg-white rounded-2xl shadow-md divide-y">
                     @foreach($listPosts as $post)
-                        <a href="{{ $post->client_url }}" wire:navigate class="group block p-4 sm:p-5 hover:bg-slate-50 transition-colors">
+                        <a href="{{ $post->client_url }}" wire:navigate class="group block p-4 sm:p-5 hover:bg-slate-50 transition-colors first:rounded-t-2xl last:rounded-b-2xl">
                             <div class="flex flex-col sm:flex-row gap-4">
                                 <div class="w-full sm:w-44 lg:h-28 h-50 bg-gray-200 rounded-lg overflow-hidden shrink-0 relative">
                                     @if($post->thumbnail)
@@ -476,8 +546,7 @@ class extends Component {
                                     @endif
 
                                     @if($this->isNewPost($post))
-                                        <div class="absolute top-2 left-2 inline-flex items-center gap-1 rounded-lg bg-[#22c55e] px-2 py-1 text-[11px] font-semibold text-white shadow">
-                                            <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+                                        <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] pe-2 ps-1 py-0.5 text-[10px] font-bold text-white shadow-md rounded-br-xl">
                                             {{ __('New') }}
                                         </div>
                                     @endif
