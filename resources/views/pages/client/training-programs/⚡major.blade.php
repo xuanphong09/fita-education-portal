@@ -1133,7 +1133,7 @@ class extends Component {
                                                 x-bind:class="isOpen('table-semester-modal-current') ? 'rotate-180' : ''"
                                             />
                                         </span>
-                                        <h3 class="text-lg font-semibold select-none">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} {{ data_get($currentSemesterTimeline, 'semester_name')?'('.data_get($currentSemesterTimeline, 'semester_name').')':'' }}</h3>
+                                        <h3 class="text-md md:text-lg font-semibold select-none">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} {{ data_get($currentSemesterTimeline, 'semester_name')?'('.data_get($currentSemesterTimeline, 'semester_name').')':'' }}</h3>
 {{--                                        <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($currentSemesterTimeline) ?: __('') }}</div>--}}
                                     </div>
                                     <span
@@ -1271,7 +1271,7 @@ class extends Component {
                                                 x-bind:class="isOpen('table-semester-modal-next') ? 'rotate-180' : ''"
                                             />
                                         </span>
-                                            <h3 class="cursor-pointer text-lg font-semibold select-none">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} {{ data_get($nextSemesterTimeline, 'semester_name')?'('.data_get($nextSemesterTimeline, 'semester_name').')':'' }}</h3>
+                                            <h3 class="text-md md:text-lg cursor-pointer font-semibold select-none">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} {{ data_get($nextSemesterTimeline, 'semester_name')?'('.data_get($nextSemesterTimeline, 'semester_name').')':'' }}</h3>
 {{--                                            <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>--}}
                                         </div>
                                         <span
@@ -1438,7 +1438,7 @@ class extends Component {
                                                         x-bind:class="isOpen('table-semester-{{$semesterBlock['semester_no']}}') ? 'rotate-180' : ''"
                                                     />
                                                 </span>
-                                                <h3 class="cursor-pointer text-lg font-semibold select-none">{{__('Semester')}} {{ $semesterBlock['semester_no'] }} {{ $semesterBlock['semester_name']? '('.$semesterBlock['semester_name'].')' :'' }}</h3>
+                                                <h3 class="text-md md:text-lg cursor-pointer font-semibold select-none">{{__('Semester')}} {{ $semesterBlock['semester_no'] }} {{ $semesterBlock['semester_name']? '('.$semesterBlock['semester_name'].')' :'' }}</h3>
                                                 @if(!empty($semesterBlock['timeline']))
 {{--                                                    <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>--}}
                                                 @endif
@@ -1581,7 +1581,7 @@ class extends Component {
                                                         x-bind:class="isOpen('table-semester-{{$groupBlock['group_name']}}') ? 'rotate-180' : ''"
                                                     />
                                                 </span>
-                                                <h3 class="text-lg font-semibold cursor-pointer select-none">{{ $groupBlock['group_name'] }}</h3>
+                                                <h3 class="text-md md:text-lg font-semibold cursor-pointer select-none">{{ $groupBlock['group_name'] }}</h3>
                                             </div>
                                             <div class="text-md">
                                                 {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ Subject::formatCredit($groupBlock['total_credits']) }}
