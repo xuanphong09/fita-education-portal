@@ -728,7 +728,7 @@ new class extends Component {
             $oldSemester = ProgramSemester::find($this->selectedSemesterId);
             if ($oldSemester) {
                 $oldSemester->subjects()->detach($this->attach_subject_id);
-                $this->recalculateSemesterCredits($oldSemester->id);
+//                $this->recalculateSemesterCredits($oldSemester->id);
             }
         } else {
             // Nếu thêm mới, kiểm tra xem nó đã tồn tại trong toàn CTĐT chưa
@@ -773,7 +773,7 @@ new class extends Component {
             return;
         }
 
-        $this->recalculateSemesterCredits($targetSemester->id);
+//        $this->recalculateSemesterCredits($targetSemester->id);
 
         // Chuyển view hiển thị sang học kỳ vừa chuyển tới
         $this->selectedSemesterId = $targetSemester->id;
@@ -847,7 +847,7 @@ new class extends Component {
                 ->where('subject_id', $subjectId)
                 ->delete();
 
-            $this->recalculateSemesterCredits($semester->id);
+//            $this->recalculateSemesterCredits($semester->id);
             $this->success('Đã xóa môn học khỏi học kỳ thành công.');
         } catch (QueryException $e) {
             $this->error('Lỗi khi xóa môn học: ' . $e->getMessage());
@@ -1283,11 +1283,12 @@ new class extends Component {
             <p>Đang tải dữ liệu...</p>
         </div>
         <div class="space-y-3" wire:loading.remove wire:target="openCreateSemester,editSemester">
-            <div class="grid grid-cols-1 gap-3">
+            <div class="grid grid-cols-1">
                 <x-input label="Số học kỳ" type="number" min="1" wire:model="semester_no" />
                 <x-input label="Tên học kỳ" wire:model="semester_name" placeholder="HK2-2025-2026" />
+                <x-input label="Tổng số tín chỉ " type="number" min="0" wire:model="semester_total_credits"/>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 md:grid-cols-2">
                 <x-input label="Ngày bắt đầu" type="date" wire:model="semester_start_date" />
                 <x-input label="Ngày kết thúc" type="date" wire:model="semester_end_date" />
             </div>

@@ -801,7 +801,40 @@ class extends Component {
 };
 ?>
 
-<div>
+<div x-data="{
+        storageKey: 'page_home_open_state',
+        openStates: {},
+
+        init() {
+            try {
+                const raw = localStorage.getItem(this.storageKey);
+                this.openStates = raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                this.openStates = {};
+            }
+        },
+
+        saveToLocal() {
+            localStorage.setItem(this.storageKey, JSON.stringify(this.openStates));
+        },
+
+        ensureState(id, defaultState = true) {
+            if (this.openStates[id] === undefined) {
+                this.openStates[id] = defaultState;
+                this.saveToLocal();
+            }
+        },
+
+        isOpen(id) {
+            return this.openStates[id] !== false;
+        },
+
+        toggle(id) {
+            this.ensureState(id);
+            this.openStates[id] = !this.openStates[id];
+            this.saveToLocal();
+        }
+    }">
     <x-slot:title>{{ __('Training Programs') }} - {{!$this->selectedMajorSlug?__('Major'): __('Specialized') }} {{ $this->specializationLabel }}</x-slot:title>
 
 {{--    <x-slot:breadcrumb>--}}
@@ -1090,17 +1123,25 @@ class extends Component {
                         @endphp
 
                         <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[65vh] overflow-y-auto pr-1">
-                            <div class="rounded-md bg-fita2">
-                                <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 pt-2 text-white">
-                                    <div>
-                                        <h3 class="text-lg font-semibold">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} {{ data_get($currentSemesterTimeline, 'semester_name')?'('.data_get($currentSemesterTimeline, 'semester_name').')':'' }}</h3>
+                            <div class="rounded-md border border-gray-200">
+                                <div class="flex flex-wrap items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                    <div class="flex items-center gap-2">
+                                        <span class="tooltip tooltip-right z-100 font-medium" x-bind:data-tip="isOpen('table-semester-modal-current') ? 'Thu gọn' : 'Mở rộng'">
+                                            <x-icon
+                                                name="o-chevron-down"
+                                                class="w-5 h-5 cursor-pointer transition-transform"
+                                                x-bind:class="isOpen('table-semester-modal-current') ? 'rotate-180' : ''"
+                                                @click="toggle('table-semester-modal-current')"
+                                            />
+                                        </span>
+                                        <h3 @click="toggle('table-semester-modal-current')" class="cursor-pointer text-lg font-semibold select-none">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} {{ data_get($currentSemesterTimeline, 'semester_name')?'('.data_get($currentSemesterTimeline, 'semester_name').')':'' }}</h3>
 {{--                                        <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($currentSemesterTimeline) ?: __('') }}</div>--}}
                                     </div>
                                     <span
                                         class="text-md">{{ count(data_get($currentSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
                                 </div>
 
-                                <div class="mt-3 overflow-x-auto rounded border border-primary/20 bg-white">
+                                <div class="overflow-x-auto rounded border border-base-300 bg-white transition-all duration-300" x-show="isOpen('table-semester-modal-current')" x-collapse>
                                     <x-table
                                         :headers="$this->semesterHeaders()"
                                         :rows="$currentRows"
@@ -1172,7 +1213,7 @@ class extends Component {
                                         @endscope
 
                                         @scope('cell_note', $subject)
-                                        {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                        {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
                                         @endscope
 
                                         @scope('expansion', $subject)
@@ -1220,11 +1261,19 @@ class extends Component {
                                 </div>
                             </div>
 
-                            <div class="rounded-md border border-gray-200 bg-white">
+                            <div class="rounded-md border border-gray-200">
                                 @if($nextSemesterTimeline)
-                                    <div class="flex flex-wrap items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
-                                        <div>
-                                            <h3 class="text-lg font-semibold">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} {{ data_get($nextSemesterTimeline, 'semester_name')?'('.data_get($nextSemesterTimeline, 'semester_name').')':'' }}</h3>
+                                    <div class="flex flex-wrap items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                        <div class="flex items-center gap-2">
+                                            <span class="tooltip tooltip-right font-medium" x-bind:data-tip="isOpen('table-semester-modal-next') ? 'Thu gọn' : 'Mở rộng'">
+                                            <x-icon
+                                                name="o-chevron-down"
+                                                class="w-5 h-5 cursor-pointer transition-transform"
+                                                x-bind:class="isOpen('table-semester-modal-next') ? 'rotate-180' : ''"
+                                                @click="toggle('table-semester-modal-next')"
+                                            />
+                                        </span>
+                                            <h3 @click="toggle('table-semester-modal-next')" class="cursor-pointer text-lg font-semibold select-none">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} {{ data_get($nextSemesterTimeline, 'semester_name')?'('.data_get($nextSemesterTimeline, 'semester_name').')':'' }}</h3>
 {{--                                            <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>--}}
                                         </div>
                                         <span
@@ -1232,7 +1281,7 @@ class extends Component {
                                     </div>
                                 @endif
                                 @if($nextSemesterTimeline)
-                                    <div class="mt-3 overflow-x-auto rounded border border-base-300 bg-white">
+                                    <div class="overflow-x-auto rounded border border-base-300 bg-white transition-all duration-300" x-show="isOpen('table-semester-modal-next')" x-collapse>
                                         <x-table
                                             :headers="$this->semesterHeaders()"
                                             :rows="$nextRows"
@@ -1304,7 +1353,7 @@ class extends Component {
                                             @endscope
 
                                             @scope('cell_note', $subject)
-                                            {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                            {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
                                             @endscope
 
                                             @scope('expansion', $subject)
@@ -1382,9 +1431,17 @@ class extends Component {
                             <div class="space-y-4">
                                 @forelse($semesterBlocks as $semesterBlock)
                                     <x-card shadow class="p-0!">
-                                        <div class="flex items-center justify-between mb-3 bg-fita2 rounded-t-md px-4 py-2 text-white">
-                                            <div>
-                                                <h3 class="text-lg font-semibold">{{__('Semester')}} {{ $semesterBlock['semester_no'] }} {{ $semesterBlock['semester_name']? '('.$semesterBlock['semester_name'].')' :'' }}</h3>
+                                        <div class="flex items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                            <div class="flex items-center gap-2">
+                                                <span class="tooltip tooltip-top font-medium" x-bind:data-tip="isOpen('table-semester-{{$semesterBlock['semester_no']}}') ? 'Thu gọn' : 'Mở rộng'">
+                                                    <x-icon
+                                                        name="o-chevron-down"
+                                                        class="w-5 h-5 cursor-pointer transition-transform"
+                                                        x-bind:class="isOpen('table-semester-{{$semesterBlock['semester_no']}}') ? 'rotate-180' : ''"
+                                                        @click="toggle('table-semester-{{$semesterBlock['semester_no']}}')"
+                                                    />
+                                                </span>
+                                                <h3 class="cursor-pointer text-lg font-semibold select-none" @click="toggle('table-semester-{{$semesterBlock['semester_no']}}')">{{__('Semester')}} {{ $semesterBlock['semester_no'] }} {{ $semesterBlock['semester_name']? '('.$semesterBlock['semester_name'].')' :'' }}</h3>
                                                 @if(!empty($semesterBlock['timeline']))
 {{--                                                    <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>--}}
                                                 @endif
@@ -1396,7 +1453,7 @@ class extends Component {
                                         @if($semesterBlock['subjects']->isEmpty())
                                             <div class="text-sm text-gray-500">Không có môn học trong học kỳ này.</div>
                                         @else
-                                            <div class="overflow-x-auto">
+                                            <div class="overflow-x-auto transition-all duration-300" x-show="isOpen('table-semester-{{$semesterBlock['semester_no']}}')" x-collapse>
                                                 <x-table
                                                     :headers="$this->semesterHeaders()"
                                                     :rows="$semesterBlock['subjects']"
@@ -1518,15 +1575,25 @@ class extends Component {
                             <div class="space-y-4">
                                 @forelse($groupBlocks as $groupBlock)
                                     <x-card shadow class="p-0!">
-                                        <div class="flex flex-wrap items-center justify-between mb-3 gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white">
-                                            <h3 class="text-lg font-semibold">{{ $groupBlock['group_name'] }}</h3>
+                                        <div class="flex flex-wrap items-center justify-between gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white">
+                                            <div class="flex items-center gap-2">
+                                                <span class="tooltip tooltip-top font-medium" x-bind:data-tip="isOpen('table-semester-{{$groupBlock['group_name']}}') ? 'Thu gọn' : 'Mở rộng'">
+                                                    <x-icon
+                                                        name="o-chevron-down"
+                                                        class="w-5 h-5 cursor-pointer transition-transform"
+                                                        x-bind:class="isOpen('table-semester-{{$groupBlock['group_name']}}') ? 'rotate-180' : ''"
+                                                        @click="toggle('table-semester-{{$groupBlock['group_name']}}')"
+                                                    />
+                                                </span>
+                                                <h3 class="text-lg font-semibold cursor-pointer select-none" @click="toggle('table-semester-{{$groupBlock['group_name']}}')">{{ $groupBlock['group_name'] }}</h3>
+                                            </div>
                                             <div class="text-md">
                                                 {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ Subject::formatCredit($groupBlock['total_credits']) }}
                                                 {{__('Credits ')}}
                                             </div>
                                         </div>
 
-                                        <div class="overflow-x-auto">
+                                        <div class="overflow-x-auto transition-all duration-300" x-show="isOpen('table-semester-{{$groupBlock['group_name']}}')" x-collapse>
                                             <x-table
                                                 :headers="$this->groupHeaders()"
                                                 :rows="$groupBlock['subjects']"
@@ -1603,7 +1670,7 @@ class extends Component {
                                                 @endscope
 
                                                 @scope('cell_note', $subject)
-                                                {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '—' }}
+                                                {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
                                                 @endscope
 
                                                 @scope('expansion', $subject)
@@ -1669,31 +1736,177 @@ class extends Component {
         // Chạy ngay lập tức, dùng window flag để chống duplicate event khi chuyển trang SPA
         if (!window.maryTooltipInitialized) {
             window.maryTooltipInitialized = true;
+            window.maryNoteMergeInitialized = true;
+            window.maryNoteMergeBusy = false;
+            window.maryNoteMergeScheduled = false;
+
+            const normalizeNoteText = (value) => (value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            const getTableCells = (row) => Array.from(row.children).filter((cell) => cell.matches('td, th'));
+
+            const attachNoteMergeObserver = () => {
+                const root = document.querySelector('.ctdt');
+                if (!root) return;
+
+                if (window.maryNoteMergeObservedRoot === root) return;
+
+                if (window.maryNoteMergeObserver) {
+                    window.maryNoteMergeObserver.disconnect();
+                }
+
+                window.maryNoteMergeObservedRoot = root;
+                window.maryNoteMergeObserver = new MutationObserver(() => scheduleNoteCellMerge());
+                window.maryNoteMergeObserver.observe(root, {
+                    childList: true,
+                    subtree: true,
+                    attributes: true,
+                    attributeFilter: ['class'],
+                });
+            };
+
+            const getDirectBodyRows = (table) => Array.from(table.tBodies || []).flatMap((tbody) => Array.from(tbody.rows || []));
+
+            const hasVisibleExpansionRow = (row) => {
+                const nextRow = row.nextElementSibling;
+
+                return !!(
+                    nextRow
+                    && nextRow.tagName === 'TR'
+                    && !nextRow.classList.contains('hidden')
+                    && nextRow.querySelector('td[colspan]')
+                );
+            };
+
+            const mergeAdjacentNoteCells = () => {
+                const root = document.querySelector('.ctdt');
+                if (!root) return;
+
+                window.maryNoteMergeBusy = true;
+
+                try {
+                    Array.from(root.querySelectorAll('table')).forEach((table) => {
+                        const headerRow = table.tHead?.rows?.[0];
+                        const headers = headerRow ? Array.from(headerRow.cells || []) : [];
+                        const noteIndex = headers.findIndex((header) => {
+                            const text = normalizeNoteText(header.textContent);
+                            return text === 'note' || text === 'ghi chú' || text === 'ghi chu' || text.includes('note');
+                        });
+
+                        if (noteIndex < 0) return;
+
+                        const rows = getDirectBodyRows(table)
+                            .filter((row) => getTableCells(row)[noteIndex]);
+
+                        if (rows.length < 2) return;
+
+                        rows.forEach((row) => {
+                            const cell = getTableCells(row)[noteIndex];
+                            if (!cell) return;
+
+                            cell.style.display = '';
+                            cell.rowSpan = 1;
+                            cell.removeAttribute('data-note-merged');
+                        });
+
+                        let currentRows = [];
+                        let currentValue = null;
+
+                        const flush = () => {
+                            if (currentRows.length <= 1) {
+                                currentRows = [];
+                                currentValue = null;
+                                return;
+                            }
+
+                            const firstCell = getTableCells(currentRows[0])[noteIndex];
+                            if (firstCell) {
+                                firstCell.rowSpan = currentRows.length;
+                                firstCell.setAttribute('data-note-merged', '1');
+                            }
+
+                            currentRows.slice(1).forEach((row) => {
+                                const cell = getTableCells(row)[noteIndex];
+                                if (!cell) return;
+
+                                cell.style.display = 'none';
+                                cell.setAttribute('data-note-merged', '1');
+                            });
+
+                            currentRows = [];
+                            currentValue = null;
+                        };
+
+                        rows.forEach((row) => {
+                            const cell = getTableCells(row)[noteIndex];
+                            if (!cell) {
+                                flush();
+                                return;
+                            }
+
+                            const value = normalizeNoteText(cell.textContent);
+                            if (value === '') {
+                                flush();
+                                return;
+                            }
+
+                            if (hasVisibleExpansionRow(row)) {
+                                flush();
+                                return;
+                            }
+
+                            if (currentRows.length === 0) {
+                                currentRows = [row];
+                                currentValue = value;
+                                return;
+                            }
+
+                            if (value === currentValue) {
+                                currentRows.push(row);
+                                return;
+                            }
+
+                            flush();
+                            currentRows = [row];
+                            currentValue = value;
+                        });
+
+                        flush();
+                    });
+                } finally {
+                    window.maryNoteMergeBusy = false;
+                }
+            };
+
+            const scheduleNoteCellMerge = () => {
+                attachNoteMergeObserver();
+
+                if (window.maryNoteMergeBusy || window.maryNoteMergeScheduled) return;
+
+                window.maryNoteMergeScheduled = true;
+                requestAnimationFrame(() => {
+                    window.maryNoteMergeScheduled = false;
+                    mergeAdjacentNoteCells();
+                });
+            };
 
             document.addEventListener('mouseover', (e) => {
                 const targetSvg = e.target.closest('svg');
                 if (!targetSvg) return;
 
                 const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
+                if (!clickAttr.includes('toggleExpand')) return;
 
-                if (clickAttr.includes('toggleExpand')) {
-                    const rect = targetSvg.getBoundingClientRect();
-                    const isClosed = targetSvg.className.baseVal && targetSvg.className.baseVal.includes('rotate');
+                const rect = targetSvg.getBoundingClientRect();
+                const isClosed = (targetSvg.getAttribute('class') || '').includes('rotate');
 
-                    const tooltipElement = document.getElementById('mary-global-tooltip');
-                    const textElement = document.getElementById('mary-tooltip-text');
+                const tooltipElement = document.getElementById('mary-global-tooltip');
+                const textElement = document.getElementById('mary-tooltip-text');
 
-                    if (tooltipElement && textElement) {
-                        textElement.textContent = isClosed ? 'Các học phần tương đương' : 'Thu gọn';
-
-                        // Định vị vị trí
-                        tooltipElement.style.left = `${rect.left + (rect.width / 2)}px`;
-                        tooltipElement.style.top = `${rect.top - 10}px`;
-                        tooltipElement.style.transform = 'translate(-50%, -100%)';
-
-                        // Hiển thị lập tức
-                        tooltipElement.classList.remove('hidden');
-                    }
+                if (tooltipElement && textElement) {
+                    textElement.textContent = isClosed ? 'Các học phần tương đương' : 'Thu gọn';
+                    tooltipElement.style.left = `${rect.left + (rect.width / 2)}px`;
+                    tooltipElement.style.top = `${rect.top - 10}px`;
+                    tooltipElement.style.transform = 'translate(-50%, -100%)';
+                    tooltipElement.classList.remove('hidden');
                 }
             });
 
@@ -1702,15 +1915,21 @@ class extends Component {
                 if (!targetSvg) return;
 
                 const clickAttr = targetSvg.getAttribute('@click') || targetSvg.getAttribute('x-on:click') || '';
-                if (clickAttr.includes('toggleExpand')) {
-                    const tooltipElement = document.getElementById('mary-global-tooltip');
-                    if (tooltipElement) {
-                        // Ẩn lập tức
-                        tooltipElement.classList.add('hidden');
-                        tooltipElement.style.left = '-9999px';
-                    }
+                if (!clickAttr.includes('toggleExpand')) return;
+
+                const tooltipElement = document.getElementById('mary-global-tooltip');
+                if (tooltipElement) {
+                    tooltipElement.classList.add('hidden');
+                    tooltipElement.style.left = '-9999px';
                 }
             });
+
+            document.addEventListener('livewire:init', scheduleNoteCellMerge);
+            document.addEventListener('livewire:navigated', scheduleNoteCellMerge);
+            document.addEventListener('livewire:morph.updated', scheduleNoteCellMerge);
+            window.addEventListener('load', scheduleNoteCellMerge);
+
+            scheduleNoteCellMerge();
         }
     </script>
 </div>
