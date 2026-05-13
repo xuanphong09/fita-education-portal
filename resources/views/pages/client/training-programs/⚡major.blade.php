@@ -749,7 +749,7 @@ class extends Component {
                         'semester_no' => (int) $semester->semester_no,
                         'timeline' => $this->formatSemesterTimeline($semester),
                         'semester_name' => $semester->semester_name,
-                        'total_credits' => (float) $subjects->sum('credits'),
+                        'total_credits' => $semester->total_credits,
                         'subjects' => $subjects,
                     ];
                 })
