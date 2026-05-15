@@ -121,6 +121,12 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
         @apply max-w-full h-auto rounded-lg shadow-sm transition-all duration-300 ease-in-out cursor-pointer;
     }
 
+    .tinymce-content img {
+        display: inline-block;
+        max-width: 100%;
+        height: auto;
+    }
+
     /* 🌟 Hiệu ứng khi rê chuột vào Ảnh */
     .tinymce-content img:hover {
         @apply scale-[1.01] shadow-xl;
