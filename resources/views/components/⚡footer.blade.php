@@ -73,10 +73,48 @@ new class extends Component {
             <div class="lg:col-span-2">
                 <h5 class="text-[20px] lg:text-[22px] font-semibold mb-4 lg:mb-6">{{__('Quick links')}}</h5>
                 <ul class="flex flex-col space-y-3 text-white w-full">
+                    @php
+                        $isAbsoluteUrl = fn (?string $url): bool => filled($url) && preg_match('/^(https?:)?\/\//i', trim($url)) === 1;
+
+                        $isAbsoluteExternalUrl = function (?string $url) use ($isAbsoluteUrl): bool {
+                            if (!$isAbsoluteUrl($url)) {
+                                return false;
+                            }
+
+                            $normalizedUrl = trim((string) $url);
+
+                            // Xử lý link bắt đầu bằng // (protocol-relative)
+                            if (str_starts_with($normalizedUrl, '//')) {
+                                $normalizedUrl = request()->getScheme() . ':' . $normalizedUrl;
+                            }
+
+                            $targetHost = parse_url($normalizedUrl, PHP_URL_HOST);
+                            $targetPort = parse_url($normalizedUrl, PHP_URL_PORT);
+
+                            // Nếu URL không ghi rõ port, tự suy luận port mặc định dựa trên giao thức
+                            if (!$targetPort) {
+                                $scheme = parse_url($normalizedUrl, PHP_URL_SCHEME);
+                                $targetPort = ($scheme === 'https') ? 443 : 80;
+                            }
+
+                            if (!filled($targetHost)) {
+                                return true;
+                            }
+
+                            $currentHost = request()->getHost();
+                            $currentPort = request()->getPort();
+
+                            // Link là External nếu Tên miền khác nhau HOẶC Cổng (Port) khác nhau
+                            return (strcasecmp((string) $targetHost, $currentHost) !== 0) || ($targetPort !== $currentPort);
+                        };
+                    @endphp
                     @foreach($pageData['quick_links']??[] as $index => $item)
                         @if(!empty(trim($item['name'])) && !empty(trim($item['url'])))
                             <li class="hover:translate-x-2 transition-transform duration-300 origin-left">
-                                <a href="{{$item['url']}}" class="flex items-center gap-2" wire:navigate>
+                                <a
+                                    href="{{$item['url']}}"
+                                    class="flex items-center gap-2"
+                                    @if($isAbsoluteExternalUrl($item['url'])) target="_blank" @else wire:navigate @endif>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="none"
                                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0">
                                         <path d="m5 3 5 5-5 5"/>
