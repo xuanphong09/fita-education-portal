@@ -5,6 +5,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -18,14 +19,18 @@ new class extends Component {
     public array $data = [];
     protected array $originalData = [];
 
-    public array $popularIcons = [
-        'o-academic-cap', 'o-adjustments-horizontal', 'o-adjustments-vertical', 'o-archive-box-arrow-down', 'o-archive-box-x-mark', 'o-archive-box', 'o-arrow-down-circle', 'o-arrow-down-left', 'o-arrow-down-on-square-stack', 'o-arrow-down-on-square', 'o-arrow-down-right', 'o-arrow-down-tray', 'o-arrow-down', 'o-arrow-left-circle', 'o-arrow-left-end-on-rectangle', 'o-arrow-left-start-on-rectangle', 'o-arrow-left', 'o-arrow-long-down', 'o-arrow-long-left', 'o-arrow-long-right', 'o-arrow-long-up', 'o-arrow-path-rounded-square', 'o-arrow-path', 'o-arrow-right-circle', 'o-arrow-right-end-on-rectangle', 'o-arrow-right-start-on-rectangle', 'o-arrow-right', 'o-arrow-top-right-on-square', 'o-arrow-trending-down', 'o-arrow-trending-up', 'o-arrow-turn-down-left', 'o-arrow-turn-down-right', 'o-arrow-turn-left-down', 'o-arrow-turn-left-up', 'o-arrow-turn-right-down', 'o-arrow-turn-right-up', 'o-arrow-turn-up-left', 'o-arrow-turn-up-right', 'o-arrow-up-circle', 'o-arrow-up-left', 'o-arrow-up-on-square-stack', 'o-arrow-up-on-square', 'o-arrow-up-right', 'o-arrow-up-tray', 'o-arrow-up', 'o-arrow-uturn-down', 'o-arrow-uturn-left', 'o-arrow-uturn-right', 'o-arrow-uturn-up',
-        'o-arrows-pointing-in', 'o-arrows-pointing-out', 'o-arrows-right-left', 'o-arrows-up-down', 'o-at-symbol', 'o-backspace', 'o-backward', 'o-banknotes', 'o-bars-2', 'o-bars-3-bottom-left', 'o-bars-3-bottom-right', 'o-bars-3-center-left', 'o-bars-3', 'o-bars-4', 'o-bars-arrow-down', 'o-bars-arrow-up', 'o-battery-0', 'o-battery-100', 'o-battery-50', 'o-beaker', 'o-bell-alert', 'o-bell-slash', 'o-bell-snooze', 'o-bell', 'o-bold', 'o-bolt-slash', 'o-bolt', 'o-book-open', 'o-bookmark-slash', 'o-bookmark-square', 'o-bookmark', 'o-briefcase', 'o-bug-ant', 'o-building-library', 'o-building-office-2', 'o-building-office', 'o-building-storefront', 'o-cake', 'o-calculator', 'o-calendar-date-range', 'o-calendar-days', 'o-calendar', 'o-camera', 'o-chart-bar-square', 'o-chart-bar', 'o-chart-pie', 'o-chat-bubble-bottom-center-text', 'o-chat-bubble-bottom-center', 'o-chat-bubble-left-ellipsis', 'o-chat-bubble-left-right', 'o-chat-bubble-left', 'o-chat-bubble-oval-left-ellipsis', 'o-chat-bubble-oval-left', 'o-check-badge', 'o-check-circle', 'o-check',
-        'o-chevron-double-down', 'o-chevron-double-left', 'o-chevron-double-right', 'o-chevron-double-up', 'o-chevron-down', 'o-chevron-left', 'o-chevron-right', 'o-chevron-up-down', 'o-chevron-up', 'o-circle-stack', 'o-clipboard-document-check', 'o-clipboard-document-list', 'o-clipboard-document', 'o-clipboard', 'o-clock', 'o-cloud-arrow-down', 'o-cloud-arrow-up', 'o-cloud', 'o-code-bracket-square', 'o-code-bracket', 'o-cog-6-tooth', 'o-cog-8-tooth', 'o-cog', 'o-command-line', 'o-computer-desktop', 'o-cpu-chip', 'o-credit-card', 'o-cube-transparent', 'o-cube', 'o-currency-bangladeshi', 'o-currency-dollar', 'o-currency-euro', 'o-currency-pound', 'o-currency-rupee', 'o-currency-yen', 'o-cursor-arrow-rays', 'o-cursor-arrow-ripple', 'o-device-phone-mobile', 'o-device-tablet', 'o-divide', 'o-document-arrow-down', 'o-document-arrow-up', 'o-document-chart-bar', 'o-document-check', 'o-document-currency-bangladeshi', 'o-document-currency-dollar', 'o-document-currency-euro', 'o-document-currency-pound', 'o-document-currency-rupee', 'o-document-currency-yen',
-        'o-document-duplicate', 'o-document-magnifying-glass', 'o-document-minus', 'o-document-plus', 'o-document-text', 'o-document', 'o-ellipsis-horizontal-circle', 'o-ellipsis-horizontal', 'o-ellipsis-vertical', 'o-envelope-open', 'o-envelope', 'o-equals', 'o-exclamation-circle', 'o-exclamation-triangle', 'o-eye-dropper', 'o-eye-slash', 'o-eye', 'o-face-frown', 'o-face-smile', 'o-film', 'o-finger-print', 'o-fire', 'o-flag', 'o-folder-arrow-down', 'o-folder-minus', 'o-folder-open', 'o-folder-plus', 'o-folder', 'o-forward', 'o-funnel', 'o-gif', 'o-gift-top', 'o-gift', 'o-globe-alt', 'o-globe-americas', 'o-globe-asia-australia', 'o-globe-europe-africa', 'o-h1', 'o-h2', 'o-h3', 'o-hand-raised', 'o-hand-thumb-down', 'o-hand-thumb-up', 'o-hashtag', 'o-heart', 'o-home-modern', 'o-home', 'o-identification', 'o-inbox-arrow-down', 'o-inbox-stack', 'o-inbox', 'o-information-circle', 'o-italic', 'o-key', 'o-language', 'o-lifebuoy', 'o-light-bulb', 'o-link-slash', 'o-link', 'o-list-bullet', 'o-lock-closed', 'o-lock-open',
-        'o-magnifying-glass-circle', 'o-magnifying-glass-minus', 'o-magnifying-glass-plus', 'o-magnifying-glass', 'o-map-pin', 'o-map', 'o-megaphone', 'o-microphone', 'o-minus-circle', 'o-minus', 'o-moon', 'o-musical-note', 'o-newspaper', 'o-no-symbol', 'o-numbered-list', 'o-paint-brush', 'o-paper-airplane', 'o-paper-clip', 'o-pause-circle', 'o-pause', 'o-pencil-square', 'o-pencil', 'o-percent-badge', 'o-phone-arrow-down-left', 'o-phone-arrow-up-right', 'o-phone-x-mark', 'o-phone', 'o-photo', 'o-play-circle', 'o-play-pause', 'o-play', 'o-plus-circle', 'o-plus', 'o-power', 'o-presentation-chart-bar', 'o-presentation-chart-line', 'o-printer', 'o-puzzle-piece', 'o-qr-code', 'o-question-mark-circle', 'o-queue-list', 'o-radio', 'o-receipt-percent', 'o-receipt-refund', 'o-rectangle-group', 'o-rectangle-stack', 'o-rocket-launch', 'o-rss', 'o-scale', 'o-scissors', 'o-server-stack', 'o-server', 'o-share', 'o-shield-check', 'o-shield-exclamation', 'o-shopping-bag', 'o-shopping-cart', 'o-signal-slash', 'o-signal', 'o-slash',
-        'o-sparkles', 'o-speaker-wave', 'o-speaker-x-mark', 'o-square-2-stack', 'o-square-3-stack-3d', 'o-squares-2x2', 'o-squares-plus', 'o-star', 'o-stop-circle', 'o-stop', 'o-strikethrough', 'o-sun', 'o-swatch', 'o-table-cells', 'o-tag', 'o-ticket', 'o-trash', 'o-trophy', 'o-truck', 'o-tv', 'o-underline', 'o-user-circle', 'o-user-group', 'o-user-minus', 'o-user-plus', 'o-user', 'o-users', 'o-variable', 'o-video-camera-slash', 'o-video-camera', 'o-view-columns', 'o-viewfinder-circle', 'o-wallet', 'o-wifi', 'o-window', 'o-wrench-screwdriver', 'o-wrench', 'o-x-circle', 'o-x-mark'
-    ];
+    #[Computed]
+    public function popularIcons(): array
+    {
+        return [
+            'o-academic-cap', 'o-adjustments-horizontal', 'o-adjustments-vertical', 'o-archive-box-arrow-down', 'o-archive-box-x-mark', 'o-archive-box', 'o-arrow-down-circle', 'o-arrow-down-left', 'o-arrow-down-on-square-stack', 'o-arrow-down-on-square', 'o-arrow-down-right', 'o-arrow-down-tray', 'o-arrow-down', 'o-arrow-left-circle', 'o-arrow-left-end-on-rectangle', 'o-arrow-left-start-on-rectangle', 'o-arrow-left', 'o-arrow-long-down', 'o-arrow-long-left', 'o-arrow-long-right', 'o-arrow-long-up', 'o-arrow-path-rounded-square', 'o-arrow-path', 'o-arrow-right-circle', 'o-arrow-right-end-on-rectangle', 'o-arrow-right-start-on-rectangle', 'o-arrow-right', 'o-arrow-top-right-on-square', 'o-arrow-trending-down', 'o-arrow-trending-up', 'o-arrow-turn-down-left', 'o-arrow-turn-down-right', 'o-arrow-turn-left-down', 'o-arrow-turn-left-up', 'o-arrow-turn-right-down', 'o-arrow-turn-right-up', 'o-arrow-turn-up-left', 'o-arrow-turn-up-right', 'o-arrow-up-circle', 'o-arrow-up-left', 'o-arrow-up-on-square-stack', 'o-arrow-up-on-square', 'o-arrow-up-right', 'o-arrow-up-tray', 'o-arrow-up', 'o-arrow-uturn-down', 'o-arrow-uturn-left', 'o-arrow-uturn-right', 'o-arrow-uturn-up',
+            'o-arrows-pointing-in', 'o-arrows-pointing-out', 'o-arrows-right-left', 'o-arrows-up-down', 'o-at-symbol', 'o-backspace', 'o-backward', 'o-banknotes', 'o-bars-2', 'o-bars-3-bottom-left', 'o-bars-3-bottom-right', 'o-bars-3-center-left', 'o-bars-3', 'o-bars-4', 'o-bars-arrow-down', 'o-bars-arrow-up', 'o-battery-0', 'o-battery-100', 'o-battery-50', 'o-beaker', 'o-bell-alert', 'o-bell-slash', 'o-bell-snooze', 'o-bell', 'o-bold', 'o-bolt-slash', 'o-bolt', 'o-book-open', 'o-bookmark-slash', 'o-bookmark-square', 'o-bookmark', 'o-briefcase', 'o-bug-ant', 'o-building-library', 'o-building-office-2', 'o-building-office', 'o-building-storefront', 'o-cake', 'o-calculator', 'o-calendar-date-range', 'o-calendar-days', 'o-calendar', 'o-camera', 'o-chart-bar-square', 'o-chart-bar', 'o-chart-pie', 'o-chat-bubble-bottom-center-text', 'o-chat-bubble-bottom-center', 'o-chat-bubble-left-ellipsis', 'o-chat-bubble-left-right', 'o-chat-bubble-left', 'o-chat-bubble-oval-left-ellipsis', 'o-chat-bubble-oval-left', 'o-check-badge', 'o-check-circle', 'o-check',
+            'o-chevron-double-down', 'o-chevron-double-left', 'o-chevron-double-right', 'o-chevron-double-up', 'o-chevron-down', 'o-chevron-left', 'o-chevron-right', 'o-chevron-up-down', 'o-chevron-up', 'o-circle-stack', 'o-clipboard-document-check', 'o-clipboard-document-list', 'o-clipboard-document', 'o-clipboard', 'o-clock', 'o-cloud-arrow-down', 'o-cloud-arrow-up', 'o-cloud', 'o-code-bracket-square', 'o-code-bracket', 'o-cog-6-tooth', 'o-cog-8-tooth', 'o-cog', 'o-command-line', 'o-computer-desktop', 'o-cpu-chip', 'o-credit-card', 'o-cube-transparent', 'o-cube', 'o-currency-bangladeshi', 'o-currency-dollar', 'o-currency-euro', 'o-currency-pound', 'o-currency-rupee', 'o-currency-yen', 'o-cursor-arrow-rays', 'o-cursor-arrow-ripple', 'o-device-phone-mobile', 'o-device-tablet', 'o-divide', 'o-document-arrow-down', 'o-document-arrow-up', 'o-document-chart-bar', 'o-document-check', 'o-document-currency-bangladeshi', 'o-document-currency-dollar', 'o-document-currency-euro', 'o-document-currency-pound', 'o-document-currency-rupee', 'o-document-currency-yen',
+            'o-document-duplicate', 'o-document-magnifying-glass', 'o-document-minus', 'o-document-plus', 'o-document-text', 'o-document', 'o-ellipsis-horizontal-circle', 'o-ellipsis-horizontal', 'o-ellipsis-vertical', 'o-envelope-open', 'o-envelope', 'o-equals', 'o-exclamation-circle', 'o-exclamation-triangle', 'o-eye-dropper', 'o-eye-slash', 'o-eye', 'o-face-frown', 'o-face-smile', 'o-film', 'o-finger-print', 'o-fire', 'o-flag', 'o-folder-arrow-down', 'o-folder-minus', 'o-folder-open', 'o-folder-plus', 'o-folder', 'o-forward', 'o-funnel', 'o-gif', 'o-gift-top', 'o-gift', 'o-globe-alt', 'o-globe-americas', 'o-globe-asia-australia', 'o-globe-europe-africa', 'o-h1', 'o-h2', 'o-h3', 'o-hand-raised', 'o-hand-thumb-down', 'o-hand-thumb-up', 'o-hashtag', 'o-heart', 'o-home-modern', 'o-home', 'o-identification', 'o-inbox-arrow-down', 'o-inbox-stack', 'o-inbox', 'o-information-circle', 'o-italic', 'o-key', 'o-language', 'o-lifebuoy', 'o-light-bulb', 'o-link-slash', 'o-link', 'o-list-bullet', 'o-lock-closed', 'o-lock-open',
+            'o-magnifying-glass-circle', 'o-magnifying-glass-minus', 'o-magnifying-glass-plus', 'o-magnifying-glass', 'o-map-pin', 'o-map', 'o-megaphone', 'o-microphone', 'o-minus-circle', 'o-minus', 'o-moon', 'o-musical-note', 'o-newspaper', 'o-no-symbol', 'o-numbered-list', 'o-paint-brush', 'o-paper-airplane', 'o-paper-clip', 'o-pause-circle', 'o-pause', 'o-pencil-square', 'o-pencil', 'o-percent-badge', 'o-phone-arrow-down-left', 'o-phone-arrow-up-right', 'o-phone-x-mark', 'o-phone', 'o-photo', 'o-play-circle', 'o-play-pause', 'o-play', 'o-plus-circle', 'o-plus', 'o-power', 'o-presentation-chart-bar', 'o-presentation-chart-line', 'o-printer', 'o-puzzle-piece', 'o-qr-code', 'o-question-mark-circle', 'o-queue-list', 'o-radio', 'o-receipt-percent', 'o-receipt-refund', 'o-rectangle-group', 'o-rectangle-stack', 'o-rocket-launch', 'o-rss', 'o-scale', 'o-scissors', 'o-server-stack', 'o-server', 'o-share', 'o-shield-check', 'o-shield-exclamation', 'o-shopping-bag', 'o-shopping-cart', 'o-signal-slash', 'o-signal', 'o-slash',
+            'o-sparkles', 'o-speaker-wave', 'o-speaker-x-mark', 'o-square-2-stack', 'o-square-3-stack-3d', 'o-squares-2x2', 'o-squares-plus', 'o-star', 'o-stop-circle', 'o-stop', 'o-strikethrough', 'o-sun', 'o-swatch', 'o-table-cells', 'o-tag', 'o-ticket', 'o-trash', 'o-trophy', 'o-truck', 'o-tv', 'o-underline', 'o-user-circle', 'o-user-group', 'o-user-minus', 'o-user-plus', 'o-user', 'o-users', 'o-variable', 'o-video-camera-slash', 'o-video-camera', 'o-view-columns', 'o-viewfinder-circle', 'o-wallet', 'o-wifi', 'o-window', 'o-wrench-screwdriver', 'o-wrench', 'o-x-circle', 'o-x-mark'
+        ];
+    }
 
     protected $listeners = [
         'confirmSave' => 'confirmSave',
@@ -43,7 +48,7 @@ new class extends Component {
 
     protected function resolveMediaUrl(?string $path, string $fallback = ''): string
     {
-        $path = trim((string) $path);
+        $path = trim((string)$path);
 
         if ($path === '') {
             return $fallback;
@@ -135,7 +140,7 @@ new class extends Component {
 
     protected function normalizeStoredMediaPath(?string $path): ?string
     {
-        $path = trim((string) $path);
+        $path = trim((string)$path);
 
         if ($path === '') {
             return null;
@@ -303,70 +308,70 @@ new class extends Component {
     protected $messages = [
         // --- TIÊU ĐỀ CÁC KHỐI ---
         'data.*.section_titles.*.string' => 'Trường tiêu đề phải là chuỗi.',
-        'data.*.section_titles.*.max'    => 'Trường tiêu đề không được vượt quá :max ký tự.',
+        'data.*.section_titles.*.max' => 'Trường tiêu đề không được vượt quá :max ký tự.',
 
         // --- LỐI TẮT NHANH (QUICK LINKS) ---
-        'data.*.quick_links.*.app.required'   => 'Trường tiêu đề lối tắt là bắt buộc.',
-        'data.*.quick_links.*.app.string'     => 'Trường tiêu đề lối tắt phải là chuỗi.',
-        'data.*.quick_links.*.app.max'        => 'Trường tiêu đề lối tắt không được vượt quá :max ký tự.',
-        'data.*.quick_links.*.desc.required'  => 'Trường mô tả là bắt buộc.',
-        'data.*.quick_links.*.desc.string'    => 'Trường mô tả phải là chuỗi.',
-        'data.*.quick_links.*.desc.max'       => 'Trường mô tả không được vượt quá :max ký tự.',
-        'data.*.quick_links.*.link.required'  => 'Trường liên kết là bắt buộc.',
-        'data.*.quick_links.*.link.string'    => 'Trường liên kết phải là chuỗi.',
-        'data.*.quick_links.*.link.max'       => 'Trường liên kết không được vượt quá :max ký tự.',
-        'data.*.quick_links.*.link.regex'     => 'Trường liên kết phải bắt đầu bằng http://, https://, / hoặc #.',
+        'data.*.quick_links.*.app.required' => 'Trường tiêu đề lối tắt là bắt buộc.',
+        'data.*.quick_links.*.app.string' => 'Trường tiêu đề lối tắt phải là chuỗi.',
+        'data.*.quick_links.*.app.max' => 'Trường tiêu đề lối tắt không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.desc.required' => 'Trường mô tả là bắt buộc.',
+        'data.*.quick_links.*.desc.string' => 'Trường mô tả phải là chuỗi.',
+        'data.*.quick_links.*.desc.max' => 'Trường mô tả không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.link.required' => 'Trường liên kết là bắt buộc.',
+        'data.*.quick_links.*.link.string' => 'Trường liên kết phải là chuỗi.',
+        'data.*.quick_links.*.link.max' => 'Trường liên kết không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.link.regex' => 'Trường liên kết phải bắt đầu bằng http://, https://, / hoặc #.',
         'data.*.quick_links.*.color.required' => 'Trường màu sắc là bắt buộc.',
-        'data.*.quick_links.*.color.string'   => 'Trường màu sắc phải là chuỗi.',
-        'data.*.quick_links.*.color.max'      => 'Trường màu sắc không được vượt quá :max ký tự.',
-        'data.*.quick_links.*.img.string'     => 'Trường hình ảnh phải là chuỗi.',
-        'data.*.quick_links.*.img.max'        => 'Trường hình ảnh không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.color.string' => 'Trường màu sắc phải là chuỗi.',
+        'data.*.quick_links.*.color.max' => 'Trường màu sắc không được vượt quá :max ký tự.',
+        'data.*.quick_links.*.img.string' => 'Trường hình ảnh phải là chuỗi.',
+        'data.*.quick_links.*.img.max' => 'Trường hình ảnh không được vượt quá :max ký tự.',
         'data.*.quick_links.*.img_file.image' => 'Tệp tải lên phải là một hình ảnh.',
         'data.*.quick_links.*.img_file.mimes' => 'Hình ảnh phải có định dạng: jpg, jpeg, png, webp.',
-        'data.*.quick_links.*.img_file.max'   => 'Hình ảnh không được vượt quá 2MB.',
+        'data.*.quick_links.*.img_file.max' => 'Hình ảnh không được vượt quá 2MB.',
 
         // --- CHƯƠNG TRÌNH ĐÀO TẠO (TRAINING PROGRAMS) ---
-        'data.*.training_programs.*.title.required'       => 'Trường tiêu đề thẻ là bắt buộc.',
-        'data.*.training_programs.*.title.string'         => 'Trường tiêu đề thẻ phải là chuỗi.',
-        'data.*.training_programs.*.title.max'            => 'Trường tiêu đề thẻ không được vượt quá :max ký tự.',
+        'data.*.training_programs.*.title.required' => 'Trường tiêu đề thẻ là bắt buộc.',
+        'data.*.training_programs.*.title.string' => 'Trường tiêu đề thẻ phải là chuỗi.',
+        'data.*.training_programs.*.title.max' => 'Trường tiêu đề thẻ không được vượt quá :max ký tự.',
         'data.*.training_programs.*.description.required' => 'Trường mô tả là bắt buộc.',
-        'data.*.training_programs.*.description.string'   => 'Trường mô tả phải là chuỗi.',
-        'data.*.training_programs.*.detail_url.required'  => 'Trường link chi tiết là bắt buộc.',
-        'data.*.training_programs.*.detail_url.string'    => 'Trường link chi tiết phải là chuỗi.',
-        'data.*.training_programs.*.detail_url.max'       => 'Trường link chi tiết không được vượt quá :max ký tự.',
+        'data.*.training_programs.*.description.string' => 'Trường mô tả phải là chuỗi.',
+        'data.*.training_programs.*.detail_url.required' => 'Trường link chi tiết là bắt buộc.',
+        'data.*.training_programs.*.detail_url.string' => 'Trường link chi tiết phải là chuỗi.',
+        'data.*.training_programs.*.detail_url.max' => 'Trường link chi tiết không được vượt quá :max ký tự.',
         'data.*.training_programs.*.roadmap_url.required' => 'Trường link lộ trình là bắt buộc.',
-        'data.*.training_programs.*.roadmap_url.string'   => 'Trường link lộ trình phải là chuỗi.',
-        'data.*.training_programs.*.roadmap_url.max'      => 'Trường link lộ trình không được vượt quá :max ký tự.',
-        'data.*.training_programs.*.image_file.image'     => 'Tệp tải lên phải là một hình ảnh.',
-        'data.*.training_programs.*.image_file.mimes'     => 'Hình ảnh phải có định dạng: jpg, jpeg, png, webp.',
-        'data.*.training_programs.*.image_file.max'       => 'Hình ảnh không được vượt quá 2MB.',
+        'data.*.training_programs.*.roadmap_url.string' => 'Trường link lộ trình phải là chuỗi.',
+        'data.*.training_programs.*.roadmap_url.max' => 'Trường link lộ trình không được vượt quá :max ký tự.',
+        'data.*.training_programs.*.image_file.image' => 'Tệp tải lên phải là một hình ảnh.',
+        'data.*.training_programs.*.image_file.mimes' => 'Hình ảnh phải có định dạng: jpg, jpeg, png, webp.',
+        'data.*.training_programs.*.image_file.max' => 'Hình ảnh không được vượt quá 2MB.',
 
         // --- CHỈ SỐ THỐNG KÊ (COUNTER STATS) ---
         'data.*.counter_stats.*.label.required' => 'Trường nhãn chỉ số là bắt buộc.',
-        'data.*.counter_stats.*.label.string'   => 'Trường nhãn chỉ số phải là chuỗi.',
-        'data.*.counter_stats.*.label.max'      => 'Trường nhãn chỉ số không được vượt quá :max ký tự.',
+        'data.*.counter_stats.*.label.string' => 'Trường nhãn chỉ số phải là chuỗi.',
+        'data.*.counter_stats.*.label.max' => 'Trường nhãn chỉ số không được vượt quá :max ký tự.',
         'data.*.counter_stats.*.value.required' => 'Trường giá trị là bắt buộc.',
-        'data.*.counter_stats.*.value.integer'  => 'Trường giá trị phải là số nguyên.',
-        'data.*.counter_stats.*.value.min'      => 'Giá trị không được nhỏ hơn :min.',
-        'data.*.counter_stats.*.suffix.required'=> 'Trường hậu tố là bắt buộc.',
-        'data.*.counter_stats.*.suffix.string'  => 'Trường hậu tố phải là chuỗi.',
-        'data.*.counter_stats.*.suffix.max'     => 'Trường hậu tố không được vượt quá :max ký tự.',
-        'data.*.counter_stats.*.icon.required'  => 'Bạn chưa chọn Icon cho chỉ số.',
-        'data.*.counter_stats.*.icon.string'    => 'Icon phải là chuỗi hợp lệ.',
-        'data.*.counter_stats.*.icon.max'       => 'Icon không được vượt quá :max ký tự.',
+        'data.*.counter_stats.*.value.integer' => 'Trường giá trị phải là số nguyên.',
+        'data.*.counter_stats.*.value.min' => 'Giá trị không được nhỏ hơn :min.',
+        'data.*.counter_stats.*.suffix.required' => 'Trường hậu tố là bắt buộc.',
+        'data.*.counter_stats.*.suffix.string' => 'Trường hậu tố phải là chuỗi.',
+        'data.*.counter_stats.*.suffix.max' => 'Trường hậu tố không được vượt quá :max ký tự.',
+        'data.*.counter_stats.*.icon.required' => 'Bạn chưa chọn Icon cho chỉ số.',
+        'data.*.counter_stats.*.icon.string' => 'Icon phải là chuỗi hợp lệ.',
+        'data.*.counter_stats.*.icon.max' => 'Icon không được vượt quá :max ký tự.',
 
         // --- LỜI CHIA SẺ (TESTIMONIALS) ---
-        'data.*.testimonials.*.name.required'      => 'Trường họ tên là bắt buộc.',
-        'data.*.testimonials.*.name.string'        => 'Trường họ tên phải là chuỗi.',
-        'data.*.testimonials.*.name.max'           => 'Trường họ tên không được vượt quá :max ký tự.',
-        'data.*.testimonials.*.role.required'      => 'Trường chức danh là bắt buộc.',
-        'data.*.testimonials.*.role.string'        => 'Trường chức danh phải là chuỗi.',
-        'data.*.testimonials.*.role.max'           => 'Trường chức danh không được vượt quá :max ký tự.',
-        'data.*.testimonials.*.content.required'   => 'Trường nội dung chia sẻ là bắt buộc.',
-        'data.*.testimonials.*.content.string'     => 'Trường nội dung chia sẻ phải là chuỗi.',
-        'data.*.testimonials.*.avatar_file.image'  => 'Ảnh đại diện tải lên phải là hình ảnh.',
-        'data.*.testimonials.*.avatar_file.mimes'  => 'Ảnh đại diện phải có định dạng: jpg, jpeg, png, webp.',
-        'data.*.testimonials.*.avatar_file.max'    => 'Ảnh đại diện không được vượt quá 2MB.',
+        'data.*.testimonials.*.name.required' => 'Trường họ tên là bắt buộc.',
+        'data.*.testimonials.*.name.string' => 'Trường họ tên phải là chuỗi.',
+        'data.*.testimonials.*.name.max' => 'Trường họ tên không được vượt quá :max ký tự.',
+        'data.*.testimonials.*.role.required' => 'Trường chức danh là bắt buộc.',
+        'data.*.testimonials.*.role.string' => 'Trường chức danh phải là chuỗi.',
+        'data.*.testimonials.*.role.max' => 'Trường chức danh không được vượt quá :max ký tự.',
+        'data.*.testimonials.*.content.required' => 'Trường nội dung chia sẻ là bắt buộc.',
+        'data.*.testimonials.*.content.string' => 'Trường nội dung chia sẻ phải là chuỗi.',
+        'data.*.testimonials.*.avatar_file.image' => 'Ảnh đại diện tải lên phải là hình ảnh.',
+        'data.*.testimonials.*.avatar_file.mimes' => 'Ảnh đại diện phải có định dạng: jpg, jpeg, png, webp.',
+        'data.*.testimonials.*.avatar_file.max' => 'Ảnh đại diện không được vượt quá 2MB.',
     ];
 
     protected function defaultData(string $locale): array
@@ -700,7 +705,7 @@ new class extends Component {
             $this->deleteStoredMedia($item['img'] ?? null);
         }
         $this->data[$locale]['quick_links'] = collect($this->data[$locale]['quick_links'] ?? [])
-            ->reject(fn ($item) => ($item['id'] ?? null) === $quickLinkId)
+            ->reject(fn($item) => ($item['id'] ?? null) === $quickLinkId)
             ->values()
             ->toArray();
         $this->success($locale === 'vi' ? 'Đã xóa lối tắt thành công' : 'Quick link removed successfully');
@@ -754,7 +759,7 @@ new class extends Component {
             $this->deleteStoredMedia($item['image'] ?? null);
         }
         $this->data[$locale]['training_programs'] = collect($this->data[$locale]['training_programs'] ?? [])
-            ->reject(fn ($item) => ($item['id'] ?? null) === $TrainingId)
+            ->reject(fn($item) => ($item['id'] ?? null) === $TrainingId)
             ->values()
             ->toArray();
         $this->success($locale === 'vi' ? 'Đã xóa thẻ chương trình thành công' : 'Program removed successfully');
@@ -817,7 +822,7 @@ new class extends Component {
     {
         [$locale, $CounterStartId] = $id;
         $this->data[$locale]['counter_stats'] = collect($this->data[$locale]['counter_stats'] ?? [])
-            ->reject(fn ($item) => ($item['id'] ?? null) === $CounterStartId)
+            ->reject(fn($item) => ($item['id'] ?? null) === $CounterStartId)
             ->values()
             ->toArray();
         $this->success($locale === 'vi' ? 'Đã xóa chỉ số thống kê thành công' : 'Statistic removed successfully');
@@ -920,7 +925,7 @@ new class extends Component {
             $this->deleteStoredMedia($item['avatar'] ?? null);
         }
         $this->data[$locale]['testimonials'] = collect($this->data[$locale]['testimonials'] ?? [])
-            ->reject(fn ($item) => ($item['id'] ?? null) === $testimonialsId)
+            ->reject(fn($item) => ($item['id'] ?? null) === $testimonialsId)
             ->values()
             ->toArray();
         $this->success($locale === 'vi' ? 'Đã xóa lời chia sẻ thành công' : 'Testimonial removed successfully');
@@ -1043,10 +1048,10 @@ new class extends Component {
     <x-slot:breadcrumb><span>Cấu hình trang chủ</span></x-slot:breadcrumb>
     <x-header title="Cấu hình trang chủ" class="pb-3 mb-5! border-b border-gray-300">
         <x-slot:actions>
-            <x-button label="Banner" link="{{ route('admin.banner.index') }}" class="btn-ghost" />
-            <x-button label="Bài viết" link="{{ route('admin.post.index') }}" class="btn-ghost" />
-            <x-button label="Album ảnh" link="{{ route('admin.album.index') }}" class="btn-ghost" />
-            <x-button label="Đối tác" link="{{ route('admin.partner.index') }}" class="btn-ghost" />
+            <x-button label="Banner" link="{{ route('admin.banner.index') }}" class="btn-ghost"/>
+            <x-button label="Bài viết" link="{{ route('admin.post.index') }}" class="btn-ghost"/>
+            <x-button label="Album ảnh" link="{{ route('admin.album.index') }}" class="btn-ghost"/>
+            <x-button label="Đối tác" link="{{ route('admin.partner.index') }}" class="btn-ghost"/>
         </x-slot:actions>
     </x-header>
 
@@ -1079,13 +1084,19 @@ new class extends Component {
                              class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                         >
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition" @click="toggle('vi-quick-links')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-md text-gray-700 hover:text-primary transition"
+                                        @click="toggle('vi-quick-links')">
                                     Khối lối tắt nhanh
                                 </button>
-                                <x-button icon="o-plus" label="Thêm lối tắt" class="btn-sm bg-emerald-600 text-white" wire:click="addQuickLink('vi')" spinner="addQuickLink('vi')" />
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('vi-quick-links') ? 'rotate-180' : ''" @click="toggle('vi-quick-links')"/>
+                                <x-button icon="o-plus" label="Thêm lối tắt" class="btn-sm bg-emerald-600 text-white"
+                                          wire:click="addQuickLink('vi')" spinner="addQuickLink('vi')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('vi-quick-links') ? 'rotate-180' : ''"
+                                        @click="toggle('vi-quick-links')"/>
                             </div>
-                            <div x-show="isOpen('vi-quick-links')" x-collapse x-ref="quickLinksVi" class="p-4 space-y-4">
+                            <div x-show="isOpen('vi-quick-links')" x-collapse x-ref="quickLinksVi"
+                                 class="p-4 space-y-4">
                                 @foreach($data['vi']['quick_links'] as $index => $item)
                                     @php $itemId = 'vi-quick-link-' . ($item['id'] ?? $index); @endphp
                                     <div data-id="{{ $item['id'] }}"
@@ -1093,20 +1104,34 @@ new class extends Component {
                                          x-init="ensureState('{{ $itemId }}', false)"
                                          class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-quick-links-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{ $itemId }}')">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-quick-links-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{ $itemId }}')">
                                                 {{ $item['app'] ? 'Lối tắt - '. $item['app'] : 'Lối tắt #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeQuickLink('vi', '{{ $item['id'] }}')" spinner="removeQuickLink('vi', '{{ $item['id'] }}')"/>
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{ $itemId }}') ? 'rotate-180' : ''" @click="toggle('{{ $itemId }}')"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeQuickLink('vi', '{{ $item['id'] }}')"
+                                                      spinner="removeQuickLink('vi', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{ $itemId }}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{ $itemId }}')"/>
                                         </div>
                                         <div x-show="isOpen('{{ $itemId }}')" x-collapse class="p-4 pt-0 space-y-0">
                                             <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-x-4">
                                                 <div class="lg:col-span-2">
-                                                    <x-input label="Tiêu đề lối tắt" wire:model="data.vi.quick_links.{{ $index }}.app" placeholder="Nhập tiêu đề lối tắt" required/>
+                                                    <x-input label="Tiêu đề lối tắt"
+                                                             wire:model="data.vi.quick_links.{{ $index }}.app"
+                                                             placeholder="Nhập tiêu đề lối tắt" required/>
                                                 </div>
-                                                <x-input label="Mô tả" wire:model="data.vi.quick_links.{{ $index }}.desc" placeholder="Nhập mô tả (tooltip)"/>
-                                                <x-input label="Đường dẫn" wire:model="data.vi.quick_links.{{ $index }}.link" required placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
+                                                <x-input label="Mô tả"
+                                                         wire:model="data.vi.quick_links.{{ $index }}.desc"
+                                                         placeholder="Nhập mô tả (tooltip)"/>
+                                                <x-input label="Đường dẫn"
+                                                         wire:model="data.vi.quick_links.{{ $index }}.link" required
+                                                         placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
                                                 <div class="lg:col-span-2 space-y-2 mt-2">
                                                     <label class="font-medium text-sm">Ảnh icon</label>
                                                     <input
@@ -1116,18 +1141,23 @@ new class extends Component {
                                                         accept="image/png, image/jpeg, image/webp"
                                                         class="file-input file-input-bordered w-full"
                                                     >
-                                                    <div class="relative min-h-32 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
-                                                        <div wire:loading.flex wire:target="data.vi.quick_links.{{ $index }}.img_file"
+                                                    <div
+                                                        class="relative min-h-32 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
+                                                        <div wire:loading.flex
+                                                             wire:target="data.vi.quick_links.{{ $index }}.img_file"
                                                              class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                                             <span class="loading loading-spinner text-primary"></span>
                                                             <span class="mt-2 text-xs text-gray-600 font-medium">Đang tải ảnh...</span>
                                                         </div>
                                                         @if(data_get($item, 'img_file') || data_get($item, 'img'))
-                                                            <img src="{{ $this->displayMedia(data_get($item, 'img_file'), data_get($item, 'img')) }}" class="h-28 rounded-lg object-cover" alt="Ảnh icon" />
+                                                            <img
+                                                                src="{{ $this->displayMedia(data_get($item, 'img_file'), data_get($item, 'img')) }}"
+                                                                class="h-28 rounded-lg object-cover" alt="Ảnh icon"/>
                                                             <x-button type="button"
                                                                       wire:click="removeQuickLinkImage('vi', {{ $index }})"
                                                                       class="absolute top-2 right-2 z-5 btn btn-circle btn-xs btn-error text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark" spinner="removeQuickLinkImage('vi', {{ $index }})">
+                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark"
+                                                                      spinner="removeQuickLinkImage('vi', {{ $index }})">
                                                             </x-button>
                                                         @else
                                                             <span class="text-sm text-gray-500">Chưa có ảnh</span>
@@ -1162,11 +1192,16 @@ new class extends Component {
                              x-init="$nextTick(() => initTrainingSortable()); ensureState('vi-training', true)"
                              class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('vi-training')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                        @click="toggle('vi-training')">
                                     Chương trình đào tạo
                                 </button>
-                                <x-button label="Thêm thẻ mới" icon="o-plus" class="btn-sm bg-emerald-600 text-white" wire:click="addTrainingProgram('vi')" spinner="addTrainingProgram('vi')"/>
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('vi-training') ? 'rotate-180' : ''" @click="toggle('vi-training')"/>
+                                <x-button label="Thêm thẻ mới" icon="o-plus" class="btn-sm bg-emerald-600 text-white"
+                                          wire:click="addTrainingProgram('vi')" spinner="addTrainingProgram('vi')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('vi-training') ? 'rotate-180' : ''"
+                                        @click="toggle('vi-training')"/>
                             </div>
                             <div x-show="isOpen('vi-training')" x-collapse x-ref="trainingVi" class="p-4 space-y-4">
                                 @foreach($data['vi']['training_programs'] as $index => $item)
@@ -1174,23 +1209,40 @@ new class extends Component {
                                     <div
                                         data-id="{{$item['id']}}"
                                         wire:key="{{$itemId}}"
-                                        x-init="ensureState('{{$itemId}}', true)" class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                                        x-init="ensureState('{{$itemId}}', true)"
+                                        class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-training-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{$itemId}}', true)">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-training-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{$itemId}}', true)">
                                                 {{ $item['title'] ? 'Thẻ - '. $item['title'] : 'Thẻ #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeTrainingProgram('vi', '{{ $item['id'] }}')" spinner="removeTrainingProgram('vi', '{{ $item['id'] }}')" />
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''" @click="toggle('{{$itemId}}', true)"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeTrainingProgram('vi', '{{ $item['id'] }}')"
+                                                      spinner="removeTrainingProgram('vi', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{$itemId}}', true)"/>
                                         </div>
                                         <div x-show="isOpen('{{$itemId}}')" x-collapse class="p-4 pt-0 space-y-4">
                                             <div class="grid md:grid-cols-2 gap-x-4">
                                                 <div class="md:col-span-2">
-                                                    <x-input label="Tiêu đề thẻ" wire:model="data.vi.training_programs.{{ $index }}.title" required placeholder="Nhập tiêu đề thẻ "/>
-                                                    <x-textarea label="Mô tả" wire:model="data.vi.training_programs.{{ $index }}.description" rows="4" required placeholder="Nhập mô tả"/>
+                                                    <x-input label="Tiêu đề thẻ"
+                                                             wire:model="data.vi.training_programs.{{ $index }}.title"
+                                                             required placeholder="Nhập tiêu đề thẻ "/>
+                                                    <x-textarea label="Mô tả"
+                                                                wire:model="data.vi.training_programs.{{ $index }}.description"
+                                                                rows="4" required placeholder="Nhập mô tả"/>
                                                 </div>
-                                                <x-input label="Link chi tiết" wire:model="data.vi.training_programs.{{ $index }}.detail_url" placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
-                                                <x-input label="Link lộ trình" wire:model="data.vi.training_programs.{{ $index }}.roadmap_url" placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
+                                                <x-input label="Link chi tiết"
+                                                         wire:model="data.vi.training_programs.{{ $index }}.detail_url"
+                                                         placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
+                                                <x-input label="Link lộ trình"
+                                                         wire:model="data.vi.training_programs.{{ $index }}.roadmap_url"
+                                                         placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
                                                 <div class="md:col-span-2 space-y-2 mt-2">
                                                     <label class="font-medium text-sm">Ảnh chương trình</label>
                                                     <input
@@ -1200,18 +1252,24 @@ new class extends Component {
                                                         accept="image/png, image/jpeg, image/webp"
                                                         class="file-input file-input-bordered w-full"
                                                     >
-                                                    <div class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
-                                                        <div wire:loading.flex wire:target="data.vi.training_programs.{{ $index }}.image_file"
+                                                    <div
+                                                        class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
+                                                        <div wire:loading.flex
+                                                             wire:target="data.vi.training_programs.{{ $index }}.image_file"
                                                              class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                                             <span class="loading loading-spinner text-primary"></span>
                                                             <span class="mt-2 text-xs text-gray-600 font-medium">Đang tải ảnh...</span>
                                                         </div>
                                                         @if(data_get($item, 'image_file') || data_get($item, 'image'))
-                                                            <img src="{{ $this->displayMedia(data_get($item, 'image_file'), data_get($item, 'image')) }}" class="h-34 rounded-lg object-cover" alt="Ảnh chương trình" />
+                                                            <img
+                                                                src="{{ $this->displayMedia(data_get($item, 'image_file'), data_get($item, 'image')) }}"
+                                                                class="h-34 rounded-lg object-cover"
+                                                                alt="Ảnh chương trình"/>
                                                             <x-button type="button"
                                                                       wire:click="removeTrainingProgramImage('vi', {{ $index }})"
                                                                       class="absolute top-2 right-2 z-5 btn btn-circle btn-xs btn-error text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark" spinner="removeTrainingProgramImage('vi', {{ $index }})">
+                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark"
+                                                                      spinner="removeTrainingProgramImage('vi', {{ $index }})">
                                                             </x-button>
                                                         @else
                                                             <span class="text-sm text-gray-500">Chưa có ảnh</span>
@@ -1242,13 +1300,19 @@ new class extends Component {
                                          }
                                      });
                                  }
-                            }" x-init="$nextTick(() => initStatsSortable()); ensureState('vi-stats', true)" class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                            }" x-init="$nextTick(() => initStatsSortable()); ensureState('vi-stats', true)"
+                             class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('vi-stats')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                        @click="toggle('vi-stats')">
                                     Những con số ấn tượng
                                 </button>
-                                <x-button label="Thêm chỉ số" icon="o-plus" class="btn-sm bg-emerald-600 text-white" wire:click="addCounterStat('vi')" spinner="addCounterStat('vi')"/>
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('vi-stats') ? 'rotate-180' : ''" @click="toggle('vi-stats')"/>
+                                <x-button label="Thêm chỉ số" icon="o-plus" class="btn-sm bg-emerald-600 text-white"
+                                          wire:click="addCounterStat('vi')" spinner="addCounterStat('vi')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('vi-stats') ? 'rotate-180' : ''"
+                                        @click="toggle('vi-stats')"/>
                             </div>
                             <div x-show="isOpen('vi-stats')" x-collapse x-ref="counterStarVi" class="p-4 space-y-4">
                                 @foreach($data['vi']['counter_stats'] as $index => $item)
@@ -1260,28 +1324,46 @@ new class extends Component {
                                         class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                                     >
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-stats-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{$itemId}}', true)">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-stats-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{$itemId}}', true)">
                                                 {{ $item['label'] ? 'Chỉ số - '. $item['label'] : 'Chỉ số #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeCounterStat('vi', '{{ $item['id'] }}')" spinner="removeCounterStat('vi', '{{ $item['id'] }}')" />
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''" @click="toggle('{{$itemId}}', true)"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeCounterStat('vi', '{{ $item['id'] }}')"
+                                                      spinner="removeCounterStat('vi', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{$itemId}}', true)"/>
                                         </div>
                                         <div x-show="isOpen('{{$itemId}}')" x-collapse class="p-4 pt-0 space-y-4">
                                             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                <x-input label="Nhãn" wire:model="data.vi.counter_stats.{{ $index }}.label" placeholder="Nhập nhãn cho chỉ số" required/>
-                                                <x-input label="Giá trị" type="number" min="0" wire:model="data.vi.counter_stats.{{ $index }}.value" required/>
-                                                <x-input label="Hậu tố" wire:model="data.vi.counter_stats.{{ $index }}.suffix" required/>
+                                                <x-input label="Nhãn"
+                                                         wire:model="data.vi.counter_stats.{{ $index }}.label"
+                                                         placeholder="Nhập nhãn cho chỉ số" required/>
+                                                <x-input label="Giá trị" type="number" min="0"
+                                                         wire:model="data.vi.counter_stats.{{ $index }}.value"
+                                                         required/>
+                                                <x-input label="Hậu tố"
+                                                         wire:model="data.vi.counter_stats.{{ $index }}.suffix"
+                                                         required/>
 
                                                 <div x-data="{ showIcons: false, search: '' }" class="relative">
                                                     <div class="flex items-start flex-col justify-center gap-2">
-                                                        <label for="data.vi.counter_stats.{{ $index }}.icon" class="mt-3 font-medium">Icon (Heroicons)</label>
+                                                        <label for="data.vi.counter_stats.{{ $index }}.icon"
+                                                               class="mt-3 font-medium">Icon (Heroicons)</label>
                                                         <x-button type="button" @click="showIcons = true"
                                                                   class="h-10 w-full shrink-0 rounded-md bg-gray-50 border border-gray-300 text-primary hover:border-primary hover:bg-primary/10 flex items-center justify-center shadow-sm transition"
-                                                                  tooltip="Bấm để chọn Icon" spinner="data.vi.counter_stats.{{ $index }}.icon">
-                                                            <div wire:loading.remove wire:target="data.vi.counter_stats.{{ $index }}.icon">
+                                                                  tooltip="Bấm để chọn Icon"
+                                                                  spinner="data.vi.counter_stats.{{ $index }}.icon">
+                                                            <div wire:loading.remove
+                                                                 wire:target="data.vi.counter_stats.{{ $index }}.icon">
                                                                 @if(!empty($item['icon']))
-                                                                    <x-icon name="{{ $item['icon'] }}" class="w-7 h-7 text-primary" />
+                                                                    <x-icon name="{{ $item['icon'] }}"
+                                                                            class="w-7 h-7 text-primary"/>
                                                                 @else
                                                                     <span class="text-xl text-gray-400">?</span>
                                                                 @endif
@@ -1290,24 +1372,36 @@ new class extends Component {
                                                     </div>
 
                                                     <template x-teleport="body">
-                                                        <div x-show="showIcons" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] p-4">
-                                                            <div @click.outside="showIcons = false" x-transition.scale.95 class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                                                                <div class="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
-                                                                    <h3 class="font-bold text-gray-800 text-lg">Chọn Icon</h3>
-                                                                    <button type="button" @click="showIcons = false" class="btn btn-sm btn-circle btn-ghost text-gray-500">✕</button>
+                                                        <div x-show="showIcons" style="display: none;"
+                                                             class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] p-4">
+                                                            <div @click.outside="showIcons = false"
+                                                                 x-transition.scale.95
+                                                                 class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                                                                <div
+                                                                    class="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
+                                                                    <h3 class="font-bold text-gray-800 text-lg">Chọn
+                                                                        Icon</h3>
+                                                                    <button type="button" @click="showIcons = false"
+                                                                            class="btn btn-sm btn-circle btn-ghost text-gray-500">
+                                                                        ✕
+                                                                    </button>
                                                                 </div>
                                                                 <div class="p-4 border-b border-gray-100">
-                                                                    <input type="text" x-model="search" placeholder="🔍 Tìm icon (vd: user, star, heart, book)..." class="input input-bordered w-full" />
+                                                                    <input type="text" x-model="search"
+                                                                           placeholder="🔍 Tìm icon (vd: user, star, heart, book)..."
+                                                                           class="input input-bordered w-full"/>
                                                                 </div>
-                                                                <div class="p-4 overflow-y-auto custom-scrollbar bg-white">
+                                                                <div
+                                                                    class="p-4 overflow-y-auto custom-scrollbar bg-white">
                                                                     <div class="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                                                                        @foreach($this->popularIcons as $icon)
+                                                                        @foreach($this->popularIcons() as $icon)
                                                                             <button type="button"
                                                                                     x-show="search === '' || '{{ $icon }}'.includes(search.toLowerCase())"
                                                                                     @click="$wire.set('data.vi.counter_stats.{{ $index }}.icon', '{{ $icon }}'); showIcons = false"
                                                                                     class="p-2 rounded-xl bg-gray-50 hover:bg-primary/20 text-gray-600 hover:text-primary transition flex flex-col items-center justify-center gap-1 border border-gray-100 hover:border-primary/30"
                                                                                     title="{{ $icon }}">
-                                                                                <x-icon name="{{ $icon }}" class="w-7 h-7" />
+                                                                                <x-icon name="{{ $icon }}"
+                                                                                        class="w-7 h-7"/>
                                                                             </button>
                                                                         @endforeach
                                                                     </div>
@@ -1340,17 +1434,25 @@ new class extends Component {
                                          }
                                      });
                                  }
-                            }" x-init="$nextTick(() => initTestimonialsSortable()); ensureState('vi-testimonials', true)"
+                            }"
+                             x-init="$nextTick(() => initTestimonialsSortable()); ensureState('vi-testimonials', true)"
                              class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                         >
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('vi-testimonials')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                        @click="toggle('vi-testimonials')">
                                     Góc nhìn từ doanh nghiệp và cựu sinh viên
                                 </button>
-                                <x-button label="Thêm lời chia sẻ" icon="o-plus" class="btn-sm bg-emerald-600 text-white" wire:click="addTestimonial('vi')" spinner="addTestimonial('vi')" />
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('vi-testimonials') ? 'rotate-180' : ''" @click="toggle('vi-testimonials')"/>
+                                <x-button label="Thêm lời chia sẻ" icon="o-plus"
+                                          class="btn-sm bg-emerald-600 text-white" wire:click="addTestimonial('vi')"
+                                          spinner="addTestimonial('vi')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('vi-testimonials') ? 'rotate-180' : ''"
+                                        @click="toggle('vi-testimonials')"/>
                             </div>
-                            <div x-show="isOpen('vi-testimonials')" x-collapse x-ref="testimonialsVi" class="p-4 space-y-4">
+                            <div x-show="isOpen('vi-testimonials')" x-collapse x-ref="testimonialsVi"
+                                 class="p-4 space-y-4">
                                 @foreach($data['vi']['testimonials'] as $index => $item)
                                     @php $itemId = 'vi-testimonials-' . ($item['id'] ?? $index); @endphp
                                     <div
@@ -1360,19 +1462,33 @@ new class extends Component {
                                         class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                                     >
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-testimonials-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{$itemId}}', true)">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-testimonials-handle-vi w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{$itemId}}', true)">
                                                 {{ $item['name'] ? 'Lời chia sẻ - '. $item['name'] : 'Lời chia sẻ #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeTestimonial('vi', '{{ $item['id'] }}')" spinner="removeTestimonial('vi', '{{ $item['id'] }}')" />
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''" @click="toggle('{{$itemId}}', true)"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeTestimonial('vi', '{{ $item['id'] }}')"
+                                                      spinner="removeTestimonial('vi', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{$itemId}}', true)"/>
                                         </div>
                                         <div x-show="isOpen('{{$itemId}}')" x-collapse class="p-4 pt-0 space-y-0">
                                             <div class="grid md:grid-cols-2 gap-x-4">
-                                                <x-input label="Họ tên" wire:model="data.vi.testimonials.{{ $index }}.name" placeholder="Nhập họ và tên" required/>
-                                                <x-input label="Chức danh" wire:model="data.vi.testimonials.{{ $index }}.role" placeholder="Nhập chức danh" required/>
+                                                <x-input label="Họ tên"
+                                                         wire:model="data.vi.testimonials.{{ $index }}.name"
+                                                         placeholder="Nhập họ và tên" required/>
+                                                <x-input label="Chức danh"
+                                                         wire:model="data.vi.testimonials.{{ $index }}.role"
+                                                         placeholder="Nhập chức danh" required/>
                                                 <div class="md:col-span-2">
-                                                    <x-textarea label="Nội dung" wire:model="data.vi.testimonials.{{ $index }}.content" rows="4" placeholder="Nhập nội dung chia sẻ" required/>
+                                                    <x-textarea label="Nội dung"
+                                                                wire:model="data.vi.testimonials.{{ $index }}.content"
+                                                                rows="4" placeholder="Nhập nội dung chia sẻ" required/>
                                                 </div>
                                                 <div class="md:col-span-2 space-y-2 mt-2">
                                                     <label class="font-medium text-sm">Ảnh đại diện</label>
@@ -1383,18 +1499,24 @@ new class extends Component {
                                                         accept="image/png, image/jpeg, image/webp"
                                                         class="file-input file-input-bordered w-full"
                                                     >
-                                                    <div class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
-                                                        <div wire:loading.flex wire:target="data.vi.testimonials.{{ $index }}.avatar_file"
+                                                    <div
+                                                        class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
+                                                        <div wire:loading.flex
+                                                             wire:target="data.vi.testimonials.{{ $index }}.avatar_file"
                                                              class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                                             <span class="loading loading-spinner text-primary"></span>
                                                             <span class="mt-2 text-xs text-gray-600 font-medium">Đang tải ảnh...</span>
                                                         </div>
                                                         @if(data_get($item, 'avatar_file') || data_get($item, 'avatar'))
-                                                            <img src="{{ $this->displayMedia(data_get($item, 'avatar_file'), data_get($item, 'avatar')) }}" class="h-32 w-32 rounded-full object-cover" alt="Ảnh đại diện" />
+                                                            <img
+                                                                src="{{ $this->displayMedia(data_get($item, 'avatar_file'), data_get($item, 'avatar')) }}"
+                                                                class="h-32 w-32 rounded-full object-cover"
+                                                                alt="Ảnh đại diện"/>
                                                             <x-button type="button"
                                                                       wire:click="removeTestimonialImage('vi', {{ $index }})"
                                                                       class="absolute top-2 right-2 z-5 btn btn-circle btn-xs btn-error text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark" spinner="removeTestimonialImage('vi', {{ $index }})">
+                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark"
+                                                                      spinner="removeTestimonialImage('vi', {{ $index }})">
                                                             </x-button>
                                                         @else
                                                             <span class="text-sm text-gray-500">Chưa có ảnh</span>
@@ -1436,13 +1558,19 @@ new class extends Component {
                              class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                         >
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('en-quick-links')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                        @click="toggle('en-quick-links')">
                                     Khối lối tắt nhanh (Tiếng Anh)
                                 </button>
-                                <x-button icon="o-plus" label="Thêm lối tắt" class="btn-sm bg-emerald-600 text-white" wire:click="addQuickLink('en')" spinner="addQuickLink('en')" />
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('en-quick-links') ? 'rotate-180' : ''" @click="toggle('en-quick-links')"/>
+                                <x-button icon="o-plus" label="Thêm lối tắt" class="btn-sm bg-emerald-600 text-white"
+                                          wire:click="addQuickLink('en')" spinner="addQuickLink('en')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('en-quick-links') ? 'rotate-180' : ''"
+                                        @click="toggle('en-quick-links')"/>
                             </div>
-                            <div x-show="isOpen('en-quick-links')" x-collapse x-ref="quickLinksEn" class="p-4 space-y-4">
+                            <div x-show="isOpen('en-quick-links')" x-collapse x-ref="quickLinksEn"
+                                 class="p-4 space-y-4">
                                 @foreach($data['en']['quick_links'] as $index => $item)
                                     @php $itemId = 'en-quick-link-' . ($item['id'] ?? $index); @endphp
                                     <div data-id="{{ $item['id'] }}"
@@ -1450,20 +1578,34 @@ new class extends Component {
                                          x-init="ensureState('{{ $itemId }}', false)"
                                          class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-quick-links-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{ $itemId }}')">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-quick-links-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{ $itemId }}')">
                                                 {{ $item['app'] ? 'Lối tắt - '. $item['app'] : 'Lối tắt #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeQuickLink('en', '{{ $item['id'] }}')" spinner="removeQuickLink('en', '{{ $item['id'] }}')"/>
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{ $itemId }}') ? 'rotate-180' : ''" @click="toggle('{{ $itemId }}')"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeQuickLink('en', '{{ $item['id'] }}')"
+                                                      spinner="removeQuickLink('en', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{ $itemId }}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{ $itemId }}')"/>
                                         </div>
                                         <div x-show="isOpen('{{ $itemId }}')" x-collapse class="p-4 pt-0 space-y-0">
                                             <div class="grid md:grid-cols-1 lg:grid-cols-2 gap-x-4">
                                                 <div class="lg:col-span-2">
-                                                    <x-input label="Tiêu đề lối tắt" wire:model="data.en.quick_links.{{ $index }}.app" placeholder="Nhập tiêu đề lối tắt" required/>
+                                                    <x-input label="Tiêu đề lối tắt"
+                                                             wire:model="data.en.quick_links.{{ $index }}.app"
+                                                             placeholder="Nhập tiêu đề lối tắt" required/>
                                                 </div>
-                                                <x-input label="Mô tả" wire:model="data.en.quick_links.{{ $index }}.desc" placeholder="Nhập mô tả (tooltip)"/>
-                                                <x-input label="Đường dẫn" wire:model="data.en.quick_links.{{ $index }}.link" required placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
+                                                <x-input label="Mô tả"
+                                                         wire:model="data.en.quick_links.{{ $index }}.desc"
+                                                         placeholder="Nhập mô tả (tooltip)"/>
+                                                <x-input label="Đường dẫn"
+                                                         wire:model="data.en.quick_links.{{ $index }}.link" required
+                                                         placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
                                                 <div class="lg:col-span-2 space-y-2 mt-2">
                                                     <label class="font-medium text-sm">Ảnh icon</label>
                                                     <input
@@ -1473,18 +1615,23 @@ new class extends Component {
                                                         accept="image/png, image/jpeg, image/webp"
                                                         class="file-input file-input-bordered w-full"
                                                     >
-                                                    <div class="relative min-h-32 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
-                                                        <div wire:loading.flex wire:target="data.en.quick_links.{{ $index }}.img_file"
+                                                    <div
+                                                        class="relative min-h-32 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
+                                                        <div wire:loading.flex
+                                                             wire:target="data.en.quick_links.{{ $index }}.img_file"
                                                              class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                                             <span class="loading loading-spinner text-primary"></span>
                                                             <span class="mt-2 text-xs text-gray-600 font-medium">Đang tải ảnh...</span>
                                                         </div>
                                                         @if(data_get($item, 'img_file') || data_get($item, 'img'))
-                                                            <img src="{{ $this->displayMedia(data_get($item, 'img_file'), data_get($item, 'img')) }}" class="h-28 rounded-lg object-cover" alt="Ảnh icon" />
+                                                            <img
+                                                                src="{{ $this->displayMedia(data_get($item, 'img_file'), data_get($item, 'img')) }}"
+                                                                class="h-28 rounded-lg object-cover" alt="Ảnh icon"/>
                                                             <x-button type="button"
                                                                       wire:click="removeQuickLinkImage('en', {{ $index }})"
                                                                       class="absolute top-2 right-2 z-5 btn btn-circle btn-xs btn-error text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark" spinner="removeQuickLinkImage('en', {{ $index }})">
+                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark"
+                                                                      spinner="removeQuickLinkImage('en', {{ $index }})">
                                                             </x-button>
                                                         @else
                                                             <span class="text-sm text-gray-500">Chưa có ảnh</span>
@@ -1519,11 +1666,16 @@ new class extends Component {
                              x-init="$nextTick(() => initTrainingSortable()); ensureState('en-training', true)"
                              class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('en-training')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                        @click="toggle('en-training')">
                                     Chương trình đào tạo (Tiếng Anh)
                                 </button>
-                                <x-button label="Thêm thẻ mới" icon="o-plus" class="btn-sm bg-emerald-600 text-white" wire:click="addTrainingProgram('en')" spinner="addTrainingProgram('en')"/>
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('en-training') ? 'rotate-180' : ''" @click="toggle('en-training')"/>
+                                <x-button label="Thêm thẻ mới" icon="o-plus" class="btn-sm bg-emerald-600 text-white"
+                                          wire:click="addTrainingProgram('en')" spinner="addTrainingProgram('en')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('en-training') ? 'rotate-180' : ''"
+                                        @click="toggle('en-training')"/>
                             </div>
                             <div x-show="isOpen('en-training')" x-collapse x-ref="trainingEn" class="p-4 space-y-4">
                                 @foreach($data['en']['training_programs'] as $index => $item)
@@ -1531,23 +1683,40 @@ new class extends Component {
                                     <div
                                         data-id="{{$item['id']}}"
                                         wire:key="{{$itemId}}"
-                                        x-init="ensureState('{{$itemId}}', true)" class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+                                        x-init="ensureState('{{$itemId}}', true)"
+                                        class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-training-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{$itemId}}', true)">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-training-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{$itemId}}', true)">
                                                 {{ $item['title'] ? 'Thẻ - '. $item['title'] : 'Thẻ #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeTrainingProgram('en', '{{ $item['id'] }}')" spinner="removeTrainingProgram('en', '{{ $item['id'] }}')" />
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''" @click="toggle('{{$itemId}}', true)"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeTrainingProgram('en', '{{ $item['id'] }}')"
+                                                      spinner="removeTrainingProgram('en', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{$itemId}}', true)"/>
                                         </div>
                                         <div x-show="isOpen('{{$itemId}}')" x-collapse class="p-4 pt-0 space-y-4">
                                             <div class="grid md:grid-cols-2 gap-x-4">
                                                 <div class="md:col-span-2">
-                                                    <x-input label="Tiêu đề thẻ" wire:model="data.en.training_programs.{{ $index }}.title" required placeholder="Nhập tiêu đề thẻ"/>
-                                                    <x-textarea label="Mô tả" wire:model="data.en.training_programs.{{ $index }}.description" rows="4" required placeholder="Nhập mô tả"/>
+                                                    <x-input label="Tiêu đề thẻ"
+                                                             wire:model="data.en.training_programs.{{ $index }}.title"
+                                                             required placeholder="Nhập tiêu đề thẻ"/>
+                                                    <x-textarea label="Mô tả"
+                                                                wire:model="data.en.training_programs.{{ $index }}.description"
+                                                                rows="4" required placeholder="Nhập mô tả"/>
                                                 </div>
-                                                <x-input label="Link chi tiết" wire:model="data.en.training_programs.{{ $index }}.detail_url" placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
-                                                <x-input label="Link lộ trình" wire:model="data.en.training_programs.{{ $index }}.roadmap_url" placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
+                                                <x-input label="Link chi tiết"
+                                                         wire:model="data.en.training_programs.{{ $index }}.detail_url"
+                                                         placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
+                                                <x-input label="Link lộ trình"
+                                                         wire:model="data.en.training_programs.{{ $index }}.roadmap_url"
+                                                         placeholder="/duong-dan hoặc https://example.com hoặc ###"/>
                                                 <div class="md:col-span-2 space-y-2 mt-2">
                                                     <label class="font-medium text-sm">Ảnh chương trình</label>
                                                     <input
@@ -1557,18 +1726,24 @@ new class extends Component {
                                                         accept="image/png, image/jpeg, image/webp"
                                                         class="file-input file-input-bordered w-full"
                                                     >
-                                                    <div class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
-                                                        <div wire:loading.flex wire:target="data.en.training_programs.{{ $index }}.image_file"
+                                                    <div
+                                                        class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
+                                                        <div wire:loading.flex
+                                                             wire:target="data.en.training_programs.{{ $index }}.image_file"
                                                              class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                                             <span class="loading loading-spinner text-primary"></span>
                                                             <span class="mt-2 text-xs text-gray-600 font-medium">Đang tải ảnh...</span>
                                                         </div>
                                                         @if(data_get($item, 'image_file') || data_get($item, 'image'))
-                                                            <img src="{{ $this->displayMedia(data_get($item, 'image_file'), data_get($item, 'image')) }}" class="h-34 rounded-lg object-cover" alt="Ảnh chương trình" />
+                                                            <img
+                                                                src="{{ $this->displayMedia(data_get($item, 'image_file'), data_get($item, 'image')) }}"
+                                                                class="h-34 rounded-lg object-cover"
+                                                                alt="Ảnh chương trình"/>
                                                             <x-button type="button"
                                                                       wire:click="removeTrainingProgramImage('en', {{ $index }})"
                                                                       class="absolute top-2 right-2 z-5 btn btn-circle btn-xs btn-error text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark" spinner="removeTrainingProgramImage('en', {{ $index }})">
+                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark"
+                                                                      spinner="removeTrainingProgramImage('en', {{ $index }})">
                                                             </x-button>
                                                         @else
                                                             <span class="text-sm text-gray-500">Chưa có ảnh</span>
@@ -1599,13 +1774,19 @@ new class extends Component {
                          }
                      });
                  }
-            }" x-init="$nextTick(() => initStatsSortable()); ensureState('en-stats', true)" class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+            }" x-init="$nextTick(() => initStatsSortable()); ensureState('en-stats', true)"
+                             class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('en-stats')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                        @click="toggle('en-stats')">
                                     Những con số ấn tượng (Tiếng Anh)
                                 </button>
-                                <x-button label="Thêm chỉ số" icon="o-plus" class="btn-sm bg-emerald-600 text-white" wire:click="addCounterStat('en')" spinner="addCounterStat('en')"/>
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('en-stats') ? 'rotate-180' : ''" @click="toggle('en-stats')"/>
+                                <x-button label="Thêm chỉ số" icon="o-plus" class="btn-sm bg-emerald-600 text-white"
+                                          wire:click="addCounterStat('en')" spinner="addCounterStat('en')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('en-stats') ? 'rotate-180' : ''"
+                                        @click="toggle('en-stats')"/>
                             </div>
                             <div x-show="isOpen('en-stats')" x-collapse x-ref="counterStarEn" class="p-4 space-y-4">
                                 @foreach($data['en']['counter_stats'] as $index => $item)
@@ -1617,28 +1798,46 @@ new class extends Component {
                                         class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                                     >
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-stats-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{$itemId}}', true)">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-stats-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{$itemId}}', true)">
                                                 {{ $item['label'] ? 'Chỉ số - '. $item['label'] : 'Chỉ số #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeCounterStat('en', '{{ $item['id'] }}')" spinner="removeCounterStat('en', '{{ $item['id'] }}')" />
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''" @click="toggle('{{$itemId}}', true)"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeCounterStat('en', '{{ $item['id'] }}')"
+                                                      spinner="removeCounterStat('en', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{$itemId}}', true)"/>
                                         </div>
                                         <div x-show="isOpen('{{$itemId}}')" x-collapse class="p-4 pt-0 space-y-4">
                                             <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                                <x-input label="Nhãn" wire:model="data.en.counter_stats.{{ $index }}.label" placeholder="Nhập nhãn cho chỉ số" required/>
-                                                <x-input label="Giá trị" type="number" min="0" wire:model="data.en.counter_stats.{{ $index }}.value" required/>
-                                                <x-input label="Hậu tố" wire:model="data.en.counter_stats.{{ $index }}.suffix" required/>
+                                                <x-input label="Nhãn"
+                                                         wire:model="data.en.counter_stats.{{ $index }}.label"
+                                                         placeholder="Nhập nhãn cho chỉ số" required/>
+                                                <x-input label="Giá trị" type="number" min="0"
+                                                         wire:model="data.en.counter_stats.{{ $index }}.value"
+                                                         required/>
+                                                <x-input label="Hậu tố"
+                                                         wire:model="data.en.counter_stats.{{ $index }}.suffix"
+                                                         required/>
 
                                                 <div x-data="{ showIcons: false, search: '' }" class="relative">
                                                     <div class="flex items-start flex-col justify-center gap-2">
-                                                        <label for="data.en.counter_stats.{{ $index }}.icon" class="mt-3 font-medium">Icon (Heroicons)</label>
+                                                        <label for="data.en.counter_stats.{{ $index }}.icon"
+                                                               class="mt-3 font-medium">Icon (Heroicons)</label>
                                                         <x-button type="button" @click="showIcons = true"
                                                                   class="h-10 w-full shrink-0 rounded-md bg-gray-50 border border-gray-300 text-primary hover:border-primary hover:bg-primary/10 flex items-center justify-center shadow-sm transition"
-                                                                  tooltip="Bấm để chọn Icon" spinner="data.en.counter_stats.{{ $index }}.icon">
-                                                            <div wire:loading.remove wire:target="data.en.counter_stats.{{ $index }}.icon">
+                                                                  tooltip="Bấm để chọn Icon"
+                                                                  spinner="data.en.counter_stats.{{ $index }}.icon">
+                                                            <div wire:loading.remove
+                                                                 wire:target="data.en.counter_stats.{{ $index }}.icon">
                                                                 @if(!empty($item['icon']))
-                                                                    <x-icon name="{{ $item['icon'] }}" class="w-7 h-7 text-primary" />
+                                                                    <x-icon name="{{ $item['icon'] }}"
+                                                                            class="w-7 h-7 text-primary"/>
                                                                 @else
                                                                     <span class="text-xl text-gray-400">?</span>
                                                                 @endif
@@ -1647,24 +1846,36 @@ new class extends Component {
                                                     </div>
 
                                                     <template x-teleport="body">
-                                                        <div x-show="showIcons" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] p-4">
-                                                            <div @click.outside="showIcons = false" x-transition.scale.95 class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                                                                <div class="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
-                                                                    <h3 class="font-bold text-gray-800 text-lg">Chọn Icon</h3>
-                                                                    <button type="button" @click="showIcons = false" class="btn btn-sm btn-circle btn-ghost text-gray-500">✕</button>
+                                                        <div x-show="showIcons" style="display: none;"
+                                                             class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-[2px] p-4">
+                                                            <div @click.outside="showIcons = false"
+                                                                 x-transition.scale.95
+                                                                 class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                                                                <div
+                                                                    class="flex items-center justify-between p-4 border-b border-gray-100 bg-gray-50">
+                                                                    <h3 class="font-bold text-gray-800 text-lg">Chọn
+                                                                        Icon</h3>
+                                                                    <button type="button" @click="showIcons = false"
+                                                                            class="btn btn-sm btn-circle btn-ghost text-gray-500">
+                                                                        ✕
+                                                                    </button>
                                                                 </div>
                                                                 <div class="p-4 border-b border-gray-100">
-                                                                    <input type="text" x-model="search" placeholder="🔍 Tìm icon (vd: user, star, heart, book)..." class="input input-bordered w-full" />
+                                                                    <input type="text" x-model="search"
+                                                                           placeholder="🔍 Tìm icon (vd: user, star, heart, book)..."
+                                                                           class="input input-bordered w-full"/>
                                                                 </div>
-                                                                <div class="p-4 overflow-y-auto custom-scrollbar bg-white">
+                                                                <div
+                                                                    class="p-4 overflow-y-auto custom-scrollbar bg-white">
                                                                     <div class="grid grid-cols-6 sm:grid-cols-8 gap-2">
-                                                                        @foreach($this->popularIcons as $icon)
+                                                                        @foreach($this->popularIcons() as $icon)
                                                                             <button type="button"
                                                                                     x-show="search === '' || '{{ $icon }}'.includes(search.toLowerCase())"
                                                                                     @click="$wire.set('data.en.counter_stats.{{ $index }}.icon', '{{ $icon }}'); showIcons = false"
                                                                                     class="p-2 rounded-xl bg-gray-50 hover:bg-primary/20 text-gray-600 hover:text-primary transition flex flex-col items-center justify-center gap-1 border border-gray-100 hover:border-primary/30"
                                                                                     title="{{ $icon }}">
-                                                                                <x-icon name="{{ $icon }}" class="w-7 h-7" />
+                                                                                <x-icon name="{{ $icon }}"
+                                                                                        class="w-7 h-7"/>
                                                                             </button>
                                                                         @endforeach
                                                                     </div>
@@ -1701,13 +1912,20 @@ new class extends Component {
                              class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                         >
                             <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('en-testimonials')">
+                                <button type="button"
+                                        class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                        @click="toggle('en-testimonials')">
                                     Góc nhìn từ doanh nghiệp và cựu sinh viên (Tiếng Anh)
                                 </button>
-                                <x-button label="Thêm lời chia sẻ" icon="o-plus" class="btn-sm bg-emerald-600 text-white" wire:click="addTestimonial('en')" spinner="addTestimonial('en')" />
-                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('en-testimonials') ? 'rotate-180' : ''" @click="toggle('en-testimonials')"/>
+                                <x-button label="Thêm lời chia sẻ" icon="o-plus"
+                                          class="btn-sm bg-emerald-600 text-white" wire:click="addTestimonial('en')"
+                                          spinner="addTestimonial('en')"/>
+                                <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform"
+                                        x-bind:class="isOpen('en-testimonials') ? 'rotate-180' : ''"
+                                        @click="toggle('en-testimonials')"/>
                             </div>
-                            <div x-show="isOpen('en-testimonials')" x-collapse x-ref="testimonialsEn" class="p-4 space-y-4">
+                            <div x-show="isOpen('en-testimonials')" x-collapse x-ref="testimonialsEn"
+                                 class="p-4 space-y-4">
                                 @foreach($data['en']['testimonials'] as $index => $item)
                                     @php $itemId = 'en-testimonials-' . ($item['id'] ?? $index); @endphp
                                     <div
@@ -1717,19 +1935,33 @@ new class extends Component {
                                         class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden"
                                     >
                                         <div class="flex items-center gap-3 p-3 bg-gray-50 border-b border-gray-100">
-                                            <x-icon name="o-bars-3" class="drag-testimonials-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
-                                            <button type="button" class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition" @click="toggle('{{$itemId}}', true)">
+                                            <x-icon name="o-bars-3"
+                                                    class="drag-testimonials-handle-en w-5 h-5 text-gray-400 cursor-move hover:text-gray-700"/>
+                                            <button type="button"
+                                                    class="flex-1 text-left font-semibold text-sm text-gray-700 hover:text-primary transition"
+                                                    @click="toggle('{{$itemId}}', true)">
                                                 {{ $item['name'] ? 'Lời chia sẻ - '. $item['name'] : 'Lời chia sẻ #' . ($index + 1) }}
                                             </button>
-                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error" wire:click="removeTestimonial('en', '{{ $item['id'] }}')" spinner="removeTestimonial('en', '{{ $item['id'] }}')" />
-                                            <x-icon name="o-chevron-down" class="w-5 h-5 cursor-pointer transition-transform" x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''" @click="toggle('{{$itemId}}', true)"/>
+                                            <x-button icon="o-trash" class="btn-ghost btn-sm text-error"
+                                                      wire:click="removeTestimonial('en', '{{ $item['id'] }}')"
+                                                      spinner="removeTestimonial('en', '{{ $item['id'] }}')"/>
+                                            <x-icon name="o-chevron-down"
+                                                    class="w-5 h-5 cursor-pointer transition-transform"
+                                                    x-bind:class="isOpen('{{$itemId}}') ? 'rotate-180' : ''"
+                                                    @click="toggle('{{$itemId}}', true)"/>
                                         </div>
                                         <div x-show="isOpen('{{$itemId}}')" x-collapse class="p-4 pt-0 space-y-0">
                                             <div class="grid md:grid-cols-2 gap-x-4">
-                                                <x-input label="Họ tên" wire:model="data.en.testimonials.{{ $index }}.name" placeholder="Nhập họ và tên" required/>
-                                                <x-input label="Chức danh" wire:model="data.en.testimonials.{{ $index }}.role" placeholder="Nhập chức danh" required/>
+                                                <x-input label="Họ tên"
+                                                         wire:model="data.en.testimonials.{{ $index }}.name"
+                                                         placeholder="Nhập họ và tên" required/>
+                                                <x-input label="Chức danh"
+                                                         wire:model="data.en.testimonials.{{ $index }}.role"
+                                                         placeholder="Nhập chức danh" required/>
                                                 <div class="md:col-span-2">
-                                                    <x-textarea label="Nội dung" wire:model="data.en.testimonials.{{ $index }}.content" rows="4" placeholder="Nhập nội dung chia sẻ" required/>
+                                                    <x-textarea label="Nội dung"
+                                                                wire:model="data.en.testimonials.{{ $index }}.content"
+                                                                rows="4" placeholder="Nhập nội dung chia sẻ" required/>
                                                 </div>
                                                 <div class="md:col-span-2 space-y-2 mt-2">
                                                     <label class="font-medium text-sm">Ảnh đại diện</label>
@@ -1740,18 +1972,24 @@ new class extends Component {
                                                         accept="image/png, image/jpeg, image/webp"
                                                         class="file-input file-input-bordered w-full"
                                                     >
-                                                    <div class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
-                                                        <div wire:loading.flex wire:target="data.en.testimonials.{{ $index }}.avatar_file"
+                                                    <div
+                                                        class="relative min-h-40 rounded-lg border border-dashed border-gray-300 bg-gray-50/70 overflow-hidden flex items-center justify-center group">
+                                                        <div wire:loading.flex
+                                                             wire:target="data.en.testimonials.{{ $index }}.avatar_file"
                                                              class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
                                                             <span class="loading loading-spinner text-primary"></span>
                                                             <span class="mt-2 text-xs text-gray-600 font-medium">Đang tải ảnh...</span>
                                                         </div>
                                                         @if(data_get($item, 'avatar_file') || data_get($item, 'avatar'))
-                                                            <img src="{{ $this->displayMedia(data_get($item, 'avatar_file'), data_get($item, 'avatar')) }}" class="h-32 w-32 rounded-full object-cover" alt="Ảnh đại diện" />
+                                                            <img
+                                                                src="{{ $this->displayMedia(data_get($item, 'avatar_file'), data_get($item, 'avatar')) }}"
+                                                                class="h-32 w-32 rounded-full object-cover"
+                                                                alt="Ảnh đại diện"/>
                                                             <x-button type="button"
                                                                       wire:click="removeTestimonialImage('en', {{ $index }})"
                                                                       class="absolute top-2 right-2 z-5 btn btn-circle btn-xs btn-error text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark" spinner="removeTestimonialImage('en', {{ $index }})">
+                                                                      tooltip-left="Xóa ảnh" icon="o-x-mark"
+                                                                      spinner="removeTestimonialImage('en', {{ $index }})">
                                                             </x-button>
                                                         @else
                                                             <span class="text-sm text-gray-500">Chưa có ảnh</span>
@@ -1771,8 +2009,10 @@ new class extends Component {
 
         <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
             <div class="space-y-2">
-                <x-button label="Lưu cấu hình" class="bg-primary text-white w-full" wire:click="save" wire:loading.attr="disabled" wire:target="save" spinner />
-                <x-button label="Xem trước" wire:click="preview" wire:loading.attr="disabled" wire:target="preview" class="bg-success text-white w-full" spinner />
+                <x-button label="Lưu cấu hình" class="bg-primary text-white w-full" wire:click="save"
+                          wire:loading.attr="disabled" wire:target="save" spinner/>
+                <x-button label="Xem trước" wire:click="preview" wire:loading.attr="disabled" wire:target="preview"
+                          class="bg-success text-white w-full" spinner/>
             </div>
         </x-card>
     </div>
