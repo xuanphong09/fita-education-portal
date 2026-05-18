@@ -42,6 +42,7 @@ class Post extends Model
         'slug',
         'slug_translations',
         'thumbnail',
+        'post_default_image_id',
         'seo_title',
         'seo_description',
         'user_id',
@@ -97,6 +98,34 @@ class Post extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function defaultImage(): BelongsTo
+    {
+        return $this->belongsTo(PostDefaultImage::class, 'post_default_image_id');
+    }
+
+    /**
+     * Get OG image URL (rendered with title, fallback to thumbnail, then generate)
+     */
+    public function getOgImageUrl(): string
+    {
+        // Nếu có thumbnail riêng, dùng nó
+        if ($this->thumbnail) {
+            return \Illuminate\Support\Facades\Storage::url($this->thumbnail);
+        }
+
+        // Nếu có template ảnh mặc định, render với tiêu đề
+        if ($this->post_default_image_id) {
+            $renderer = app(\App\Services\PostDefaultImageRenderer::class);
+            $url = $renderer->getPostImageUrl($this);
+            if ($url) {
+                return $url;
+            }
+        }
+
+        // Fallback to default post image
+        return '/images/default-post-image.png';
     }
 
     public function approvalHistories(): HasMany

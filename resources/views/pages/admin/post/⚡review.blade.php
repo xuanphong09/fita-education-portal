@@ -14,6 +14,7 @@ new class extends Component {
     use Toast;
 
     public int $id;
+    public $post;
     public string $selectedTab = 'tab-vi';
 
     public string $title_vi = '';
@@ -104,43 +105,43 @@ new class extends Component {
     public function mount(int $id): void
     {
         $this->id = $id;
-        $post = Post::query()->with(['categories', 'user'])->findOrFail($id);
-        $this->authorizeReviewAccess($post);
+        $this->post = Post::query()->with(['categories', 'user'])->findOrFail($id);
+        $this->authorizeReviewAccess($this->post);
 
-        $this->title_vi = $post->getTranslation('title', 'vi', false) ?? '';
-        $this->title_en = $post->getTranslation('title', 'en', false) ?? '';
-        $this->content_vi = $post->getTranslation('content', 'vi', false) ?? '';
-        $this->content_en = $post->getTranslation('content', 'en', false) ?? '';
-        $this->excerpt_vi = $post->getTranslation('excerpt', 'vi', false) ?? '';
-        $this->excerpt_en = $post->getTranslation('excerpt', 'en', false) ?? '';
-        $this->slug = $post->slug ?? '';
-        $this->url = $post->client_url;
-        $this->status = $post->status;
-        $this->currentStatus = $post->status;
+        $this->title_vi = $this->post->getTranslation('title', 'vi', false) ?? '';
+        $this->title_en = $this->post->getTranslation('title', 'en', false) ?? '';
+        $this->content_vi = $this->post->getTranslation('content', 'vi', false) ?? '';
+        $this->content_en = $this->post->getTranslation('content', 'en', false) ?? '';
+        $this->excerpt_vi = $this->post->getTranslation('excerpt', 'vi', false) ?? '';
+        $this->excerpt_en = $this->post->getTranslation('excerpt', 'en', false) ?? '';
+        $this->slug = $this->post->slug ?? '';
+        $this->url = $this->post->client_url;
+        $this->status = $this->post->status;
+        $this->currentStatus = $this->post->status;
 
         // GIỮ NGUYÊN FORMAT NÀY CHO INPUT DATETIME-LOCAL
-        $this->published_at = $post->published_at?->format('Y-m-d\TH:i');
+        $this->published_at = $this->post->published_at?->format('Y-m-d\TH:i');
 
-        $this->submitted_at = $post->submitted_at?->format('d/m/Y H:i');
-        $this->reviewed_at = $post->reviewed_at?->format('d/m/Y H:i');
-        $this->rejection_reason = $post->rejection_reason;
-        $this->author_id = $post->user_id;
-        $this->author_name = $post->user?->name ?? '—';
-        $this->views = (int)($post->views ?? 0);
-        $this->categories = $post->categories
+        $this->submitted_at = $this->post->submitted_at?->format('d/m/Y H:i');
+        $this->reviewed_at = $this->post->reviewed_at?->format('d/m/Y H:i');
+        $this->rejection_reason = $this->post->rejection_reason;
+        $this->author_id = $this->post->user_id;
+        $this->author_name = $this->post->user?->name ?? '—';
+        $this->views = (int)($this->post->views ?? 0);
+        $this->categories = $this->post->categories
             ->map(fn($category) => [
                 'id' => $category->id,
                 'name' => $category->getTranslatedName(),
             ])
             ->values()
             ->all();
-        $this->currentThumbnail = $post->thumbnail;
-        $this->is_featured = (bool)$post->is_featured;
-        $this->show_author = (bool)$post->show_author;
-        $this->show_published_at = (bool)$post->show_published_at;
-        $this->show_views = (bool)$post->show_views;
-        $this->show_category = (bool)$post->show_category;
-        $this->show_related_posts = (bool)$post->show_related_posts;
+        $this->currentThumbnail = $this->post->thumbnail;
+        $this->is_featured = (bool)$this->post->is_featured;
+        $this->show_author = (bool)$this->post->show_author;
+        $this->show_published_at = (bool)$this->post->show_published_at;
+        $this->show_views = (bool)$this->post->show_views;
+        $this->show_category = (bool)$this->post->show_category;
+        $this->show_related_posts = (bool)$this->post->show_related_posts;
 
         $this->checkScheduleStatus();
     }
@@ -404,12 +405,30 @@ new class extends Component {
                     </div>
                 </div>
 
-                @if($currentThumbnail)
-                    <div class="mt-4">
-                        <div class="font-semibold mb-2 text-sm">Ảnh đại diện:</div>
-                        <img src="{{ Storage::url($currentThumbnail) }}" alt="Thumbnail" class="w-full max-w-md rounded-lg border border-gray-200 object-cover"/>
-                    </div>
-                @endif
+                <div class="mt-4">
+                    <div class="font-semibold mb-2 text-sm">Ảnh đại diện:</div>
+{{--                        <img src="{{ Storage::url($currentThumbnail) }}" alt="Thumbnail" class="w-full max-w-md rounded-lg border border-gray-200 object-cover"/>--}}
+                        @if($post->thumbnail)
+                            <img src="{{ Storage::url($post->thumbnail) }}" class="w-full rounded-lg border border-gray-200 object-cover object-top" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                        @elseif($post->post_default_image_id)
+                            @if($post->defaultImage?->show_title)
+                                <div class="absolute inset-0 flex items-center justify-center p-3.5" style="container-type: inline-size;">
+                                    <p class="line-clamp-3 font-bold"
+                                       :style="{
+                                                            color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                            fontSize: 'clamp(8px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                            lineHeight: 1.1,
+                                                            textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                        }"
+                                       x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                    ></p>
+                                </div>
+                            @endif
+                            <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full rounded-lg border border-gray-200 object-cover object-top" alt="No image" loading="lazy" decoding="async">
+                        @else
+{{--                            <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full rounded-lg border border-gray-200 object-cover object-top" alt="No image" loading="lazy" decoding="async">--}}
+                        @endif
+                </div>
             </x-card>
 
             <x-tabs wire:model="selectedTab">

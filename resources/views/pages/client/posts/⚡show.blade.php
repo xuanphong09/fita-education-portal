@@ -216,23 +216,40 @@ class extends Component {
         {{-- Main Content --}}
         <div class="lg:col-span-2">
             <article class="bg-white rounded-lg shadow-lg overflow-hidden">
-                {{-- Featured Image --}}
-                @if($post->thumbnail)
-                    <div class="aspect-video bg-gray-200 overflow-hidden relative">
-                        <img
-                            src="{{ Storage::url($post->thumbnail) }}"
-                            alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
-                            class="w-full h-full object-cover"
-                        />
 
-                        @if($this->isNewPost($post) && !$post->is_featured)
-                            <div class="absolute top-3 left-3 z-10 inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-2.5 py-1 text-xs font-semibold text-white shadow">
-                                <span class="h-2 w-2 rounded-full bg-white"></span>
-                                {{ __('New') }}
+                <div class="aspect-auto bg-gray-200 overflow-hidden relative">
+                    @if($post->thumbnail)
+                        <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                    @elseif($post->post_default_image_id)
+                        <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">
+                        @if($post->defaultImage?->show_title)
+                            <div class="absolute inset-0 flex items-center justify-center p-20 lg:p-30" style="container-type: inline-size; transform: translateY(calc( {{$post->defaultImage->text_y_offset}} / 1200 * 100cqw))">
+                                <p class="line-clamp-4 font-bold select-none"
+                                   :style="{
+                                                    color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                    fontSize: 'clamp(8px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 450 * 100cqw), 60px)',
+                                                    lineHeight: 1.1,
+                                                    textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                    padding: '5px'
+                                                }"
+                                   x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                ></p>
                             </div>
                         @endif
-                    </div>
-                @endif
+                    @else
+{{--                        <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">--}}
+                    @endif
+                    @if($post->is_featured)
+                        <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">
+                            {{ __('Featured News') }}
+                        </div>
+
+                    @elseif($this->isNewPost($post) && !$post->is_featured)
+                        <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">
+                            {{ __('New') }}
+                        </div>
+                    @endif
+                </div>
 
                 <div class="p-4 lg:p-6">
                     {{-- Category Badge --}}
@@ -337,17 +354,24 @@ class extends Component {
                                 <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow duration-300">
                                     <div class="aspect-video bg-gray-200 overflow-hidden relative">
                                         @if($related->thumbnail)
-                                            <img
-                                                src="{{ Storage::url($related->thumbnail) }}"
-                                                alt="{{ $related->getTranslation('title', app()->getLocale()) }}"
-                                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
+                                            <img src="{{ Storage::url($related->thumbnail) }}" class="w-full h-full object-cover object-top" alt="{{ $related->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                        @elseif($related->post_default_image_id)
+                                            @if($related->defaultImage?->show_title)
+                                                <div class="absolute inset-0 flex items-center justify-center p-10" style="container-type: inline-size;">
+                                                    <p class="line-clamp-4 font-bold"
+                                                       :style="{
+                                                            color: '{{ $related->defaultImage?->text_color ?? '#ffffff' }}',
+                                                            fontSize: 'clamp(8px, calc({{ $related->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                            lineHeight: 1.1,
+                                                            textAlign: '{{$related->defaultImage?->text_alignment ?? 'center'}}',
+                                                        }"
+                                                       x-text="'{{ $related->getTranslation('title', app()->getLocale()) }}'"
+                                                    ></p>
+                                                </div>
+                                            @endif
+                                            <img src="{{ Storage::url($related->defaultImage?->image_path) }}" class="w-full h-full object-cover object-top" alt="No image" loading="lazy" decoding="async">
                                         @else
-                                            <img
-                                                src="{{ asset('assets/images/post-5.jpg') }}"
-                                                alt="ảnh bài viết"
-                                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
+                                            <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover object-top" alt="No image" loading="lazy" decoding="async">
                                         @endif
 
                                         @if($related->is_featured)
@@ -385,19 +409,26 @@ class extends Component {
                     <div class="space-y-4">
                         @foreach($recentPosts as $recent)
                             <a href="{{ $recent->client_url }}" wire:navigate class="group flex gap-3">
-                                <div class="w-20 h-20 shrink-0 bg-gray-200 rounded overflow-hidden relative">
+                                <div class="w-28 h-18 shrink-0 bg-gray-200 rounded overflow-hidden relative">
                                     @if($recent->thumbnail)
-                                        <img
-                                            src="{{ Storage::url($recent->thumbnail) }}"
-                                            alt="{{ $recent->getTranslation('title', app()->getLocale()) }}"
-                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
+                                        <img src="{{ Storage::url($recent->thumbnail) }}" class="w-full h-full object-cover object-top" alt="{{ $recent->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                    @elseif($recent->post_default_image_id)
+                                        @if($recent->defaultImage?->show_title)
+                                            <div class="absolute inset-0 flex items-center justify-center p-3.5" style="container-type: inline-size;">
+                                                <p class="line-clamp-3 font-bold"
+                                                   :style="{
+                                                            color: '{{ $recent->defaultImage?->text_color ?? '#ffffff' }}',
+                                                            fontSize: 'clamp(8px, calc({{ $recent->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                            lineHeight: 1.1,
+                                                            textAlign: '{{$recent->defaultImage?->text_alignment ?? 'center'}}',
+                                                        }"
+                                                   x-text="'{{ $recent->getTranslation('title', app()->getLocale()) }}'"
+                                                ></p>
+                                            </div>
+                                        @endif
+                                        <img src="{{ Storage::url($recent->defaultImage?->image_path) }}" class="w-full h-full object-cover object-top" alt="No image" loading="lazy" decoding="async">
                                     @else
-                                        <img
-                                            src="{{ asset('assets/images/post-7.jpg') }}"
-                                            alt="ảnh bài viết"
-                                            class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                                        />
+                                        <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover object-top" alt="No image" loading="lazy" decoding="async">
                                     @endif
 
                                     @if($recent->is_featured)

@@ -458,22 +458,25 @@ class extends Component {
                                     <div class="flex flex-col sm:flex-row gap-4">
                                         <div class="w-full sm:w-44 lg:h-28 h-50 bg-gray-200 rounded-lg overflow-hidden shrink-0 relative">
                                             @if($post->thumbnail)
-                                                <img
-                                                    src="{{ Storage::url($post->thumbnail) }}"
-                                                    alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
-                                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                />
+                                                <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                            @elseif($post->post_default_image_id)
+                                                <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">
+                                                @if($post->defaultImage?->show_title)
+                                                    <div class="absolute inset-0 flex items-center justify-center p-5" style="container-type: inline-size;">
+                                                        <p class="line-clamp-4 font-bold"
+                                                           :style="{
+                                                        color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                        fontSize: 'clamp(8px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                        lineHeight: 1.1,
+                                                        textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                    }"
+                                                           x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                                        ></p>
+                                                    </div>
+                                                @endif
                                             @else
-                                                <img
-                                                    src="{{ asset('assets/images/post-6.jpg') }}"
-                                                    alt="No image"
-                                                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                />
-                                                {{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
-                                                {{--                                            <x-icon name="o-photo" class="w-10 h-10 text-white opacity-50" />--}}
-                                                {{--                                        </div>--}}
+                                                <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">
                                             @endif
-
                                             @if($post->is_featured)
                                                 <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[10px] font-bold text-white shadow-md rounded-br-xl">
                                                     {{ __('Featured News') }}
@@ -529,20 +532,24 @@ class extends Component {
                             <div class="flex flex-col sm:flex-row gap-4">
                                 <div class="w-full sm:w-44 lg:h-28 h-50 bg-gray-200 rounded-lg overflow-hidden shrink-0 relative">
                                     @if($post->thumbnail)
-                                        <img
-                                            src="{{ Storage::url($post->thumbnail) }}"
-                                            alt="{{ $post->getTranslation('title', app()->getLocale()) }}"
-                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
+                                        <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                    @elseif($post->post_default_image_id)
+                                        <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">
+                                        @if($post->defaultImage?->show_title)
+                                            <div class="absolute inset-0 flex items-center justify-center p-5" style="container-type: inline-size;">
+                                                <p class="line-clamp-4 font-bold"
+                                                   :style="{
+                                                        color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                        fontSize: 'clamp(8px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                        lineHeight: 1.1,
+                                                        textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                    }"
+                                                   x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                                ></p>
+                                            </div>
+                                        @endif
                                     @else
-                                        <img
-                                            src="{{ asset('assets/images/post-6.jpg') }}"
-                                            alt="No image"
-                                            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                        />
-{{--                                        <div class="w-full h-full flex items-center justify-center bg-linear-to-br from-fita to-fita2">--}}
-{{--                                            <x-icon name="o-photo" class="w-10 h-10 text-white opacity-50" />--}}
-{{--                                        </div>--}}
+                                        <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">
                                     @endif
 
                                     @if($this->isNewPost($post))

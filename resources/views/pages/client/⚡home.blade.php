@@ -438,7 +438,7 @@ class extends Component {
             {{ !empty($sectionTitles['news']) ? $sectionTitles['news'] : __('News and events') }}
         </h1>
         <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-10">
-            <div class="lg:w-[50%] w-full relative h-60 lg:h-140" wire:key="slider-{{ $tabSelected }}">
+            <div class="lg:w-[50%] w-full relative h-65 lg:h-140" wire:key="slider-{{ $tabSelected }}">
                 @php
                     $currentTabPosts = match($tabSelected) {
                         'tab-feature-post' => $featuredPosts,
@@ -451,7 +451,14 @@ class extends Component {
                             'url' => $post->client_url,
                             'image' => $post->thumbnail
                                 ? Storage::url($post->thumbnail)
-                                : asset('assets/images/post-7.jpg'),
+                                : ($post->post_default_image_id
+                                    ? Storage::url($post->defaultImage->image_path)
+                                    : asset('assets/images/post-6.jpg')),
+                            'has_img_default' => !$post->thumbnail && $post->post_default_image_id && $post->defaultImage?->show_title,
+                            'text_size' => $post->defaultImage?->text_size ?: 18,
+                            'text_color' => $post->defaultImage?->text_color ?: '#ffffff',
+                            'text_align' => $post->defaultImage?->text_alignment ?: 'center',
+                            'text_y_offset' => $post->defaultImage?->text_y_offset ?: 0,
                             'is_featured' => $post->is_featured,
                             'is_new' => $this->isNewPost($post),
                             'is_notif' => $post->categories->contains(fn($cat) => $cat->slug === 'thong-bao'),
@@ -485,7 +492,8 @@ class extends Component {
                            wire:navigate
                            class="absolute inset-0 group block h-full w-full"
                         >
-                            <img :src="post.image" :alt="post.title" loading="eager" class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105">
+                            <img x-show="post.has_img_default" :src="post.image" :alt="post.title" loading="eager" class="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105">
+                            <img x-show="!post.has_img_default" :src="post.image" :alt="post.title" loading="eager" class="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105">
 
                             <template x-if="post.is_featured">
                                 <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 px-4 py-1 text-md font-bold text-white shadow-md rounded-br-2xl rounded-tl-xl">
@@ -512,9 +520,23 @@ class extends Component {
                                 <div class="text-[40px]/[34px] lg:text-[54px]/[44px] font-bold" x-text="post.day"></div>
                                 <div class="text-[18px]/[30px] lg:text-[20px]/[24px] font-bold mt-0 lg:mt-3" x-text="post.month"></div>
                             </div>
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent"></div>
-                            <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+                            <div x-show="!post.has_img_default" class="absolute inset-0 bg-linear-to-t from-black/60 via-black/20 to-transparent"></div>
+                            <div x-show="!post.has_img_default" class="absolute bottom-0 left-0 right-0 p-6 text-white">
                                 <h3 class="line-clamp-2 text-[18px]/[20px] lg:text-[20px]/[24px] font-bold" x-text="post.title"></h3>
+                            </div>
+                            <div x-show="post.has_img_default" class="absolute inset-0 flex items-center justify-center p-12 lg:p-5 text-center"
+                                 :style="`transform: translateY(calc(${post.text_y_offset} / 1200 * 100cqw))`"
+                            >
+                                <p class="line-clamp-4 font-bold select-none"
+                                    :style="{
+                                            color: post.text_color,
+                                            fontSize: `clamp(12px, calc(${post.text_size} / 1200 * 100cqw), 60px)`,
+                                            lineHeight: 1.1,
+                                            textAlign: post.text_align,
+                                            padding: '5px',
+                                        }"
+                                   x-text="post.title"
+                                ></p>
                             </div>
                         </a>
                     </template>
@@ -536,7 +558,7 @@ class extends Component {
 
             <div class="w-full lg:w-[50%]">
                 <x-tabs wire:model.live="tabSelected" active-class="text-fita! border-b-4 border-fita font-semibold" label-class="font-semibold text-[20px] text-gray-700 px-4 pb-1 whitespace-nowrap font-barlow" label-div-class="border-b-[length:var(--border)] border-b-base-content/10 flex overflow-x-auto">
-                    <x-tab name="tab-feature-post" icon="">
+                    <x-tab name="tab-feature-post">
                         <x-slot:label>
                             <span class="inline-flex items-center h-6">{{ __('Featured News') }}</span>
                         </x-slot:label>
@@ -546,6 +568,21 @@ class extends Component {
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                        @elseif($post->post_default_image_id)
+                                            @if($post->defaultImage?->show_title)
+                                                <div class="absolute inset-0 flex items-center justify-center p-1.25" style="container-type: inline-size;">
+                                                    <p class="line-clamp-4 font-bold"
+                                                       :style="{
+                                                            color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                            fontSize: 'clamp(8px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                            lineHeight: 1.1,
+                                                            textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                        }"
+                                                       x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                                    ></p>
+                                                </div>
+                                            @endif
+                                            <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
                                         @else
                                             <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
                                         @endif
@@ -580,6 +617,21 @@ class extends Component {
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                        @elseif($post->post_default_image_id)
+                                            @if($post->defaultImage?->show_title)
+                                                <div class="absolute inset-0 flex items-center justify-center p-1.25" style="container-type: inline-size;">
+                                                    <p class="line-clamp-4 font-bold"
+                                                       :style="{
+                                                            color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                            fontSize: 'clamp(8px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                            lineHeight: 1.1,
+                                                            textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                        }"
+                                                       x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                                    ></p>
+                                                </div>
+                                            @endif
+                                            <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
                                         @else
                                             <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
                                         @endif
@@ -614,6 +666,21 @@ class extends Component {
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                                        @elseif($post->post_default_image_id)
+                                            @if($post->defaultImage?->show_title)
+                                                <div class="absolute inset-0 flex items-center justify-center p-1.25" style="container-type: inline-size;">
+                                                    <p class="line-clamp-4 font-bold"
+                                                       :style="{
+                                                            color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                            fontSize: 'clamp(8px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                            lineHeight: 1.1,
+                                                            textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                        }"
+                                                       x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                                    ></p>
+                                                </div>
+                                            @endif
+                                            <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
                                         @else
                                             <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover" alt="No image" loading="lazy" decoding="async">
                                         @endif
