@@ -512,24 +512,32 @@ new class extends Component {
 
     public function previewDraft(): void
     {
-        $cacheKey = 'post_preview_' . $this->id . '_' . auth()->id();
+        $cacheKey = isset($this->id) ? 'post_preview_' . $this->id . '_' . auth()->id() : 'post_preview_new_' . auth()->id();
+
         Cache::put($cacheKey, [
-            'title'           => ['vi' => $this->title_vi,   'en' => $this->title_en],
-            'content'         => ['vi' => $this->content_vi, 'en' => $this->content_en],
-            'excerpt'         => ['vi' => $this->excerpt_vi, 'en' => $this->excerpt_en],
-            'slug'            => $this->slug,
-            'category_id'     => $this->category_ids[0] ?? null,
-            'category_ids'    => $this->category_ids,
-            'status'          => $this->status,
-            'is_featured'     => $this->is_featured,
-            'published_at'    => $this->published_at,
-            'seo_title'       => ['vi' => $this->seo_title_vi, 'en' => $this->seo_title_en],
-            'seo_description' => ['vi' => $this->seo_description_vi, 'en' => $this->seo_description_en],
-            'thumbnail'       => $this->currentThumbnail,
-            'user_id'         => auth()->id(),
-            'show_related_posts' => $this->show_related_posts,
+            'title'                 => ['vi' => $this->title_vi,   'en' => $this->title_en],
+            'content'               => ['vi' => $this->content_vi, 'en' => $this->content_en],
+            'excerpt'               => ['vi' => $this->excerpt_vi, 'en' => $this->excerpt_en],
+            'slug'                  => $this->slug,
+            'category_ids'          => $this->category_ids,
+            'status'                => $this->status,
+            'is_featured'           => $this->is_featured,
+            'published_at'          => $this->published_at,
+            'thumbnail'             => $this->currentThumbnail ?? $this->thumbnail ?? null,
+            'post_default_image_id' => $this->post_default_image_id ?? null,
+            'show_author'           => $this->show_author ?? true,
+            'show_published_at'     => $this->show_published_at ?? true,
+            'show_views'            => $this->show_views ?? true,
+            'show_category'         => $this->show_category ?? true,
+            'show_related_posts'    => $this->show_related_posts ?? true,
+            'user_id'               => auth()->id(),
         ], now()->addMinutes(30));
-        $this->dispatch('open-preview', url: route('admin.preview.post', ['id' => $this->id, 'draft' => 1]));
+
+        $url = isset($this->id)
+            ? route('admin.preview.post', ['id' => $this->id, 'draft' => 1])
+            : route('admin.preview.post.new');
+
+        $this->dispatch('open-preview', url: $url);
     }
 
     public function removeThumbnail(): void
