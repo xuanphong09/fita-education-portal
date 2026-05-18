@@ -720,10 +720,40 @@ class extends Component {
 
     @if(!empty($testimonials))
         <section class="bg-blue-100/40 pb-10 pt-2 font-sans" x-data="{
-            activeIndex: 0, slides: @js($testimonials),
-            next() { this.activeIndex = this.activeIndex === this.slides.length - 1 ? 0 : this.activeIndex + 1 },
-            prev() { this.activeIndex = this.activeIndex === 0 ? this.slides.length - 1 : this.activeIndex - 1 },
-        }" x-init="if (slides.length > 1) setInterval(() => next(), 7000)">
+            activeIndex: 0,
+            slides: @js($testimonials),
+            isExpanded: false,
+            isHovered: false,
+            intervalId: null,
+
+            next() {
+                this.isExpanded = false;
+                this.activeIndex = this.activeIndex === this.slides.length - 1 ? 0 : this.activeIndex + 1
+            },
+            prev() {
+                this.isExpanded = false;
+                this.activeIndex = this.activeIndex === 0 ? this.slides.length - 1 : this.activeIndex - 1
+            },
+
+            startAutoplay() {
+                if (this.slides.length <= 1) return;
+                this.intervalId = setInterval(() => {
+                    if (!this.isExpanded && !this.isHovered) {
+                        this.next();
+                    }
+                }, 7000);
+            },
+
+            stopAutoplay() {
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                }
+            }
+        }"
+                 x-init="startAutoplay()"
+                 @mouseenter="isHovered = true"
+                 @mouseleave="isHovered = false"
+        >
             <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-6">
                     <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10">
@@ -736,7 +766,7 @@ class extends Component {
                         <x-icon name="s-chevron-left"></x-icon>
                     </button>
 
-                    <div class="bg-white rounded-[40px] shadow-sm p-8 md:p-12 max-w-4xl w-full mx-8 relative md:h-72.5 sm:h-100 h-114">
+                    <div class="bg-white rounded-[40px] shadow-sm p-8 md:p-12 max-w-4xl w-full mx-8 relative min-h-[26rem] md:min-h-[18rem] transition-all duration-300">
                         <template x-for="(slide, index) in slides" :key="slide.id ?? index">
                             <div x-show="activeIndex === index"
                                  x-transition:enter="transition ease-out duration-300"
@@ -748,25 +778,46 @@ class extends Component {
                                         <img :src="slide.avatar_url ?? slide.avatar ?? '{{ asset('assets/images/default-user-image.png') }}'" alt="Avatar" class="w-full h-full object-cover">
                                     </div>
                                 </div>
-                                <div class="flex-1 text-center md:text-left relative">
+
+                                {{-- 1. Khai báo biến showButton cho từng slide và đo chiều cao tự động --}}
+                                <div class="flex-1 text-center md:text-left relative"
+                                     x-data="{ showButton: false }"
+                                     x-effect="if (activeIndex === index && !isExpanded) $nextTick(() => { showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight })"
+                                     @resize.window="if (activeIndex === index && !isExpanded) showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight"
+                                >
                                     <div class="hidden md:block absolute top-0 -right-2 text-6xl italic font-serif">
                                         <svg height="40px" width="40px" viewBox="0 0 512.00 512.00" fill="#000000"><g><path style="fill:#0c83d8;" d="M148.57,63.619H72.162C32.31,63.619,0,95.929,0,135.781v76.408c0,39.852,32.31,72.161,72.162,72.161h7.559 c6.338,0,12.275,3.128,15.87,8.362c3.579,5.234,4.365,11.898,2.074,17.811L54.568,422.208c-2.291,5.92-1.505,12.584,2.074,17.81 c3.595,5.234,9.532,8.362,15.87,8.362h50.738c7.157,0,13.73-3.981,17.041-10.318l61.257-117.03 c12.609-24.09,19.198-50.881,19.198-78.072v-107.18C220.748,95.929,188.422,63.619,148.57,63.619z"></path><path style="fill:#0c83d8;" d="M439.84,63.619h-76.41c-39.852,0-72.16,32.31-72.16,72.162v76.408c0,39.852,32.309,72.161,72.16,72.161h7.543 c6.338,0,12.291,3.128,15.87,8.362c3.596,5.234,4.365,11.898,2.091,17.811l-43.113,111.686c-2.291,5.92-1.505,12.584,2.09,17.81 c3.579,5.234,9.516,8.362,15.871,8.362h50.722c7.157,0,13.73-3.981,17.058-10.318l61.24-117.03 C505.411,296.942,512,270.152,512,242.96v-107.18C512,95.929,479.691,63.619,439.84,63.619z"></path></g></svg>
                                     </div>
                                     <h4 class="text-xl font-bold text-black mb-1" x-text="slide.name"></h4>
-                                    <p class="text-gray-600 italic mb-6 text-sm md:text-base" x-text="slide.role"></p>
-                                    <p class="text-gray-700 leading-relaxed text-base md:text-lg md:line-clamp-4 line-clamp-6" x-text="slide.content"></p>
+                                    <p class="text-gray-600 italic mb-4 text-sm md:text-base" x-text="slide.role"></p>
+
+                                    {{-- 2. Đặt x-ref="desc" vào thẻ <p> này để làm mốc đo --}}
+                                    <p x-ref="desc"
+                                       class="text-gray-700 leading-relaxed text-base md:text-lg transition-all"
+                                       :class="isExpanded ? '' : 'md:line-clamp-4 line-clamp-6'"
+                                       x-text="slide.content">
+                                    </p>
+
+                                    {{-- 3. Chỉ hiện nút khi nào text bị tràn khung (showButton = true) --}}
+                                    <template x-if="showButton || isExpanded">
+                                        <button @click="isExpanded = !isExpanded"
+                                                class="mt-2 text-fita font-semibold hover:text-blue-800 transition-colors text-sm"
+                                                x-text="isExpanded ? 'Thu gọn' : 'Xem thêm'"></button>
+                                    </template>
                                 </div>
                             </div>
                         </template>
                     </div>
+
                     <button @click="next()" class="absolute right-0 md:-right-4 z-10 w-10 h-10 bg-white rounded-full shadow-md flex items-center justify-center text-gray-400 hover:text-fita transition">
                         <x-icon name="s-chevron-right"></x-icon>
                     </button>
                 </div>
             </div>
+
             <div class="flex justify-center mt-8 gap-2">
                 <template x-for="(slide, index) in slides" :key="slide.id ?? index">
-                    <button @click="activeIndex = index" class="h-1.5 transition-all duration-300 rounded-full" :class="activeIndex === index ? 'w-8 bg-fita2' : 'w-8 bg-blue-300'"></button>
+                    <button @click="isExpanded = false; activeIndex = index" class="h-1.5 transition-all duration-300 rounded-full" :class="activeIndex === index ? 'w-8 bg-fita2' : 'w-8 bg-blue-300'"></button>
                 </template>
             </div>
         </section>
