@@ -88,16 +88,15 @@
             <x-menu-item title="Dashboard" icon="o-home" link="{{route('admin.dashboard')}}" :active="request()->routeIs('admin.dashboard')"/>
             @if(auth()->user()?->canAccessPostModule())
                 <x-menu-sub title="Quản lý bài viết" icon="o-newspaper">
-                    @can('quan_ly_bai_viet')
-                        <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
-                    @endcan
                     <x-menu-item title="Danh sách bài viết" link="{{route('admin.post.index')}}" :active="request()->routeIs('admin.post.*')"/>
 
-
-                    @if(auth()->user()?->canReviewPosts())
-                        <livewire:admin.list-pending-menu-item />
-{{--                        <x-menu-item title="Danh sách bài viết chờ duyệt" link="{{route('admin.posts.pending')}}" :active="request()->routeIs('admin.posts.*')"/>--}}
-                    @endif
+                @if(auth()->user()?->canReviewPosts())
+                    <livewire:admin.list-pending-menu-item />
+                @endif
+                    @can('quan_ly_bai_viet')
+                        <x-menu-item title="Danh sách danh mục" link="{{route('admin.category.index')}}" :active="request()->routeIs('admin.category.*')"/>
+                        <x-menu-item title="Ảnh mặc định bài viết" link="{{route('admin.post-default-image.index')}}" :active="request()->routeIs('admin.post-default-image.*')"/>
+                    @endcan
                 </x-menu-sub>
             @endif
             @can('quan_ly_dao_tao')

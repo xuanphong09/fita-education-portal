@@ -102,6 +102,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/category/index', 'pages::admin.category.index')->name('admin.category.index');
         Route::livewire('/category/create', 'pages::admin.category.create')->name('admin.category.create');
         Route::livewire('/category/edit/{id}', 'pages::admin.category.edit')->name('admin.category.edit');
+        Route::livewire('/post-default-image/index', 'pages::admin.post-default-image.index')->name('admin.post-default-image.index');
     });
 
 //    Route::middleware('permission:quan_ly_bai_viet|viet_bai_viet|duyet_bai_viet')->group(function () {

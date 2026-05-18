@@ -59,6 +59,10 @@ new class extends Component {
     // Thumbnail
     public $thumbnail;
     public ?string $currentThumbnail = null;
+    public bool $is_removing_thumbnail = false;
+
+    // Default Image Template
+    public ?int $post_default_image_id = null;
 
     // Nổi bật
     public bool $is_featured = false;
@@ -306,6 +310,7 @@ new class extends Component {
         $this->is_featured        = (bool) $post->is_featured;
         $this->published_at       = $post->published_at?->format('Y-m-d\\TH:i');
         $this->currentThumbnail   = $post->thumbnail;
+        $this->post_default_image_id = $post->post_default_image_id;
         $this->show_author        = (bool) $post->show_author;
         $this->show_published_at  = (bool) $post->show_published_at;
         $this->show_views         = (bool) $post->show_views;
@@ -529,10 +534,13 @@ new class extends Component {
 
     public function removeThumbnail(): void
     {
-        if ($this->currentThumbnail) Storage::disk('public')->delete($this->currentThumbnail);
+//        if ($this->currentThumbnail) Storage::disk('public')->delete($this->currentThumbnail);
+        $this->is_removing_thumbnail = true;
         $this->currentThumbnail = null;
-        Post::where('id', $this->id)->update(['thumbnail' => null]);
-        $this->success('Đã xóa ảnh thumbnail.');
+
+//        Post::where('id', $this->id)->update(['thumbnail' => null]);
+//        $this->success('Đã xóa ảnh thumbnail.');
+        $this->info('Đã gỡ ảnh. Nhớ bấm "Lưu thay đổi" để áp dụng!');
     }
 
     private function ensureFeaturedLimitForUpdate(Post $post): void
@@ -700,6 +708,10 @@ new class extends Component {
         $this->validateCategoryPermissions($finalCategoryIds, $originalCategoryIdsFromDB);
 
         $thumbnailPath = $this->currentThumbnail;
+        if ($this->is_removing_thumbnail && $post->thumbnail) {
+            Storage::disk('public')->delete($post->thumbnail);
+            $thumbnailPath = null;
+        }
         if ($this->thumbnail) {
             if ($thumbnailPath) Storage::disk('public')->delete($thumbnailPath);
             $thumbnailPath = $this->thumbnail->store('uploads/posts', 'public');
@@ -735,6 +747,7 @@ new class extends Component {
             'category_id' => $primaryCategoryId,
             'is_featured' => $this->canToggleFeatured() ? $this->is_featured : $post->is_featured,
             'thumbnail' => $thumbnailPath ?: null,
+            'post_default_image_id' => $this->post_default_image_id ?: null,
             'show_author' => $this->show_author,
             'show_published_at' => $this->show_published_at,
             'show_views' => $this->show_views,
@@ -791,6 +804,16 @@ new class extends Component {
     public function getApprovalHistoriesProperty()
     {
         return PostApprovalHistory::query()->with(['actor', 'reviewer'])->where('post_id', $this->id)->latest()->limit(10)->get();
+    }
+
+    public function selectTemplate(int $id): void
+    {
+        // 1. Gán ID template
+        $this->post_default_image_id = $id;
+
+        // 2. Hủy hoàn toàn file ảnh mới tải lên trên server (nếu có)
+        $this->thumbnail = null;
+        $this->resetErrorBag('thumbnail');
     }
 };
 ?>
@@ -1031,16 +1054,141 @@ new class extends Component {
 
             <x-card title="Ảnh đại diện" shadow class="p-3!">
                 <div x-data="{ previewUrl: null }" x-on:livewire-upload-start="previewUrl = null">
-                    <x-file wire:model="thumbnail" label="Ảnh thumbnail" hint="jpg, jpeg, png, webp – tối đa 2MB" accept="image/*" x-on:change="previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null"/>
+                    @php
+                        $defaultImageTemplates = \App\Models\PostDefaultImage::where('is_active', true)->orderBy('order')->get();
+                        $selectedTemplate = $defaultImageTemplates->firstWhere('id', $post_default_image_id);
+                        $previewTitle = trim($title_vi) !== '' ? $title_vi : (trim($title_en) !== '' ? $title_en : '');
+                    @endphp
+
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-2 gap-2">
+                            <p class="text-sm font-semibold text-gray-700">Chọn ảnh có sẵn</p>
+                            @if($post_default_image_id)
+                                <x-button
+                                    label="Bỏ chọn"
+                                    icon="o-x-mark"
+                                    class="btn-ghost text-red-500 btn-sm"
+                                    wire:click="$set('post_default_image_id', null)"
+                                    spinner="post_default_image_id"
+                                />
+                            @endif
+                        </div>
+
+                        @if($defaultImageTemplates->isEmpty())
+                            <p class="text-sm text-gray-500">Không có ảnh nào</p>
+                        @else
+                            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                @foreach($defaultImageTemplates as $template)
+                                    @php $isSelected = (int) $post_default_image_id === (int) $template->id; @endphp
+                                    <button
+                                        type="button"
+                                        wire:click="selectTemplate({{ $template->id }})"
+                                        x-on:click="previewUrl = null;
+                                            if(document.querySelector('input[type=file]')) {
+                                                    document.querySelector('input[type=file]').value = '';
+                                            }
+                                        "
+                                        class="relative overflow-hidden rounded-lg border text-left transition {{ $isSelected ? 'border-primary ring-2 ring-primary/40' : 'border-gray-200 hover:border-primary/60' }}"
+                                    >
+                                        <img
+                                            src="{{ Storage::url($template->image_path) }}"
+                                            alt="{{ $template->name }}"
+                                            class="h-20 w-full object-cover object-top"
+                                        />
+{{--                                        <div class="absolute inset-x-0 bottom-0 bg-black/55 px-2 py-1 text-xs font-medium text-white line-clamp-2">--}}
+{{--                                            {{ $template->name }}--}}
+{{--                                        </div>--}}
+                                        @if($isSelected)
+                                            <span class="absolute right-2 top-2 text-sm">
+                                                <x-icon name="o-check-circle" class="rounded-full bg-primary text-white"></x-icon>
+                                            </span>
+                                        @endif
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+
+                    @if($selectedTemplate)
+                        <div class="mb-4 rounded border border-blue-200 bg-blue-50 p-3">
+                            <p class="mb-2 text-sm text-blue-700">Xem ảnh đã chọn</p>
+                            <div class="relative overflow-hidden rounded" style="container-type: inline-size;">
+                                <img
+                                    src="{{ Storage::url($selectedTemplate->image_path) }}"
+                                    alt="{{ $selectedTemplate->name }}"
+                                    class="w-full object-cover"
+                                />
+                                @if($selectedTemplate->show_title)
+                                    <div class="absolute inset-0 flex items-center justify-center p-4 text-center"
+                                         style="transform: translateY(calc({{ $selectedTemplate->text_y_offset }} / 1200 * 100cqw));"
+                                    >
+                                        <p class="line-clamp-4 font-bold"
+                                           style="color: {{ $selectedTemplate->text_color }};
+                                            font-size: clamp(12px, calc({{ $selectedTemplate->text_size }} / 1200 * 100cqw), 60px);
+                                            line-height: 1.1;
+                                            text-align: {{ $selectedTemplate->text_alignment }};
+                                            text-wrap: balance;
+                                            "
+                                        >{{ $previewTitle }}</p>
+                                    </div>
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+
+                    <hr class="my-4"/>
+
+                    <x-file
+                        wire:model="thumbnail"
+                        label="Tải lên ảnh đại diện"
+                        hint="jpg, jpeg, png, webp – tối đa 2MB"
+                        accept="image/*"
+                        x-on:change="
+                                previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null;
+                                if ($event.target.files[0]) {
+                                    $wire.set('post_default_image_id', null);
+                                }
+                            "/>
                     <div class="mt-3 space-y-3">
                         <template x-if="previewUrl">
-                            <div><p class="text-sm text-gray-500 mb-1">Ảnh mới (chưa lưu)</p><img src="#" :src="previewUrl" alt="Preview" class="size-40 rounded object-cover ring-1 ring-gray-200"/></div>
+                            <div>
+                                <p class="text-sm text-gray-500 mb-1">Ảnh mới (chưa lưu)</p>
+                                <div class="relative inline-block">
+                                    <img src="#" :src="previewUrl" alt="Preview" class="w-full rounded object-cover ring-1 ring-gray-200"/>
+                                    <button
+                                        type="button"
+                                        class="absolute -right-2 -top-2 btn btn-circle btn-xs btn-error text-white shadow-md hover:scale-110 transition-transform"
+                                        @click="
+                                            previewUrl = null;
+                                            document.querySelector('input[type=file]').value = '';
+                                            $wire.set('thumbnail', null);
+                                        "
+                                        title="Xóa ảnh tải lên"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
                         </template>
                         @if($currentThumbnail)
-                            <div x-show="!previewUrl"><p class="text-sm text-gray-500 mb-1">Ảnh hiện tại</p><img src="{{ Storage::url($currentThumbnail) }}" alt="Current thumbnail" class="size-40 rounded object-cover ring-1 ring-gray-200"/></div>
-                            @if(($currentStatus !== 'published' && $this->isAuthor()) || $this->canReviewOriginalPost())
-                                <x-button label="Xóa ảnh hiện tại" icon="o-trash" class="btn-outline btn-error btn-sm" wire:click="removeThumbnail" spinner="removeThumbnail"/>
-                            @endif
+                            <div x-show="!previewUrl">
+                                <p class="text-sm text-gray-500 mb-1">Ảnh hiện tại</p>
+                                <div class="relative inline-block">
+                                    <img src="{{ Storage::url($currentThumbnail) }}" alt="Current thumbnail" class="w-full rounded object-cover ring-1 ring-gray-200"/>
+
+                                    @if(($currentStatus !== 'published' && $this->isAuthor()) || $this->canReviewOriginalPost())
+                                        <button
+                                            type="button"
+                                            class="absolute -right-2 -top-2 btn btn-circle btn-xs btn-error text-white shadow-md hover:scale-110 transition-transform"
+                                            wire:click="removeThumbnail"
+                                            spinner="removeThumbnail"
+                                            title="Xóa ảnh hiện tại"
+                                        >
+                                            ✕
+                                        </button>
+                                    @endif
+                                </div>
+                            </div>
                         @endif
                     </div>
                 </div>
