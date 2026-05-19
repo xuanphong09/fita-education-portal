@@ -484,6 +484,12 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
 .modalDisplaySemesterTimeline div.modal-box{
     @apply xl:w-300 lg:w-250 max-w-[85%] max-h-screen py-4
 }
+
+.modalDisplayTestimonials div.modal-box{
+    @apply lg:w-200 max-w-[85%] max-h-screen py-4
+}
+
+
 .ctdt td .cursor-pointer[class*="rotate"] {
     background-color: #0c83d8;
 }

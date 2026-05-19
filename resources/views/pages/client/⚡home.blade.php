@@ -15,6 +15,7 @@ new
 class extends Component {
 
     public $tabSelected = 'tab-feature-post';
+    public bool $testimonialModal = false;
 
     protected function getEmptyConfig(): array
     {
@@ -789,23 +790,27 @@ class extends Component {
         <section class="bg-blue-100/40 pb-10 pt-2 font-sans" x-data="{
             activeIndex: 0,
             slides: @js($testimonials),
-            isExpanded: false,
             isHovered: false,
             intervalId: null,
 
+            selectedSlide: null,
+            openDetailModal(slide) {
+                    this.selectedSlide = slide;
+                    this.isHovered = true;
+                    $wire.testimonialModal = true;
+                },
+
             next() {
-                this.isExpanded = false;
                 this.activeIndex = this.activeIndex === this.slides.length - 1 ? 0 : this.activeIndex + 1
             },
             prev() {
-                this.isExpanded = false;
                 this.activeIndex = this.activeIndex === 0 ? this.slides.length - 1 : this.activeIndex - 1
             },
 
             startAutoplay() {
                 if (this.slides.length <= 1) return;
                 this.intervalId = setInterval(() => {
-                    if (!this.isExpanded && !this.isHovered) {
+                    if (!this.isHovered && !$wire.testimonialModal) {
                         this.next();
                     }
                 }, 7000);
@@ -849,8 +854,8 @@ class extends Component {
                                 {{-- 1. Khai báo biến showButton cho từng slide và đo chiều cao tự động --}}
                                 <div class="flex-1 text-center md:text-left relative"
                                      x-data="{ showButton: false }"
-                                     x-effect="if (activeIndex === index && !isExpanded) $nextTick(() => { showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight })"
-                                     @resize.window="if (activeIndex === index && !isExpanded) showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight"
+                                     x-effect="if (activeIndex === index) $nextTick(() => { showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight })"
+                                     @resize.window="if (activeIndex === index) showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight"
                                 >
                                     <div class="hidden md:block absolute top-0 -right-2 text-6xl italic font-serif">
                                         <svg height="40px" width="40px" viewBox="0 0 512.00 512.00" fill="#000000"><g><path style="fill:#0c83d8;" d="M148.57,63.619H72.162C32.31,63.619,0,95.929,0,135.781v76.408c0,39.852,32.31,72.161,72.162,72.161h7.559 c6.338,0,12.275,3.128,15.87,8.362c3.579,5.234,4.365,11.898,2.074,17.811L54.568,422.208c-2.291,5.92-1.505,12.584,2.074,17.81 c3.595,5.234,9.532,8.362,15.87,8.362h50.738c7.157,0,13.73-3.981,17.041-10.318l61.257-117.03 c12.609-24.09,19.198-50.881,19.198-78.072v-107.18C220.748,95.929,188.422,63.619,148.57,63.619z"></path><path style="fill:#0c83d8;" d="M439.84,63.619h-76.41c-39.852,0-72.16,32.31-72.16,72.162v76.408c0,39.852,32.309,72.161,72.16,72.161h7.543 c6.338,0,12.291,3.128,15.87,8.362c3.596,5.234,4.365,11.898,2.091,17.811l-43.113,111.686c-2.291,5.92-1.505,12.584,2.09,17.81 c3.579,5.234,9.516,8.362,15.871,8.362h50.722c7.157,0,13.73-3.981,17.058-10.318l61.24-117.03 C505.411,296.942,512,270.152,512,242.96v-107.18C512,95.929,479.691,63.619,439.84,63.619z"></path></g></svg>
@@ -859,18 +864,38 @@ class extends Component {
                                     <p class="text-gray-600 italic mb-4 text-sm md:text-base" x-text="slide.role"></p>
 
                                     {{-- 2. Đặt x-ref="desc" vào thẻ <p> này để làm mốc đo --}}
-                                    <p x-ref="desc"
-                                       class="text-gray-700 leading-relaxed text-base md:text-lg transition-all"
-                                       :class="isExpanded ? '' : 'md:line-clamp-4 line-clamp-6'"
-                                       x-text="slide.content">
-                                    </p>
+                                    <div class="relative">
+                                        <p x-ref="desc"
+                                           class="text-gray-700 leading-relaxed text-base md:text-lg transition-all md:line-clamp-4 line-clamp-6 pr-10 text-justify wrap-anywhere"
+                                           x-text="slide.content">
+                                        </p>
 
-                                    {{-- 3. Chỉ hiện nút khi nào text bị tràn khung (showButton = true) --}}
-                                    <template x-if="showButton || isExpanded">
-                                        <button @click="isExpanded = !isExpanded"
-                                                class="mt-2 text-fita font-semibold hover:text-blue-800 transition-colors text-sm"
-                                                x-text="isExpanded ? 'Thu gọn' : 'Xem thêm'"></button>
-                                    </template>
+                                        <template x-if="showButton">
+                                            <button type="button"
+                                                    @click="openDetailModal(slide)"
+                                                    class="group absolute right-5 bottom-1 bg-white pl-1 text-fita font-extrabold hover:text-blue-800 transition-colors text-sm">
+                                                &gt;&gt;
+                                                <span
+                                                    class="pointer-events-none absolute left-1/2 bottom-full mb-3 -translate-x-1/2
+                                                           whitespace-nowrap rounded-xl bg-white px-4 py-2
+                                                           text-sm font-medium text-gray-800 shadow-lg
+                                                           opacity-0 invisible
+                                                           transition-all duration-200
+                                                           group-hover:opacity-100 group-hover:visible">
+
+                                                    {{__('View full')}}
+
+                                                    {{-- Mũi tên --}}
+                                                    <span
+                                                        class="absolute left-1/2 top-full -translate-x-1/2
+                                                               w-0 h-0
+                                                               border-l-8 border-r-8 border-t-8
+                                                               border-l-transparent border-r-transparent border-t-white">
+                                                    </span>
+                                                </span>
+                                            </button>
+                                        </template>
+                                    </div>
                                 </div>
                             </div>
                         </template>
@@ -884,9 +909,38 @@ class extends Component {
 
             <div class="flex justify-center mt-8 gap-2">
                 <template x-for="(slide, index) in slides" :key="slide.id ?? index">
-                    <button @click="isExpanded = false; activeIndex = index" class="h-1.5 transition-all duration-300 rounded-full" :class="activeIndex === index ? 'w-8 bg-fita2' : 'w-8 bg-blue-300'"></button>
+                    <button @click="activeIndex = index" class="h-1.5 transition-all duration-300 rounded-full" :class="activeIndex === index ? 'w-8 bg-fita2' : 'w-8 bg-blue-300'"></button>
                 </template>
             </div>
+            <x-modal wire:model="testimonialModal" title="{{ !empty($sectionTitles['testimonials']) ? $sectionTitles['testimonials'] : __('Perspectives from businesses and alumni') }}" class="backdrop-blur-xs modalDisplayTestimonials" box-class="max-w-3xl" separator>
+                <template x-if="selectedSlide">
+                    <div class="space-y-5">
+                        <div class="flex flex-col md:flex-row items-center md:items-start gap-5">
+                            <div class="w-28 h-28 rounded-full overflow-hidden border-4 border-gray-100 shadow-inner shrink-0">
+                                <img :src="selectedSlide.avatar_url ?? selectedSlide.avatar ?? '{{ asset('assets/images/default-user-image.png') }}'"
+                                     alt="Avatar"
+                                     class="w-full h-full object-cover">
+                            </div>
+
+                            <div class="text-center md:text-left">
+                                <h4 class="text-xl font-bold text-black" x-text="selectedSlide.name"></h4>
+                                <p class="text-gray-600 italic text-sm md:text-base" x-text="selectedSlide.role"></p>
+                            </div>
+                        </div>
+
+                        <div class="max-h-[40vh] md:max-h-[45vh] overflow-y-auto pr-1">
+                            <p class="text-gray-700 leading-relaxed text-base md:text-lg whitespace-pre-line text-justify wrap-anywhere"
+                               x-text="selectedSlide.content">
+                            </p>
+                        </div>
+                    </div>
+                </template>
+
+                <x-slot:actions>
+                    <x-button label="{{__('Close')}}" @click="$wire.testimonialModal = false; selectedSlide = null; isHovered = false" />
+                </x-slot:actions>
+            </x-modal>
+
         </section>
     @endif
 
