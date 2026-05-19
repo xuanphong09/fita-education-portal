@@ -866,14 +866,14 @@ class extends Component {
                                     {{-- 2. Đặt x-ref="desc" vào thẻ <p> này để làm mốc đo --}}
                                     <div class="relative">
                                         <p x-ref="desc"
-                                           class="text-gray-700 leading-relaxed text-base md:text-lg transition-all md:line-clamp-4 line-clamp-6 pr-10 text-justify wrap-anywhere"
+                                           class="text-gray-700 leading-relaxed text-base md:text-lg transition-all md:line-clamp-4 line-clamp-6 md:pr-10 text-justify wrap-anywhere"
                                            x-text="slide.content">
                                         </p>
 
                                         <template x-if="showButton">
                                             <button type="button"
                                                     @click="openDetailModal(slide)"
-                                                    class="group absolute right-5 bottom-1 bg-white pl-1 text-fita font-extrabold hover:text-blue-800 transition-colors text-sm">
+                                                    class="group absolute -right-4 bottom-1 md:right-5 md:bottom-1 bg-white pl-1 text-fita font-extrabold hover:text-blue-800 transition-colors text-sm">
                                                 &gt;&gt;
                                                 <span
                                                     class="pointer-events-none absolute left-1/2 bottom-full mb-3 -translate-x-1/2
