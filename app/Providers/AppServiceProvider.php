@@ -46,19 +46,30 @@ class AppServiceProvider extends ServiceProvider
                 ->post('/mary/upload', function (Request $request) {
                     if (! Auth::check()) {
                         return response()->json([
+                            'error' => 'Bạn cần đăng nhập để tải ảnh lên.',
                             'message' => 'Ban can dang nhap de tai anh.',
                         ], 401);
                     }
 
+                    $maxFileSizeKb = 16384; // 16MB
+                    $maxFileSizeMb = (int) ($maxFileSizeKb / 1024);
+
                     $validator = Validator::make($request->all(), [
-                        'file' => 'required|file|max:20480',
+                        'file' => "required|file|max:$maxFileSizeKb",
                         'disk' => 'nullable|string',
                         'folder' => 'nullable|string',
+                    ], [
+                        'file.required' => 'Vui lòng chọn tệp cần tải lên.',
+                        'file.file' => 'Tệp tải lên không hợp lệ.',
+                        'file.max' => "Tệp tải lên không được lớn hơn {$maxFileSizeMb}MB.",
+                        'file.uploaded' => "Tệp tải lên thất bại. Dung lượng tối đa cho phép là {$maxFileSizeMb}MB.",
                     ]);
 
                     if ($validator->fails()) {
+                        $msg = $validator->errors()->first('file') ?: 'Upload không hợp lệ.';
                         return response()->json([
-                            'message' => 'Upload khong hop le.',
+                            'error' => $msg, // Thêm dòng này
+                            'message' => $msg,
                             'errors' => $validator->errors(),
                         ], 422);
                     }
@@ -77,7 +88,8 @@ class AppServiceProvider extends ServiceProvider
                     $file = $request->file('file');
                     if (! $file || ! $file->isValid()) {
                         return response()->json([
-                            'message' => 'Khong the doc tep tai len.',
+                            'error' => 'Không thể đọc tệp tải lên.',
+                            'message' => 'Không thể đọc tệp tải lên.',
                         ], 422);
                     }
 
@@ -112,8 +124,9 @@ class AppServiceProvider extends ServiceProvider
 
                     if (! $isAllowedByMime && ! $isAllowedByExtension) {
                         return response()->json([
-                            'message' => 'Chi cho phep tai tep anh hoac tai lieu hop le.',
-                            'errors' => ['file' => ['Dinh dang tep khong duoc ho tro.']],
+                            'error' => 'Chỉ cho phép tải tệp ảnh hoặc tài liệu hợp lệ.', // Thêm dòng này
+                            'message' => 'Chỉ cho phép tải tệp ảnh hoặc tài liệu hợp lệ.',
+                            'errors' => ['file' => ['Định dạng tệp không được hỗ trợ.']],
                         ], 422);
                     }
 

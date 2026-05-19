@@ -179,7 +179,7 @@
 </x-main>
 {{-- end main layout --}}
 
-<x-toast class="z-50" />
+<x-toast />
 
 {{-- start scripts--}}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

@@ -16,6 +16,7 @@
     use App\Services\ContentImageService;
     use Illuminate\Support\Facades\DB;
     use App\Services\PostNotificationService;
+    use Livewire\Attributes\On;
 
     new class extends Component {
         use Toast, WithFileUploads;
@@ -111,6 +112,16 @@
             abort_unless($this->canWrite(), 403);
         }
 
+        #[On('editor-upload-error')]
+        public function showEditorUploadError(string $message): void
+        {
+            $this->error(
+                $message,
+                position: 'toast-top toast-end',
+                timeout: 6000
+            );
+        }
+
         protected function rules(): array
         {
             $primaryCategoryId = $this->category_ids[0] ?? null;
@@ -149,7 +160,7 @@
                 'seo_title_en'       => 'nullable|string|max:255',
                 'seo_description_vi' => 'nullable|string|max:500',
                 'seo_description_en' => 'nullable|string|max:500',
-                'thumbnail'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:2048',
+                'thumbnail'          => 'nullable|image|mimes:jpg,jpeg,png,webp|max:10240',
             ];
         }
 
@@ -158,7 +169,7 @@
             'slug.unique'         => 'Đường dẫn đã tồn tại, vui lòng chọn đường dẫn khác.',
             'thumbnail.image'     => 'File tải lên phải là hình ảnh.',
             'thumbnail.mimes'     => 'Ảnh chỉ chấp nhận jpg, jpeg, png, webp.',
-            'thumbnail.max'       => 'Ảnh không được vượt quá 2MB.',
+            'thumbnail.max'       => 'Ảnh không được vượt quá 10MB.',
             'category_ids.required' => 'Vui lòng chọn ít nhất một danh mục cho bài viết.',
         ];
 
@@ -864,4 +875,94 @@
                 </x-card>
             </div>
         </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                let lastMessage = null;
+                let lastToastTime = 0;
+
+                function getUploadErrorMessage(data) {
+                    return data?.errors?.file?.[0]
+                        || data?.message
+                        || data?.error
+                        || 'Đã có lỗi xảy ra khi tải ảnh lên.';
+                }
+
+                function showUploadError(message) {
+                    const now = Date.now();
+
+                    // Tránh hiện lặp toast liên tục cùng một lỗi
+                    if (lastMessage === message && now - lastToastTime < 1500) {
+                        return;
+                    }
+
+                    lastMessage = message;
+                    lastToastTime = now;
+
+                    if (window.Livewire) {
+                        Livewire.dispatch('editor-upload-error', {
+                            message: message
+                        });
+                        return;
+                    }
+
+                    alert(message);
+                }
+
+                // Bắt request dùng fetch
+                const originalFetch = window.fetch;
+
+                window.fetch = async function (...args) {
+                    const response = await originalFetch.apply(this, args);
+
+                    const url = typeof args[0] === 'string'
+                        ? args[0]
+                        : (args[0]?.url || '');
+
+                    if (!response.ok && response.status >= 400 && url.includes('/mary/upload')) {
+                        response.clone().json()
+                            .then(data => {
+                                showUploadError(getUploadErrorMessage(data));
+                            })
+                            .catch(() => {
+                                showUploadError('Tải ảnh thất bại. Vui lòng thử lại.');
+                            });
+                    }
+
+                    return response;
+                };
+
+                // Bắt request dùng XMLHttpRequest
+                const originalOpen = XMLHttpRequest.prototype.open;
+                const originalSend = XMLHttpRequest.prototype.send;
+
+                XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+                    this._maryUploadUrl = typeof url === 'string' && url.includes('/mary/upload');
+                    return originalOpen.call(this, method, url, ...rest);
+                };
+
+                XMLHttpRequest.prototype.send = function (...args) {
+                    if (this._maryUploadUrl) {
+                        this.addEventListener('load', function () {
+                            if (this.status >= 400) {
+                                let data = {};
+
+                                try {
+                                    data = JSON.parse(this.responseText || '{}');
+                                } catch (e) {
+                                    data = {};
+                                }
+
+                                showUploadError(getUploadErrorMessage(data));
+                            }
+                        });
+
+                        this.addEventListener('error', function () {
+                            showUploadError('Không thể tải ảnh lên. Vui lòng kiểm tra kết nối mạng.');
+                        });
+                    }
+
+                    return originalSend.apply(this, args);
+                };
+            });
+        </script>
     </div>

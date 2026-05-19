@@ -460,6 +460,10 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     color: #ffffff !important;
 }
 
+.toast {
+    z-index: 9999 !important;
+}
+
 .modalAddSubject div.modal-box{
     @apply lg:w-250 max-w-[90%] py-4
 }
