@@ -866,7 +866,7 @@ class extends Component {
                                     {{-- 2. Đặt x-ref="desc" vào thẻ <p> này để làm mốc đo --}}
                                     <div class="relative">
                                         <p x-ref="desc"
-                                           class="text-gray-700 leading-relaxed text-base md:text-lg transition-all md:line-clamp-4 line-clamp-6 md:pr-10 text-justify wrap-anywhere"
+                                           class="text-gray-700 leading-relaxed text-base md:text-lg transition-all md:line-clamp-4 line-clamp-6 pr-2 md:pr-10 text-justify wrap-anywhere"
                                            x-text="slide.content">
                                         </p>
 
