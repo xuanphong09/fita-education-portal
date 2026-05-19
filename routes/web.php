@@ -166,16 +166,20 @@ use App\Mail\FirstTimePasswordSetup;
 //    return new FirstTimePasswordSetup($user, $fakeUrl);
 //});
 
-Route::get('/fix-links', function () {
+//Route::get('/fix-links', function () {
+//
+//    DB::statement("
+//        UPDATE posts
+//        SET content = REPLACE(
+//            content,
+//            'st-dse.vnua.edu.vn:6889',
+//            'st-dse.vnua.edu.vn'
+//        )
+//    ");
+//
+//    return 'Đã sửa xong!';
+//});
 
-    DB::statement("
-        UPDATE posts
-        SET content = REPLACE(
-            content,
-            'st-dse.vnua.edu.vn:6889',
-            'st-dse.vnua.edu.vn'
-        )
-    ");
-
-    return 'Đã sửa xong!';
+Route::get('/phpinfo-test', function () {
+    phpinfo();
 });
