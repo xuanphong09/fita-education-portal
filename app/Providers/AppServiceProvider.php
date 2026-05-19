@@ -51,7 +51,7 @@ class AppServiceProvider extends ServiceProvider
                     }
 
                     $validator = Validator::make($request->all(), [
-                        'file' => 'required|file|max:10240',
+                        'file' => 'required|file|max:20480',
                         'disk' => 'nullable|string',
                         'folder' => 'nullable|string',
                     ]);
