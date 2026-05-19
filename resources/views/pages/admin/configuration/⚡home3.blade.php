@@ -2007,7 +2007,7 @@ new class extends Component {
             </x-tabs>
         </x-card>
 
-        <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
+        <x-card class="col-span-2 bg-white p-3! sticky top-22 self-start" title="Hành động" shadow separator progress-indicator="save">
             <div class="space-y-2">
                 <x-button label="Lưu cấu hình" class="bg-primary text-white w-full" wire:click="save"
                           wire:loading.attr="disabled" wire:target="save" spinner/>

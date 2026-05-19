@@ -519,7 +519,7 @@ new class extends Component {
             </x-tabs>
         </x-card>
 
-        <x-card class="col-span-2 bg-white p-3!" title="{{__('Action')}}" shadow separator progress-indicator="save">
+        <x-card class="col-span-2 bg-white p-3! sticky top-22 self-start" title="{{__('Action')}}" shadow separator progress-indicator="save">
             <x-button label="Lưu cấu hình" class="bg-primary text-white my-1 w-full" wire:click="save"
                       wire:loading.attr="disabled" wire:target="save" spinner/>
             <x-button label="Xem trang" link="{{route('client.information')}}" external
