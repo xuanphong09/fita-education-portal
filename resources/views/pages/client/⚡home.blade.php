@@ -838,14 +838,14 @@ class extends Component {
                         <x-icon name="s-chevron-left"></x-icon>
                     </button>
 
-                    <div class="bg-white rounded-[40px] shadow-sm p-8 md:p-12 max-w-4xl w-full mx-8 relative min-h-[26rem] md:min-h-[18rem] transition-all duration-300">
+                    <div class="bg-white rounded-[40px] shadow-sm p-8 md:p-12 max-w-4xl w-full mx-8 relative min-h-104 md:min-h-72 transition-all duration-300">
                         <template x-for="(slide, index) in slides" :key="slide.id ?? index">
                             <div x-show="activeIndex === index"
                                  x-transition:enter="transition ease-out duration-300"
                                  x-transition:enter-start="opacity-0 transform translate-x-4"
                                  x-transition:enter-end="opacity-100 transform translate-x-0"
                                  class="flex flex-col md:flex-row items-center gap-8">
-                                <div class="relative flex-shrink-0">
+                                <div class="relative shrink-0">
                                     <div class="w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-gray-100 shadow-inner">
                                         <img :src="slide.avatar_url ?? slide.avatar ?? '{{ asset('assets/images/default-user-image.png') }}'" alt="Avatar" class="w-full h-full object-cover">
                                     </div>
@@ -853,9 +853,39 @@ class extends Component {
 
                                 {{-- 1. Khai báo biến showButton cho từng slide và đo chiều cao tự động --}}
                                 <div class="flex-1 text-center md:text-left relative"
-                                     x-data="{ showButton: false }"
-                                     x-effect="if (activeIndex === index) $nextTick(() => { showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight })"
-                                     @resize.window="if (activeIndex === index) showButton = $refs.desc.scrollHeight > $refs.desc.clientHeight"
+                                     x-data="{
+                                        showButton: false,
+
+                                        checkOverflow() {
+                                            this.$nextTick(() => {
+                                                requestAnimationFrame(() => {
+                                                    requestAnimationFrame(() => {
+                                                        const el = this.$refs.desc;
+
+                                                        if (!el || activeIndex !== index) return;
+
+                                                        this.showButton = el.scrollHeight > el.clientHeight + 2;
+                                                    });
+                                                });
+                                            });
+                                        }
+                                    }"
+                                                                         x-init="
+                                        checkOverflow();
+                                        setTimeout(() => checkOverflow(), 300);
+                                        setTimeout(() => checkOverflow(), 800);
+
+                                        if (document.fonts) {
+                                            document.fonts.ready.then(() => checkOverflow());
+                                        }
+                                    "
+                                                                         x-effect="
+                                        if (activeIndex === index) {
+                                            checkOverflow();
+                                            setTimeout(() => checkOverflow(), 300);
+                                        }
+                                    "
+                                    @resize.window.debounce.200ms="checkOverflow()"
                                 >
                                     <div class="hidden md:block absolute top-0 -right-2 text-6xl italic font-serif">
                                         <svg height="40px" width="40px" viewBox="0 0 512.00 512.00" fill="#000000"><g><path style="fill:#0c83d8;" d="M148.57,63.619H72.162C32.31,63.619,0,95.929,0,135.781v76.408c0,39.852,32.31,72.161,72.162,72.161h7.559 c6.338,0,12.275,3.128,15.87,8.362c3.579,5.234,4.365,11.898,2.074,17.811L54.568,422.208c-2.291,5.92-1.505,12.584,2.074,17.81 c3.595,5.234,9.532,8.362,15.87,8.362h50.738c7.157,0,13.73-3.981,17.041-10.318l61.257-117.03 c12.609-24.09,19.198-50.881,19.198-78.072v-107.18C220.748,95.929,188.422,63.619,148.57,63.619z"></path><path style="fill:#0c83d8;" d="M439.84,63.619h-76.41c-39.852,0-72.16,32.31-72.16,72.162v76.408c0,39.852,32.309,72.161,72.16,72.161h7.543 c6.338,0,12.291,3.128,15.87,8.362c3.596,5.234,4.365,11.898,2.091,17.811l-43.113,111.686c-2.291,5.92-1.505,12.584,2.09,17.81 c3.579,5.234,9.516,8.362,15.871,8.362h50.722c7.157,0,13.73-3.981,17.058-10.318l61.24-117.03 C505.411,296.942,512,270.152,512,242.96v-107.18C512,95.929,479.691,63.619,439.84,63.619z"></path></g></svg>
@@ -866,26 +896,26 @@ class extends Component {
                                     {{-- 2. Đặt x-ref="desc" vào thẻ <p> này để làm mốc đo --}}
                                     <div class="relative">
                                         <p x-ref="desc"
-                                           class="text-gray-700 leading-relaxed text-base md:text-lg transition-all md:line-clamp-4 line-clamp-6 pr-2 md:pr-10 text-justify wrap-anywhere"
+                                           class="text-gray-700 leading-relaxed text-base md:text-lg transition-all md:line-clamp-4 line-clamp-6 pr-1 md:pr-12 text-justify wrap-anywhere"
                                            x-text="slide.content">
                                         </p>
 
                                         <template x-if="showButton">
                                             <button type="button"
                                                     @click="openDetailModal(slide)"
-                                                    class="group absolute -right-4 bottom-1 md:right-5 md:bottom-1 bg-white pl-1 text-fita font-extrabold hover:text-blue-800 transition-colors text-sm">
+                                                    class="group absolute -right-4 bottom-1 md:right-6 md:bottom-1 bg-white text-fita font-extrabold hover:text-blue-800 transition-colors text-sm">
                                                 &gt;&gt;
+
                                                 <span
-                                                    class="pointer-events-none absolute left-1/2 bottom-full mb-3 -translate-x-1/2
+                                                    class="pointer-events-none absolute left-1/2 bottom-full z-50 mb-3 -translate-x-1/2
                                                            whitespace-nowrap rounded-xl bg-white px-4 py-2
                                                            text-sm font-medium text-gray-800 shadow-lg
                                                            opacity-0 invisible
                                                            transition-all duration-200
                                                            group-hover:opacity-100 group-hover:visible">
 
-                                                    {{__('View full')}}
+                                                    {{ __('View full') }}
 
-                                                    {{-- Mũi tên --}}
                                                     <span
                                                         class="absolute left-1/2 top-full -translate-x-1/2
                                                                w-0 h-0
