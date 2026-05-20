@@ -391,7 +391,8 @@
                             @else
                                 <div class="space-y-3">
                                     @foreach($newUsers as $user)
-                                        <div class="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 transition">
+                                        <a href="{{route('admin.user.edit', $user->id)}}" class="block" wire:navigate>
+                                            <div class="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 transition">
                                             <img src="https://ui-avatars.com/api/?name={{ urlencode($user->name) }}&background=random&size=44" alt="{{ $user->name }}" class="w-11 h-11 rounded-full">
                                             <div class="min-w-0 flex-1">
                                                 <div class="font-medium text-gray-900 text-sm truncate">{{ $user->name }}</div>
@@ -399,6 +400,7 @@
                                             </div>
                                             <div class="text-[11px] text-gray-400 whitespace-nowrap">{{ $user->created_at->locale('vi')->diffForHumans() }}</div>
                                         </div>
+                                        </a>
                                     @endforeach
                                 </div>
                             @endif
