@@ -902,7 +902,7 @@ new class extends Component {
             </div>
         </x-card>
 
-        <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
+        <x-card class="col-span-2 bg-white p-3! sticky top-22 self-start" title="Hành động" shadow separator progress-indicator="save">
             <x-button label="Đổi mật khẩu" class="btn-warning text-white  my-1 w-full" wire:click="openPasswordModal" spinner="openPasswordModal"/>
             <x-button label="Lưu" class="bg-primary text-white my-1 w-full" wire:click="save" spinner/>
         </x-card>

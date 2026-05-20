@@ -5,6 +5,7 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
+use Spatie\Permission\Models\Role;
 
 new class extends Component {
     use WithPagination;
@@ -16,6 +17,17 @@ new class extends Component {
     public string $search = '';
     #[Url(as: 'user-type')]
     public string $filterUserType = '';
+    #[Url(as: 'role')]
+    public string $filterRole = '';
+
+    public function getRoleOptionsProperty()
+    {
+        return Role::query()
+            ->orderBy('name')
+            ->get(['id', 'display_name'])
+            ->map(fn($role) => ['id' => $role->id, 'name' => $role->display_name])
+            ->toArray();
+    }
 
     public function getUsersProperty()
     {
@@ -36,6 +48,12 @@ new class extends Component {
                         ->orWhereHas('lecturer', function ($subQuery) {
                             $subQuery->where('staff_code', 'like', '%' . $this->search . '%');
                         });
+
+                });
+            })
+            ->when($this->filterRole !== '', function ($query) {
+                $query->whereHas('roles', function ($roleQuery) {
+                    $roleQuery->where('id', $this->filterRole);
                 });
             })
             ->when($this->filterUserType !== '', function ($query) {
@@ -93,22 +111,9 @@ new class extends Component {
 
     {{--    start - header--}}
     <x-header title="Danh sách người dùng"
-              class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
+              class="pb-3 mb-2! border-(length:--var(--border)) border-b border-gray-300">
         <x-slot:middle class="justify-end!">
             <div class=" flex flex-col md:flex-row gap-3">
-                <x-select
-                    wire:model.live="filterUserType"
-                    placeholder="Tất cả người dùng"
-                    placeholder-value=""
-                    :options="[
-                        ['id' => 'admin', 'name' => 'Admin'],
-                        ['id' => 'lecturer', 'name' => 'Giảng viên'],
-                        ['id' => 'student', 'name' => 'Sinh viên'],
-                    ]"
-                    option-value="id"
-                    option-label="name"
-                    class="w-full md:w-48"
-                />
                 <x-input
                     icon="o-magnifying-glass"
                     placeholder="Tìm tên, email, mã SV/CB..."
@@ -123,6 +128,30 @@ new class extends Component {
                       link="{{route('admin.user.create')}}"/>
         </x-slot:actions>
     </x-header>
+    <div class="flex flex-wrap gap-3 mb-4">
+        <x-select
+            wire:model.live="filterUserType"
+            placeholder="Tất cả người dùng"
+            placeholder-value=""
+            :options="[
+                        ['id' => 'admin', 'name' => 'Admin'],
+                        ['id' => 'lecturer', 'name' => 'Giảng viên'],
+                        ['id' => 'student', 'name' => 'Sinh viên'],
+                    ]"
+            option-value="id"
+            option-label="name"
+            class="w-full md:w-48"
+        />
+        <x-select
+            wire:model.live="filterRole"
+            placeholder="Tất cả vai trò"
+            placeholder-value=""
+            :options="$this->roleOptions"
+            option-value="id"
+            option-label="name"
+            class="w-full md:w-48"
+        />
+    </div>
     {{--    end - header--}}
 
     <div class="shadow-md ring-1 ring-gray-200 rounded-md relative">
@@ -205,7 +234,7 @@ new class extends Component {
             @endscope
 
             @scope('cell_created_at', $user)
-                <span class="text-gray-700 whitespace-nowrap">
+            <span class="text-gray-700 whitespace-nowrap">
                     {{ $user->created_at->format('d/m/Y H:i') }}
                 </span>
             @endscope
@@ -220,12 +249,12 @@ new class extends Component {
                     link="{{route('admin.user.edit', $user->id)}}"
                 />
 
-{{--                <x-button--}}
-{{--                    icon="o-trash"--}}
-{{--                    class="btn-sm btn-ghost text-danger [&]:hover:bg-gray-200/40 [&]:hover:border-gray-400/70"--}}
-{{--                    tooltip="Xóa"--}}
-{{--                    wire:click="delete({{ $user->id }})"--}}
-{{--                />--}}
+                {{--                <x-button--}}
+                {{--                    icon="o-trash"--}}
+                {{--                    class="btn-sm btn-ghost text-danger [&]:hover:bg-gray-200/40 [&]:hover:border-gray-400/70"--}}
+                {{--                    tooltip="Xóa"--}}
+                {{--                    wire:click="delete({{ $user->id }})"--}}
+                {{--                />--}}
             </div>
             @endscope
 

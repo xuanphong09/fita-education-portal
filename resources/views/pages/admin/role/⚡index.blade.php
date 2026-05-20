@@ -135,7 +135,7 @@ new class extends Component {
 
             {{-- Cột Số lượng tài khoản --}}
             @scope('cell_users_count', $role)
-            <x-badge :value="$role->users_count . ' người'" class=""/>
+            <a href="{{route('admin.user.user-list',['role'=>$role->id])}}" wire:navigate><x-badge :value="$role->users_count . ' người'" class=""/></a>
             @endscope
 
             {{-- Cột Hiển thị các quyền (Badges) --}}

@@ -295,7 +295,7 @@ new class extends Component {
 
             {{-- General Permissions Section --}}
             <div class="mt-6">
-                <label class="font-semibold text-gray-700 mb-3 block">Quyền hạn chung</label>
+                <label class="font-semibold text-gray-700 mb-3 block">Nhóm quyền chung</label>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm">
 
@@ -326,7 +326,7 @@ new class extends Component {
             {{-- Category-Scoped Permissions Section --}}
             <div class="mt-8">
                 <div class="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                    <label class="font-semibold mb-3 block">Quyền hạn theo danh mục bài viết</label>
+                    <label class="font-semibold mb-3 block">Nhóm quyền theo danh mục bài viết</label>
                     <div class="flex gap-2">
                         @if($this->has_category_permissions)
                             <x-button label="Bỏ chọn tất cả" icon="o-x-mark" class="btn-md text-danger btn-ghost" wire:click="deselectAll" spinner="deselectAll"></x-button>
@@ -420,7 +420,7 @@ new class extends Component {
             </div>
         </x-card>
 
-        <x-card class="col-span-2 bg-white p-3!" title="Hành động" shadow separator progress-indicator="save">
+        <x-card class="col-span-2 bg-white p-3! sticky top-22 self-start" title="Hành động" shadow separator progress-indicator="save">
             <x-button label="{{__('Save')}}" class="bg-primary text-white my-1 w-full" wire:click="save" spinner/>
         </x-card>
     </div>

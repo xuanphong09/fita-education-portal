@@ -454,7 +454,7 @@ new class extends Component {
     </x-slot:breadcrumb>
 
     <x-header title="Quản lý chương trình đào tạo"
-              class="pb-3 mb-5! border-(length:--var(--border)) border-b border-gray-300">
+              class="pb-3 mb-2! border-(length:--var(--border)) border-b border-gray-300">
         <x-slot:middle class="justify-end!">
             <x-input
                 icon="o-magnifying-glass"
