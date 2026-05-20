@@ -447,7 +447,7 @@ class extends Component {
             {{ !empty($sectionTitles['news']) ? $sectionTitles['news'] : __('News and events') }}
         </h1>
         <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-8 lg:gap-10">
-            <div class="lg:w-[50%] w-full relative h-65 lg:h-150 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.22)]" wire:key="slider-{{ $tabSelected }}">
+            <div class="lg:w-[50%] w-full relative h-65 lg:h-145 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.22)]" wire:key="slider-{{ $tabSelected }}">
                 @php
                     $currentTabPosts = match($tabSelected) {
                         'tab-feature-post' => $featuredPosts,
@@ -567,11 +567,11 @@ class extends Component {
 
             <div class="w-full lg:w-[50%]">
                 <x-tabs wire:model.live="tabSelected" active-class="text-fita! border-b-4 border-fita font-semibold" label-class="font-semibold text-[20px] text-gray-700 px-4 pb-1 whitespace-nowrap font-barlow" label-div-class="border-b-[length:var(--border)] border-b-base-content/10 flex overflow-x-auto">
-                    <x-tab name="tab-feature-post">
+                    <x-tab name="tab-feature-post" class="py-3!">
                         <x-slot:label>
                             <span class="inline-flex items-center h-6">{{ __('Featured News') }}</span>
                         </x-slot:label>
-                        <div class="flex flex-col gap-5">
+                        <div class="flex flex-col gap-4">
                             @forelse($featuredPosts as $post)
                                 <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative ">
@@ -613,14 +613,14 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No featured posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-5 rounded-md"/>
+                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
                     </x-tab>
 
-                    <x-tab name="tab-new-post">
+                    <x-tab name="tab-new-post" class="py-3!">
                         <x-slot:label>
                             <span class="inline-flex items-center h-6">{{ __('Latest News') }}</span>
                         </x-slot:label>
-                        <div class="flex flex-col gap-5">
+                        <div class="flex flex-col gap-4">
                             @forelse($latestPosts as $post)
                                 <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
@@ -662,14 +662,14 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No latest posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-5 rounded-md"/>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
                     </x-tab>
 
-                    <x-tab name="tab-notification-post">
+                    <x-tab name="tab-notification-post" class="py-3!">
                         <x-slot:label>
                             <span class="inline-flex items-center h-6">{{ __('Notification') }}</span>
                         </x-slot:label>
-                        <div class="flex flex-col gap-5">
+                        <div class="flex flex-col gap-4">
                             @forelse($notificationPosts as $post)
                                 <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
@@ -709,7 +709,7 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No announcement posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-5 rounded-md"/>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
                     </x-tab>
                 </x-tabs>
             </div>
