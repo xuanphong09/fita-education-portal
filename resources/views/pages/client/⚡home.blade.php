@@ -363,7 +363,7 @@ class extends Component {
         >
             <x-carousel
                 :slides="$slides"
-                class="h-[40vw] md:h-65 lg:h-91 2xl:min-h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
+                class="h-[40vw] md:h-65 lg:h-91 2xl:h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
             >
                 @scope('content', $slide)
                 <div
@@ -447,7 +447,7 @@ class extends Component {
             {{ !empty($sectionTitles['news']) ? $sectionTitles['news'] : __('News and events') }}
         </h1>
         <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-8 lg:gap-10">
-            <div class="lg:w-[50%] w-full relative h-65 lg:h-140 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.22)]" wire:key="slider-{{ $tabSelected }}">
+            <div class="lg:w-[50%] w-full relative h-65 lg:h-150 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.22)]" wire:key="slider-{{ $tabSelected }}">
                 @php
                     $currentTabPosts = match($tabSelected) {
                         'tab-feature-post' => $featuredPosts,
