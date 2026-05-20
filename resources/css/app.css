@@ -595,7 +595,7 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
     .home-banner-carousel [role="group"][aria-label="slides"] {
         opacity: 0.75 !important;
         pointer-events: auto !important;
-        left: 60% !important;
+        left: 50% !important;
         right: auto !important;
         bottom: 10px !important;
         transform: translateX(-50%) !important;
