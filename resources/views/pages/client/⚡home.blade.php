@@ -717,7 +717,7 @@ class extends Component {
     </div>
 
     @if(!empty($counterStats))
-        <section class="mt-10 lg:mt-12 bg-slate-200/40 pb-6 pt-15 lg:pt-18 lg:pb-6">
+        <section class="mt-4 lg:mt-8 bg-slate-200/40 pb-6 pt-15 lg:pt-18 lg:pb-6">
             <div class="mx-auto container px-4 lg:px-0">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 lg:gap-y-10">
                     @foreach($counterStats as $stat)
