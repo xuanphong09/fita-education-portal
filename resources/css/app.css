@@ -492,7 +492,138 @@ h1, h2, h3, h4, h5, h6, .font-barlow {
 .modalDisplayTestimonials div.modal-box{
     @apply lg:w-200 max-w-[85%] max-h-screen py-4
 }
+/* =========================
+   HOME BANNER CAROUSEL
+========================= */
 
+/* Dots wrapper - style chung */
+.home-banner-carousel [role="group"][aria-label="slides"] {
+    background: rgba(30, 15, 15, 0.65) !important;
+    padding: 4px 6px !important;
+    gap: 8px !important;
+    border-radius: 9999px !important;
+    align-items: center !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+
+
+/* Dot mặc định */
+.home-banner-carousel [role="group"][aria-label="slides"] button {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 9999px !important;
+    background: rgba(255, 255, 255, 0.45) !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+/* Dot đang active */
+.home-banner-carousel [role="group"][aria-label="slides"] button.bg-base-content {
+    width: 22px !important;
+    height: 10px !important;
+    background: #ffffff !important;
+}
+
+
+/* =========================
+   DESKTOP / LAPTOP
+   Hover banner mới hiện
+========================= */
+@media (hover: hover) and (pointer: fine) {
+    /* Prev / Next mặc định ẩn */
+    .home-banner-carousel button[aria-label="Previous image"],
+    .home-banner-carousel button[aria-label="Next image"] {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    /* Hover banner thì hiện nút */
+    .home-banner-carousel:hover button[aria-label="Previous image"],
+    .home-banner-carousel:hover button[aria-label="Next image"] {
+        opacity: 0.75;
+        pointer-events: auto;
+    }
+
+    /* Hover trực tiếp vào nút thì rõ hơn */
+    .home-banner-carousel button[aria-label="Previous image"]:hover,
+    .home-banner-carousel button[aria-label="Next image"]:hover {
+        opacity: 1;
+    }
+
+    /* Dots mặc định ẩn */
+    .home-banner-carousel [role="group"][aria-label="slides"] {
+        opacity: 0;
+        pointer-events: none;
+        bottom: 20px !important;
+        left: 50% !important;
+        transform: translateX(-50%) translateY(8px) !important;
+        transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    /* Hover banner thì hiện dots nhưng mờ nhẹ */
+    .home-banner-carousel:hover [role="group"][aria-label="slides"] {
+        opacity: 0.75;
+        pointer-events: auto;
+        transform: translateX(-50%) translateY(0) !important;
+    }
+
+    /* Hover trực tiếp vào dots thì rõ hơn */
+    .home-banner-carousel [role="group"][aria-label="slides"]:hover {
+        opacity: 1;
+    }
+
+    .home-banner-carousel [role="group"][aria-label="slides"] button:hover {
+        scale: none !important;
+        background: rgba(255, 255, 255, 0.8) !important;
+    }
+}
+
+
+/* =========================
+   MOBILE / TABLET
+========================= */
+@media (max-width: 767px) {
+    /* Mobile ẩn nút prev/next */
+    .home-banner-carousel button[aria-label="Previous image"],
+    .home-banner-carousel button[aria-label="Next image"] {
+        opacity: 0.75 !important;
+    }
+
+    /* Mobile dots luôn hiện */
+    .home-banner-carousel [role="group"][aria-label="slides"] {
+        opacity: 0.75 !important;
+        pointer-events: auto !important;
+        left: 60% !important;
+        right: auto !important;
+        bottom: 10px !important;
+        transform: translateX(-50%) !important;
+        gap: 7px !important;
+        background: rgba(30, 15, 15, 0.65) !important;
+        padding: 3px 5px !important;
+    }
+
+    /* Dot thường trên mobile */
+    .home-banner-carousel [role="group"][aria-label="slides"] button {
+        width: 9px !important;
+        height: 9px !important;
+        border-radius: 9999px !important;
+        background: rgba(255, 255, 255, 0.45) !important;
+    }
+
+    /* Dot active trên mobile */
+    .home-banner-carousel [role="group"][aria-label="slides"] button.bg-base-content {
+        width: 20px !important;
+        height: 9px !important;
+        background: #ffffff !important;
+    }
+
+    /* Khi bấm dots thì rõ hơn */
+    .home-banner-carousel [role="group"][aria-label="slides"]:active {
+        opacity: 1 !important;
+    }
+}
 
 .ctdt td .cursor-pointer[class*="rotate"] {
     background-color: #0c83d8;

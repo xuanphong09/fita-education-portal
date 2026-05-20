@@ -377,11 +377,11 @@
                                 :link="!str_starts_with($item['url'], '#') ? $item['url'] : ''"
                                 :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                                 :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
-                                class="relative px-2 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow group-hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 group-hover:before:w-full after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
+                                class="relative transition-all duration-300 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow group-hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 group-hover:before:w-full after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                 responsive
                                 x-data="{ isScrolled: false }"
                                 @scroll.window="isScrolled = (window.pageYOffset > 50)"
-                                x-bind:class="isScrolled ? 'text-[17px]/[60px]' : 'text-[17px]/[78px]'"
+                                x-bind:class="isScrolled ? 'text-[17px]/[60px] px-3' : 'text-[17px]/[78px]  px-2'"
                             >
                                 {{ $item['name'] }}
                             </x-button>
@@ -431,11 +431,11 @@
                             link="{{ $item['url'] }}"
                             :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                             :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
-                            class="shrink-0 relative px-2 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 hover:before:w-full"
+                            class="shrink-0 relative transition-all duration-300 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 hover:before:w-full"
                             responsive
                             x-data="{ isScrolled: false }"
                             @scroll.window="isScrolled = (window.pageYOffset > 50)"
-                            x-bind:class="isScrolled ? 'text-[17px]/[60px]' : 'text-[17px]/[78px]'"
+                            x-bind:class="isScrolled ? 'text-[17px]/[60px] px-3' : 'text-[17px]/[78px] px-2'"
                         >
                             {{ $item['name'] }}
                         </x-button>

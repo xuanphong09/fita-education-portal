@@ -359,7 +359,7 @@ class extends Component {
             x-init="startCustomAutoplay()"
             @mouseenter="paused = true"
             @mouseleave="paused = false"
-            class="relative w-full"
+            class="relative w-full home-banner-carousel"
         >
             <x-carousel
                 :slides="$slides"
@@ -368,28 +368,36 @@ class extends Component {
                 @scope('content', $slide)
                 <div
                     @class([
-                        "absolute inset-0 z-[1] flex flex-col gap-2 px-20 py-12",
-                         "bg-gradient-to-b justify-start text-left" => data_get($slide, 'position') === 'top left',
-                         "bg-gradient-to-b justify-start items-center text-center" => data_get($slide, 'position') === 'top center',
-                         "bg-gradient-to-b justify-start items-end text-right" => data_get($slide, 'position') === 'top right',
+                        "absolute inset-0 z-[1] flex flex-col gap-1 md:gap-2 px-4 py-4 md:px-20 md:py-12",
+                        "bg-gradient-to-b justify-start text-left" => data_get($slide, 'position') === 'top left',
+                        "bg-gradient-to-b justify-start items-center text-center" => data_get($slide, 'position') === 'top center',
+                        "bg-gradient-to-b justify-start items-end text-right" => data_get($slide, 'position') === 'top right',
 
-                         "bg-gradient-to-t justify-center items-center text-center" => data_get($slide, 'position') === 'center center',
-                         "bg-gradient-to-t justify-center items-end text-right" => data_get($slide, 'position') === 'center right',
-                         "bg-gradient-to-t justify-center text-left" => data_get($slide, 'position') === 'center left',
+                        "bg-gradient-to-t justify-center items-center text-center" => data_get($slide, 'position') === 'center center',
+                        "bg-gradient-to-t justify-center items-end text-right" => data_get($slide, 'position') === 'center right',
+                        "bg-gradient-to-t justify-center text-left" => data_get($slide, 'position') === 'center left',
 
-                         "bg-gradient-to-t justify-end text-left" => data_get($slide, 'position') === 'bottom left',
-                         "bg-gradient-to-t justify-end items-center text-center" => data_get($slide, 'position') === 'bottom center',
-                         "bg-gradient-to-t justify-end items-end text-right" => data_get($slide, 'position') === 'bottom right',
+                        "bg-gradient-to-t justify-end text-left" => data_get($slide, 'position') === 'bottom left',
+                        "bg-gradient-to-t justify-end items-center text-center" => data_get($slide, 'position') === 'bottom center',
+                        "bg-gradient-to-t justify-end items-end text-right" => data_get($slide, 'position') === 'bottom right',
 
-                         "from-slate-900/45" => data_get($slide, 'urlText') || data_get($slide, 'title') || data_get($slide, 'description')
+                        "from-slate-900/45" => data_get($slide, 'urlText') || data_get($slide, 'title') || data_get($slide, 'description')
                     ])
                 >
-                    <h1 class="w-[60%] text-2xl lg:text-[64px]/[68px] font-bold text-white">{{ data_get($slide, 'title') }}</h1>
-                    <h5 class="w-[60%] text-[16px] lg:text-[30px] font-bold text-white">{{ data_get($slide, 'description') }}</h5>
+                    <h1 class="w-full md:w-[60%] text-xl md:text-2xl lg:text-[64px]/[68px] font-bold text-white">
+                        {{ data_get($slide, 'title') }}
+                    </h1>
+
+                    <h5 class="w-full md:w-[60%] text-sm md:text-[16px] lg:text-[30px] font-bold text-white">
+                        {{ data_get($slide, 'description') }}
+                    </h5>
+
                     @if(data_get($slide, 'urlText'))
                         <div class="hidden md:block">
                             <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right"
-                                      class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">{{ __(data_get($slide, 'urlText')) }}</x-button>
+                                      class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">
+                                {{ __(data_get($slide, 'urlText')) }}
+                            </x-button>
                         </div>
                     @endif
                 </div>
@@ -439,7 +447,7 @@ class extends Component {
             {{ !empty($sectionTitles['news']) ? $sectionTitles['news'] : __('News and events') }}
         </h1>
         <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-10">
-            <div class="lg:w-[50%] w-full relative h-65 lg:h-140" wire:key="slider-{{ $tabSelected }}">
+            <div class="lg:w-[50%] w-full relative h-65 lg:h-140 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.22)]" wire:key="slider-{{ $tabSelected }}">
                 @php
                     $currentTabPosts = match($tabSelected) {
                         'tab-feature-post' => $featuredPosts,
@@ -565,8 +573,8 @@ class extends Component {
                         </x-slot:label>
                         <div class="flex flex-col gap-4">
                             @forelse($featuredPosts as $post)
-                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
-                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
+                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
+                                    <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative ">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
                                         @elseif($post->post_default_image_id)
@@ -605,7 +613,7 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No featured posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4"/>
+                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
                     </x-tab>
 
                     <x-tab name="tab-new-post">
@@ -614,7 +622,7 @@ class extends Component {
                         </x-slot:label>
                         <div class="flex flex-col gap-4">
                             @forelse($latestPosts as $post)
-                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
+                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
@@ -654,7 +662,7 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No latest posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4"/>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
                     </x-tab>
 
                     <x-tab name="tab-notification-post">
@@ -663,7 +671,7 @@ class extends Component {
                         </x-slot:label>
                         <div class="flex flex-col gap-4">
                             @forelse($notificationPosts as $post)
-                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300">
+                                <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
                                         @if($post->thumbnail)
                                             <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
@@ -701,7 +709,7 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No announcement posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4"/>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
                     </x-tab>
                 </x-tabs>
             </div>
@@ -730,10 +738,10 @@ class extends Component {
                             </div>
                             <div class="px-6 pb-4 pt-2 flex gap-4 justify-around flex-wrap">
                                 @if(data_get($program, 'detail_url'))
-                                <x-button label="{{ app()->getLocale() === 'en' ? 'Detail program' : 'Chi tiết chương trình' }}" class="btn-outline text-fita font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-4xl" link="{{ data_get($program, 'detail_url') }}" />
+                                <x-button label="{{ app()->getLocale() === 'en' ? 'Detail program' : 'Chi tiết chương trình' }}" class="btn-outline text-fita font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-md" link="{{ data_get($program, 'detail_url') }}" />
                                 @endif
                                 @if(data_get($program, 'roadmap_url'))
-                                    <x-button label="{{ app()->getLocale() === 'en' ? 'Roadmap' : 'Xem lộ trình' }}" icon="o-book-open" class="bg-fita text-white font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-4xl" link="{{ data_get($program, 'roadmap_url') }}"/>
+                                    <x-button label="{{ app()->getLocale() === 'en' ? 'Roadmap' : 'Xem lộ trình' }}" icon="o-book-open" class="bg-fita text-white font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-md" link="{{ data_get($program, 'roadmap_url') }}"/>
                                 @endif
                             </div>
                         </div>
