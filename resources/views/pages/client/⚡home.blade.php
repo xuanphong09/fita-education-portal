@@ -333,7 +333,7 @@ class extends Component {
 };
 ?>
 
-<div class="">
+<div class="bg-slate-50">
     <x-slot:title>
         {{ __('Home page') }}
     </x-slot:title>
@@ -427,7 +427,7 @@ class extends Component {
                             </div>
                             <div class="text-left flex-1 min-w-0">
                                 <h2 class="text-[14px] lg:text-[16px] font-bold text-gray-800 tracking-wide truncate transition-colors duration-300"
-{{--                                    :style="`color: ${item.color};`"--}}
+                                    {{--                                    :style="`color: ${item.color};`"--}}
                                     x-text="item.app">
                                 </h2>
                             </div>
@@ -443,10 +443,10 @@ class extends Component {
     @endif
 
     <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-6 lg:mt-4 mb-4">
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-0 mb-6">
             {{ !empty($sectionTitles['news']) ? $sectionTitles['news'] : __('News and events') }}
         </h1>
-        <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-10">
+        <div class="relative flex flex-col lg:flex-row container px-4 lg:px-0 mx-auto gap-8 lg:gap-10">
             <div class="lg:w-[50%] w-full relative h-65 lg:h-140 rounded-2xl shadow-[0_15px_35px_rgba(0,0,0,0.22)]" wire:key="slider-{{ $tabSelected }}">
                 @php
                     $currentTabPosts = match($tabSelected) {
@@ -537,7 +537,7 @@ class extends Component {
                                  :style="`transform: translateY(calc(${post.text_y_offset} / 1200 * 100cqw))`"
                             >
                                 <p class="line-clamp-4 font-bold select-none"
-                                    :style="{
+                                   :style="{
                                             color: post.text_color,
                                             fontSize: `clamp(12px, calc(${post.text_size} / 1200 * 100cqw), 60px)`,
                                             lineHeight: 1.1,
@@ -571,7 +571,7 @@ class extends Component {
                         <x-slot:label>
                             <span class="inline-flex items-center h-6">{{ __('Featured News') }}</span>
                         </x-slot:label>
-                        <div class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-5">
                             @forelse($featuredPosts as $post)
                                 <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative ">
@@ -613,14 +613,14 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No featured posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
+                        <x-button link="{{ route('client.posts.index') }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-5 rounded-md"/>
                     </x-tab>
 
                     <x-tab name="tab-new-post">
                         <x-slot:label>
                             <span class="inline-flex items-center h-6">{{ __('Latest News') }}</span>
                         </x-slot:label>
-                        <div class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-5">
                             @forelse($latestPosts as $post)
                                 <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
@@ -662,14 +662,14 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No latest posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'tin-tuc']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-5 rounded-md"/>
                     </x-tab>
 
                     <x-tab name="tab-notification-post">
                         <x-slot:label>
                             <span class="inline-flex items-center h-6">{{ __('Notification') }}</span>
                         </x-slot:label>
-                        <div class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-5">
                             @forelse($notificationPosts as $post)
                                 <div class="flex gap-5 bg-white rounded-2xl p-3 lg:px-4 lg:py-3 border border-slate-300 shadow-md">
                                     <div class="h-25 w-33 shrink-0 bg-gray-100 overflow-hidden relative">
@@ -709,54 +709,19 @@ class extends Component {
                                 <p class="text-gray-500">{{ __('No announcement posts found.') }}</p>
                             @endforelse
                         </div>
-                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-4 rounded-md"/>
+                        <x-button link="{{ route('client.posts.index',['danh-muc' => 'thong-bao']) }}" label="{{__('Read more')}}" icon-right="o-arrow-right" class="bg-fita text-white font-semibold text-[16px] w-full py-5! hover:opacity-90 hover:scale-[1.02] mt-5 rounded-md"/>
                     </x-tab>
                 </x-tabs>
             </div>
         </div>
     </div>
 
-    @if(!empty($trainingPrograms))
-        <div>
-            <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-5">
-                {{ !empty($sectionTitles['training']) ? $sectionTitles['training'] : __('Training programs') }}
-            </h1>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 container mx-auto px-4 lg:px-0">
-                @foreach($trainingPrograms as $program)
-                    <div class="flex flex-col relative rounded-2xl overflow-hidden border border-slate-300 group hover:-translate-y-1.5 hover:shadow-lg transition-all duration-300"
-                         x-data="{ revealed: false }"
-                         x-intersect="if (!revealed) { revealed = true; $el.classList.add('animate-fade-in-up'); }">
-                        <img src="{{ data_get($program, 'image_url') ?: asset('assets/images/post-6.jpg') }}" alt="" class="w-full object-cover transition-transform duration-500 h-50" loading="lazy" decoding="async">
-                        <div class="flex flex-col justify-around flex-1">
-                            <div class="px-6 py-4">
-                                <a href="{{ data_get($program, 'detail_url') }}" wire:navigate class="why-title text-[18px] lg:text-[22px] font-bold text-slate-900 mb-2 transition-colors uppercase line-clamp-2 group-hover:text-fita">
-                                    {{ data_get($program, 'title') }}
-                                </a>
-                                <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed line-clamp-4">
-                                    {{ data_get($program, 'description') }}
-                                </p>
-                            </div>
-                            <div class="px-6 pb-4 pt-2 flex gap-4 justify-around flex-wrap">
-                                @if(data_get($program, 'detail_url'))
-                                <x-button label="{{ app()->getLocale() === 'en' ? 'Detail program' : 'Chi tiết chương trình' }}" class="btn-outline text-fita font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-md" link="{{ data_get($program, 'detail_url') }}" />
-                                @endif
-                                @if(data_get($program, 'roadmap_url'))
-                                    <x-button label="{{ app()->getLocale() === 'en' ? 'Roadmap' : 'Xem lộ trình' }}" icon="o-book-open" class="bg-fita text-white font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-md" link="{{ data_get($program, 'roadmap_url') }}"/>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    @endif
-
     @if(!empty($counterStats))
-        <section class="mt-8 lg:mt-10 bg-slate-200/40 pt-15 ">
+        <section class="mt-10 lg:mt-12 bg-slate-200/40 pb-6 pt-15 lg:pt-18 lg:pb-6">
             <div class="mx-auto container px-4 lg:px-0">
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-15">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-12 lg:gap-y-10">
                     @foreach($counterStats as $stat)
-                        <div data-reveal-item class="relative pt-12 pb-6 px-4 text-center"
+                        <div data-reveal-item class="relative pt-10 pb-2 px-4 text-center"
                              x-data="{
                                 value: 0, target: {{ (int) $stat['value'] }}, suffix: '{{ $stat['suffix'] }}', started: false,
                                 format(v) { return new Intl.NumberFormat('vi-VN').format(v); },
@@ -787,15 +752,49 @@ class extends Component {
         </section>
     @endif
 
+    @if(!empty($trainingPrograms))
+        <div>
+            <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10 mb-6 lg:mb-8">
+                {{ !empty($sectionTitles['training']) ? $sectionTitles['training'] : __('Training programs') }}
+            </h1>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 container mx-auto px-4 lg:px-0">
+                @foreach($trainingPrograms as $program)
+                    <div class="flex flex-col relative rounded-2xl overflow-hidden border border-slate-300 group hover:-translate-y-1.5 hover:shadow-lg transition-all duration-300"
+                         x-data="{ revealed: false }"
+                         x-intersect="if (!revealed) { revealed = true; $el.classList.add('animate-fade-in-up'); }">
+                        <img src="{{ data_get($program, 'image_url') ?: asset('assets/images/post-6.jpg') }}" alt="" class="w-full object-cover transition-transform duration-500 h-52" loading="lazy" decoding="async">
+                        <div class="flex flex-col justify-around flex-1">
+                            <div class="px-6 py-4">
+                                <a href="{{ data_get($program, 'detail_url') }}" wire:navigate class="why-title text-[18px] lg:text-[22px] font-bold text-slate-900 mb-2 transition-colors uppercase line-clamp-2 group-hover:text-fita">
+                                    {{ data_get($program, 'title') }}
+                                </a>
+                                <p class="text-[14px] lg:text-[16px] text-slate-600 leading-relaxed line-clamp-4">
+                                    {{ data_get($program, 'description') }}
+                                </p>
+                            </div>
+                            <div class="px-6 pb-4 pt-2 flex gap-4 justify-around flex-wrap">
+                                @if(data_get($program, 'detail_url'))
+                                    <x-button label="{{ app()->getLocale() === 'en' ? 'Detail program' : 'Chi tiết chương trình' }}" class="btn-outline text-fita font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-md" link="{{ data_get($program, 'detail_url') }}" />
+                                @endif
+                                @if(data_get($program, 'roadmap_url'))
+                                    <x-button label="{{ app()->getLocale() === 'en' ? 'Roadmap' : 'Xem lộ trình' }}" icon="o-book-open" class="bg-fita text-white font-semibold text-[14px] py-3! hover:opacity-90 hover:scale-[1.02] rounded-md" link="{{ data_get($program, 'roadmap_url') }}"/>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
     <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex text-center justify-center gap-1 items-center mt-8 lg:mt-10 mb-4">
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex text-center justify-center gap-1 items-center mt-10 lg:mt-12 mb-6">
             {{ !empty($sectionTitles['partners']) ? $sectionTitles['partners'] : __('NETWORK OF BUSINESS PARTNERS') }}
         </h1>
         <livewire:client.list-of-partners/>
     </div>
 
     @if(!empty($testimonials))
-        <section class="bg-blue-100/40 pb-10 pt-2 font-sans" x-data="{
+        <section class="bg-blue-100/40 py-10 lg:py-12 font-sans" x-data="{
             activeIndex: 0,
             slides: @js($testimonials),
             isHovered: false,
@@ -835,8 +834,8 @@ class extends Component {
                  @mouseleave="isHovered = false"
         >
             <div class="max-w-6xl mx-auto">
-                <div class="text-center mb-6">
-                    <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-8 lg:mt-10">
+                <div class="text-center mb-8">
+                    <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mt-0">
                         {{ !empty($sectionTitles['testimonials']) ? $sectionTitles['testimonials'] : __('Perspectives from businesses and alumni') }}
                     </h1>
                 </div>
@@ -846,7 +845,7 @@ class extends Component {
                         <x-icon name="s-chevron-left"></x-icon>
                     </button>
 
-                    <div class="bg-white rounded-[40px] shadow-sm p-8 md:p-12 max-w-4xl w-full mx-8 relative min-h-104 md:min-h-72 transition-all duration-300">
+                    <div class="bg-white rounded-[36px] shadow-sm p-6 md:p-10 max-w-4xl w-full mx-8 relative min-h-[360px] md:min-h-64 transition-all duration-300">
                         <template x-for="(slide, index) in slides" :key="slide.id ?? index">
                             <div x-show="activeIndex === index"
                                  x-transition:enter="transition ease-out duration-300"
@@ -878,7 +877,7 @@ class extends Component {
                                             });
                                         }
                                     }"
-                                                                         x-init="
+                                     x-init="
                                         checkOverflow();
                                         setTimeout(() => checkOverflow(), 300);
                                         setTimeout(() => checkOverflow(), 800);
@@ -887,13 +886,13 @@ class extends Component {
                                             document.fonts.ready.then(() => checkOverflow());
                                         }
                                     "
-                                                                         x-effect="
+                                     x-effect="
                                         if (activeIndex === index) {
                                             checkOverflow();
                                             setTimeout(() => checkOverflow(), 300);
                                         }
                                     "
-                                    @resize.window.debounce.200ms="checkOverflow()"
+                                     @resize.window.debounce.200ms="checkOverflow()"
                                 >
                                     <div class="hidden md:block absolute top-0 -right-2 text-6xl italic font-serif">
                                         <svg height="40px" width="40px" viewBox="0 0 512.00 512.00" fill="#000000"><g><path style="fill:#0c83d8;" d="M148.57,63.619H72.162C32.31,63.619,0,95.929,0,135.781v76.408c0,39.852,32.31,72.161,72.162,72.161h7.559 c6.338,0,12.275,3.128,15.87,8.362c3.579,5.234,4.365,11.898,2.074,17.811L54.568,422.208c-2.291,5.92-1.505,12.584,2.074,17.81 c3.595,5.234,9.532,8.362,15.87,8.362h50.738c7.157,0,13.73-3.981,17.041-10.318l61.257-117.03 c12.609-24.09,19.198-50.881,19.198-78.072v-107.18C220.748,95.929,188.422,63.619,148.57,63.619z"></path><path style="fill:#0c83d8;" d="M439.84,63.619h-76.41c-39.852,0-72.16,32.31-72.16,72.162v76.408c0,39.852,32.309,72.161,72.16,72.161h7.543 c6.338,0,12.291,3.128,15.87,8.362c3.596,5.234,4.365,11.898,2.091,17.811l-43.113,111.686c-2.291,5.92-1.505,12.584,2.09,17.81 c3.579,5.234,9.516,8.362,15.871,8.362h50.722c7.157,0,13.73-3.981,17.058-10.318l61.24-117.03 C505.411,296.942,512,270.152,512,242.96v-107.18C512,95.929,479.691,63.619,439.84,63.619z"></path></g></svg>
@@ -945,7 +944,7 @@ class extends Component {
                 </div>
             </div>
 
-            <div class="flex justify-center mt-8 gap-2">
+            <div class="flex justify-center mt-6 gap-2">
                 <template x-for="(slide, index) in slides" :key="slide.id ?? index">
                     <button @click="activeIndex = index" class="h-1.5 transition-all duration-300 rounded-full" :class="activeIndex === index ? 'w-8 bg-fita2' : 'w-8 bg-blue-300'"></button>
                 </template>
@@ -982,10 +981,10 @@ class extends Component {
         </section>
     @endif
 
-    <div>
-        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mb-2 mt-5">
+    <section class="pt-10 lg:pt-12 bg-slate-50">
+        <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mb-6 mt-0">
             {{ !empty($sectionTitles['gallery']) ? $sectionTitles['gallery'] : __('Photo library') }}
         </h1>
         <livewire:client.image-gallery :images="$images" class="h-40 rounded-box"/>
-    </div>
+    </section>
 </div>
