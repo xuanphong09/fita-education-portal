@@ -53,6 +53,7 @@ class extends Component {
                 });
             })
             ->orderBy('is_active', 'desc')
+            ->orderBy('order')
             ->orderByDesc('id')
             ->paginate($this->perPage);
     }
