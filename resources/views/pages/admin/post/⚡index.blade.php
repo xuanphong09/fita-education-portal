@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\Category;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Collection;
 
 new class extends Component {
     use WithPagination, Toast;
@@ -18,7 +19,8 @@ new class extends Component {
     #[Url(as: 'search')]
     public string $search = '';
     public string $filterStatus = '';
-    public ?int $filterCategory = null;
+    #[Url(as: 'category')]
+    public int|string|null $filterCategory = null;
     public string $filterFeatured = '';
     public string $filterLanguage = '';
     public bool $pendingOnlyMode = false;
@@ -256,7 +258,26 @@ new class extends Component {
             ->when($this->filterLanguage !== '', fn($q) => $this->applyLanguageFilter($q, $this->filterLanguage))
             ->when($search !== '', fn($q) => $this->applySearchFilter($q, $search, $this->filterLanguage))
             ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
-            ->when($this->filterCategory, fn($q) => $q->whereHas('categories', fn($cq) => $cq->where('categories.id', $this->filterCategory)))
+            ->when(! blank($this->filterCategory), function ($q) {
+                $categoryIds = $this->selectedCategoryFilterIds();
+
+                if (empty($categoryIds)) {
+                    $q->whereRaw('1 = 0');
+                    return;
+                }
+
+                $q->where(function ($catQuery) use ($categoryIds) {
+                    $catQuery
+                        ->where(function ($legacy) use ($categoryIds) {
+                            $legacy
+                                ->whereDoesntHave('categories')
+                                ->whereIn('category_id', $categoryIds);
+                        })
+                        ->orWhereHas('categories', function ($pivot) use ($categoryIds) {
+                            $pivot->whereIn('categories.id', $categoryIds);
+                        });
+                });
+            })
             ->when($this->filterFeatured !== '', fn($q) => $q->where('is_featured', $this->filterFeatured === '1'))
             ->when($this->filterAuthor && $this->canReview(), fn($q) => $q->where('user_id', $this->filterAuthor))
             ->orderBy(...array_values($this->sortBy))
@@ -323,20 +344,175 @@ new class extends Component {
         }
     }
 
-    public function getCategoriesProperty()
+    public function getCategoriesProperty(): array
     {
+        $canSeeAllCategories = $this->pendingOnlyMode
+            ? $this->hasGlobalReviewAccess()
+            : ($this->hasGlobalWriteAccess() || $this->hasGlobalReviewAccess());
+
         $allowedCategoryIds = $this->pendingOnlyMode
             ? $this->categoryIdsForPermission('duyet_bai_viet')
             : $this->accessibleCategoryIds();
 
-        return Category::query()
+        $allowedCategoryIds = collect($allowedCategoryIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        $categories = Category::query()
             ->orderBy('order')
-            ->get()
-            ->filter(fn ($category) => $allowedCategoryIds === [] || in_array($category->id, $allowedCategoryIds, true))
-            ->map(fn($c) => [
-            'id' => $c->id,
-            'name' => $c->getTranslatedName(),
-        ])->toArray();
+            ->orderBy('id')
+            ->get();
+
+        // Global quyền thì được lọc toàn bộ danh mục
+        if ($canSeeAllCategories) {
+            $allowedCategoryIds = $categories
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        // Không có quyền danh mục nào thì không hiện dropdown danh mục
+        if (empty($allowedCategoryIds)) {
+            return [];
+        }
+
+        $allowedMap = array_flip($allowedCategoryIds);
+        $categoriesById = $categories->keyBy('id');
+
+        $visibleIds = [];
+
+        foreach ($allowedCategoryIds as $id) {
+            $visibleIds[] = $id;
+
+            $current = $categoriesById->get($id);
+
+            // Thêm cha / ông nội để dropdown nhìn đúng cây
+            while ($current && $current->parent_id) {
+                $parentId = (int) $current->parent_id;
+
+                $visibleIds[] = $parentId;
+                $current = $categoriesById->get($parentId);
+            }
+        }
+
+        $visibleMap = array_flip(array_unique($visibleIds));
+
+        return $this->flattenCategorySelectOptions(
+            categories: $categories,
+            parentId: null,
+            allowedMap: $allowedMap,
+            visibleMap: $visibleMap,
+            depth: 0
+        );
+    }
+
+    private function flattenCategorySelectOptions(
+        Collection $categories,
+        ?int $parentId,
+        array $allowedMap,
+        array $visibleMap,
+        int $depth = 0
+    ): array {
+        $options = [];
+
+        $children = $parentId === null
+            ? $categories->filter(fn ($category) => blank($category->parent_id) || (int) $category->parent_id === 0)
+            : $categories->filter(fn ($category) => (int) $category->parent_id === $parentId);
+
+        foreach ($children as $category) {
+            $id = (int) $category->id;
+
+            if (isset($visibleMap[$id])) {
+                $prefix = $depth > 0 ? str_repeat('—', $depth) . ' ' : '';
+
+                $options[] = [
+                    'id' => $id,
+                    'name' => $prefix . $category->getTranslatedName(),
+
+                    // Cha chỉ để nhìn cây, không cho chọn nếu không có quyền trực tiếp
+                    'disabled' => ! isset($allowedMap[$id]),
+                ];
+            }
+
+            $options = array_merge(
+                $options,
+                $this->flattenCategorySelectOptions(
+                    categories: $categories,
+                    parentId: $id,
+                    allowedMap: $allowedMap,
+                    visibleMap: $visibleMap,
+                    depth: $depth + 1
+                )
+            );
+        }
+
+        return $options;
+    }
+
+    private function selectedCategoryFilterIds(): array
+    {
+        if (blank($this->filterCategory)) {
+            return [];
+        }
+
+        $selectedCategoryId = (int) $this->filterCategory;
+
+        $categories = Category::query()
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
+
+        $ids = [$selectedCategoryId];
+
+        $ids = array_merge(
+            $ids,
+            $this->getAllDescendantCategoryIds($categories, $selectedCategoryId)
+        );
+
+        $allowedCategoryIds = $this->pendingOnlyMode
+            ? $this->categoryIdsForPermission('duyet_bai_viet')
+            : $this->accessibleCategoryIds();
+
+        $allowedCategoryIds = collect($allowedCategoryIds)
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        // Global quyền thì được lọc toàn bộ danh mục
+        $canSeeAllCategories = $this->pendingOnlyMode
+            ? $this->hasGlobalReviewAccess()
+            : ($this->hasGlobalWriteAccess() || $this->hasGlobalReviewAccess());
+
+        if ($canSeeAllCategories) {
+            return array_values(array_unique($ids));
+        }
+
+        // User thường chỉ được lọc trong nhóm danh mục được cấp quyền
+        return array_values(array_intersect(
+            array_unique($ids),
+            $allowedCategoryIds
+        ));
+    }
+
+    private function getAllDescendantCategoryIds(Collection $categories, int $parentId): array
+    {
+        $ids = [];
+
+        foreach ($categories->where('parent_id', $parentId) as $child) {
+            $ids[] = (int) $child->id;
+
+            $ids = array_merge(
+                $ids,
+                $this->getAllDescendantCategoryIds($categories, (int) $child->id)
+            );
+        }
+
+        return $ids;
     }
 
     public function headers(): array
@@ -369,6 +545,14 @@ new class extends Component {
     }
     public function updatedFilterCategory(): void
     {
+        if ($this->filterCategory === '') {
+            $this->filterCategory = null;
+        }
+
+        if (! blank($this->filterCategory)) {
+            $this->filterCategory = (int) $this->filterCategory;
+        }
+
         $this->resetPage();
     }
 
@@ -404,7 +588,7 @@ new class extends Component {
     public function getHasActiveFiltersProperty(): bool
     {
         return trim($this->search) !== ''
-            || !is_null($this->filterCategory)
+            || !blank($this->filterCategory)
             || ($this->pendingOnlyMode? $this->filterStatus !== Post::APPROVAL_PENDING : $this->filterStatus !== '')
             || $this->filterFeatured !== ''
             || $this->filterLanguage !== ''

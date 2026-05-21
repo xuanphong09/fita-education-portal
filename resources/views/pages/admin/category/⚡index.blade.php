@@ -23,7 +23,16 @@ new class extends Component {
     {
         $categories = Category::query()
             ->with('parent')
-            ->withCount('posts')
+            ->withCount([
+                'posts as posts_count' => function ($query) {
+                    $userId = auth()->id();
+
+                    $query->where(function ($q) use ($userId) {
+                        $q->where('status', '!=', 'draft')
+                            ->orWhere('user_id', $userId);
+                    });
+                }
+            ])
             ->orderBy('order')
             ->orderBy('id')
             ->get();
@@ -305,7 +314,7 @@ new class extends Component {
             @endscope
 
             @scope('cell_posts_count', $category)
-            <x-badge :value="$category->posts_count . ' bài'"/>
+            <a href="{{route('admin.post.index', ['category'=>$category->id])}}" wire:navigate><x-badge :value="$category->posts_count . ' bài'"/></a>
             @endscope
 
             @scope('cell_is_active', $category)
