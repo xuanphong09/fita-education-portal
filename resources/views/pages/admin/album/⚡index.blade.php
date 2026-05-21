@@ -28,6 +28,7 @@ class extends Component {
     public string $name = '';
     public ?string $description = null;
     public int $order = 0;
+    public $isActive = true;
     public bool $isFeaturedHome = false;
 
     public function getAlbumsProperty()
@@ -51,7 +52,7 @@ class extends Component {
                         ->orWhere('description', 'like', $keyword);
                 });
             })
-            ->orderBy('order')
+            ->orderBy('is_active', 'desc')
             ->orderByDesc('id')
             ->paginate($this->perPage);
     }
@@ -67,6 +68,7 @@ class extends Component {
         $this->isEditingAlbum = false;
         $this->order = (int) Album::max('order') + 1;
         $this->showAlbumModal = true;
+        $this->isActive = true;
     }
 
     public function openEditAlbum(int $id): void
@@ -80,6 +82,7 @@ class extends Component {
         $this->order = (int) $album->order;
         $this->isFeaturedHome = (bool) $album->is_featured_home;
         $this->showAlbumModal = true;
+        $this->isActive = (bool) $album->is_active;
     }
 
     public function saveAlbum(): void
@@ -103,7 +106,8 @@ class extends Component {
         $payload = [
             'name' => $this->name,
             'description' => $this->description,
-            'order' => $this->order,
+            'is_active' => $this->isActive,
+            'order' => $this->isActive? $this->order : 0,
             'is_featured_home' => $this->isFeaturedHome,
         ];
 
@@ -202,14 +206,14 @@ class extends Component {
         </x-slot:middle>
         <x-slot:actions>
             <x-button icon="o-trash" class="btn-ghost" label="Thùng rác" link="{{ route('admin.album.trash') }}"/>
-            <x-button icon="o-plus" class="btn-primary text-white" label="Thêm album" wire:click="openCreateAlbum"/>
+            <x-button icon="o-plus" class="btn-primary text-white" label="Thêm album" wire:click="openCreateAlbum" spinner="openCreateAlbum"/>
         </x-slot:actions>
     </x-header>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" wire:loading.class="opacity-70" wire:target="search,perPage">
         @forelse($this->albums as $album)
             <x-card class="overflow-hidden p-0!" wire:key="album-card-{{ $album->id }}">
-                <div class="h-52 bg-gray-100">
+                <div class="h-52 bg-gray-100 relative">
                     <a href="{{route('admin.album.show',$album->id)}}" wire:navigate>
                         <img
                             src="{{ $album->cover_image_path ? Storage::url($album->cover_image_path) : asset('assets/images/default-image.jpg') }}"
@@ -218,6 +222,9 @@ class extends Component {
                             loading="lazy"
                         />
                     </a>
+                    @if(!$album->is_active)
+                        <x-badge class="absolute top-2 right-2 badge-sm text-white badge-error">Ẩn</x-badge>
+                    @endif
                 </div>
 
                 <div class="p-4 space-y-3">
@@ -240,9 +247,10 @@ class extends Component {
                                 class="btn-xs btn-ghost text-warning"
                                 wire:click="toggleFeaturedHome({{ $album->id }})"
                                 tooltip="{{ $album->is_featured_home ? 'Bỏ nổi bật trang chủ' : 'Đặt nổi bật trang chủ' }}"
+                                spinner="toggleFeaturedHome({{ $album->id }})"
                             />
-                            <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" wire:click="openEditAlbum({{ $album->id }})"/>
-                            <x-button icon="o-trash" class="btn-xs btn-ghost text-error" wire:click="deleteAlbum({{ $album->id }})"/>
+                            <x-button icon="o-pencil" class="btn-xs btn-ghost text-primary" wire:click="openEditAlbum({{ $album->id }})" spinner="openEditAlbum({{ $album->id }})"/>
+                            <x-button icon="o-trash" class="btn-xs btn-ghost text-error" wire:click="deleteAlbum({{ $album->id }})" spinner="deleteAlbum({{ $album->id }})"/>
                         </div>
                     </div>
                 </div>
@@ -262,11 +270,14 @@ class extends Component {
     @endif
 
     <x-modal wire:model="showAlbumModal" :title="$isEditingAlbum ? 'Chỉnh sửa album' : 'Thêm album'" separator>
-        <div class="space-y-3">
+        <div class="space-y-0">
             <x-input label="Tên album" wire:model="name" required placeholder="Nhập tên album"/>
             <x-textarea label="Mô tả" wire:model="description" rows="3" placeholder="Mô tả ngắn về album"/>
-{{--            <x-input label="Thứ tự" type="number" min="0" wire:model.number="order"/>--}}
-            <x-checkbox label="Đặt là album nổi bật trang chủ" wire:model="isFeaturedHome" class="checkbox-primary"/>
+            <x-input label="Thứ tự" type="number" min="0" wire:model.number="order"/>
+            <div class="flex items-center mt-2 justify-between">
+                <x-checkbox label="Đặt là album nổi bật trang chủ" wire:model="isFeaturedHome" class="checkbox-primary"/>
+                <x-checkbox label="Hoạt động" wire:model="isActive" class="checkbox-primary"/>
+            </div>
         </div>
         <x-slot:actions>
             <x-button label="Hủy" @click="$wire.showAlbumModal = false"/>

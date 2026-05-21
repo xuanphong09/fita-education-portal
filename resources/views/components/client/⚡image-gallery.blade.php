@@ -11,26 +11,32 @@ new class extends Component
     public string $uuid = '';
 
     // Trang chủ chỉ nên lấy ít ảnh để nhẹ website
-    public int $imageLimit = 12;
+    public int $imageLimit = 15;
 
     // null = tất cả album
     public ?int $selectedAlbumId = null;
 
-    public function mount(int $imageLimit = 12): void
+    public function mount(int $imageLimit = 15): void
     {
         $this->uuid = 'home-gallery-' . Str::random(10);
         $this->imageLimit = $imageLimit;
-        $this->selectedAlbumId = Album::query()
+        $featuredAlbum = Album::query()
             ->orderByDesc('is_featured_home')
             ->orderBy('order')
-            ->orderByDesc('id')
-            ->value('id');
+            ->first();
+
+        if ($featuredAlbum && $featuredAlbum->images()->exists()) {
+            $this->selectedAlbumId = $featuredAlbum->id;
+        } else {
+            $this->selectedAlbumId = null;
+        }
     }
 
     public function getAlbumOptionsProperty(): array
     {
         return Album::query()
             ->orderByDesc('is_featured_home')
+            ->whereHas('images')
             ->orderBy('order')
             ->orderByDesc('id')
             ->get(['id', 'name', 'is_featured_home'])
@@ -152,7 +158,7 @@ new class extends Component
         <div
             id="{{ $uuid }}-{{ $selectedAlbumId ?? 'all' }}"
             wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}"
-            class="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 lg:gap-6 mt-4"
+            class="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 gap-4 lg:gap-6 mt-4"
             x-data="{
                 lightbox: null,
 
@@ -189,11 +195,10 @@ new class extends Component
                     $imageUrl = Storage::url($image->image_path);
                     $caption = $image->caption ?: '';
 
-                    $aspectClass = match ($loop->iteration % 5) {
-                        1 => 'aspect-[4/5]',
-                        2 => 'aspect-video',
-                        3 => 'aspect-square',
-                        4 => 'aspect-[3/4]',
+                    $aspectClass = match ($loop->iteration % 4) {
+                        1 => 'aspect-[8/9]',
+                        2 => 'aspect-[6/4]',
+                        3 => 'aspect-video',
                         default => 'aspect-[5/4]',
                     };
                 @endphp

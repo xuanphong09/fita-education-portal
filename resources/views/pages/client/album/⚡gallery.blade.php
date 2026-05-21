@@ -21,6 +21,7 @@ class extends Component {
     public function getAlbumOptionsProperty(): array
     {
         return Album::query()
+            ->whereHas('images')
             ->orderBy('order')
             ->orderByDesc('id')
             ->get(['id', 'name'])

@@ -15,6 +15,7 @@ class Album extends Model
         'description',
         'order',
         'is_featured_home',
+        'is_active',
     ];
 
     protected $casts = [

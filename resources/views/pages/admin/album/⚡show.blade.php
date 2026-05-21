@@ -8,11 +8,12 @@ use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
+use Livewire\WithFileUploads;
 
 new
 #[Layout('layouts.app')]
 class extends Component {
-    use WithPagination, Toast;
+    use WithPagination, Toast, WithFileUploads;
 
     public int $albumId;
     public int $perPage = 20;
@@ -20,6 +21,12 @@ class extends Component {
     public bool $selectPage = false;
     public ?int $selectedImageId = null;
     public int $zoomLevel = 100;
+    private const MAX_UPLOAD_IMAGES = 20;
+
+    public bool $showUploadModal = false;
+    public array $uploadImages = [];
+    public ?string $uploadImagesError = null;
+    public ?string $caption = null;
 
     public function mount(int $id): void
     {
@@ -62,6 +69,11 @@ class extends Component {
             ->with('albums:id,name')
             ->whereHas('albums', fn ($query) => $query->whereKey($this->albumId))
             ->find($this->selectedImageId);
+    }
+
+    public function getMaxUploadImagesProperty(): int
+    {
+        return self::MAX_UPLOAD_IMAGES;
     }
 
     public function updatedPerPage(): void
@@ -153,6 +165,133 @@ class extends Component {
         $this->clearSelection();
         $this->success('Đã xóa các ảnh đã chọn khỏi album.');
     }
+
+    public function getUploadImagePreviewsProperty(): array
+    {
+        $previews = [];
+
+        foreach ($this->uploadImages as $index => $file) {
+            try {
+                $previews[] = [
+                    'key' => 'upload-preview-' . $index,
+                    'index' => $index,
+                    'name' => $file->getClientOriginalName(),
+                    'url' => $file->temporaryUrl(),
+                ];
+            } catch (\Throwable $e) {
+                \Log::error('Album upload preview error: ' . $e->getMessage());
+            }
+        }
+
+        return $previews;
+    }
+
+    public function updatedUploadImages(): void
+    {
+        $this->uploadImagesError = null;
+
+        if (! is_array($this->uploadImages)) {
+            $this->uploadImages = [];
+            return;
+        }
+
+        $count = count($this->uploadImages);
+
+        if ($count > self::MAX_UPLOAD_IMAGES) {
+            $this->uploadImages = array_values(array_slice($this->uploadImages, 0, self::MAX_UPLOAD_IMAGES));
+
+            $this->warning(
+                'Bạn chọn ' . $count . ' ảnh. Hệ thống chỉ giữ ' . self::MAX_UPLOAD_IMAGES . ' ảnh đầu tiên để tải lên.'
+            );
+        }
+    }
+
+    public function openUploadImages(): void
+    {
+        $this->resetImageForm();
+        $this->showUploadModal = true;
+    }
+
+    public function saveImages(): void
+    {
+        $this->validate([
+            'uploadImages' => 'required|array|min:1|max:' . self::MAX_UPLOAD_IMAGES,
+            'uploadImages.*' => 'image|mimes:jpg,jpeg,png,webp|max:4096',
+            'caption' => 'nullable|string|max:255',
+        ], [
+            'uploadImages.required' => 'Vui lòng chọn ít nhất 1 ảnh.',
+            'uploadImages.array' => 'Danh sách ảnh không hợp lệ.',
+            'uploadImages.min' => 'Vui lòng chọn ít nhất 1 ảnh.',
+            'uploadImages.max' => 'Chỉ được chọn tối đa ' . self::MAX_UPLOAD_IMAGES . ' ảnh/lần tải lên.',
+
+            'uploadImages.*.image' => 'Mỗi tệp phải là hình ảnh hợp lệ.',
+            'uploadImages.*.mimes' => 'Ảnh chỉ chấp nhận jpg, jpeg, png, webp.',
+            'uploadImages.*.max' => 'Mỗi ảnh không được vượt quá 4MB.',
+
+            'caption.max' => 'Chú thích không được vượt quá 255 ký tự.',
+        ]);
+
+        foreach ($this->uploadImages as $file) {
+            $image = AlbumImage::query()->create([
+                'image_path' => $file->store('uploads/albums', 'public'),
+                'caption' => $this->caption,
+            ]);
+
+            // Gắn ảnh vừa upload vào album hiện tại
+            $image->albums()->syncWithoutDetaching([$this->albumId]);
+        }
+
+        $uploadedCount = count($this->uploadImages);
+
+        $this->showUploadModal = false;
+        $this->resetImageForm();
+        $this->resetPage();
+
+        $this->success("Đã tải lên {$uploadedCount} ảnh vào album.");
+    }
+
+    public function removeUploadImage(int $index): void
+    {
+        if (! array_key_exists($index, $this->uploadImages)) {
+            return;
+        }
+
+        unset($this->uploadImages[$index]);
+
+        $this->uploadImages = array_values($this->uploadImages);
+        $this->uploadImagesError = null;
+    }
+
+    public function clearUploadImages(): void
+    {
+        $this->uploadImages = [];
+        $this->uploadImagesError = null;
+        $this->resetValidation(['uploadImages', 'uploadImages.*']);
+    }
+
+    public function closeUploadModal(): void
+    {
+        $this->showUploadModal = false;
+        $this->resetImageForm();
+    }
+
+    public function updatedShowUploadModal(bool $value): void
+    {
+        if (! $value) {
+            $this->resetImageForm();
+        }
+    }
+
+    protected function resetImageForm(): void
+    {
+        $this->reset([
+            'uploadImages',
+            'uploadImagesError',
+            'caption',
+        ]);
+
+        $this->resetErrorBag();
+    }
 };
 ?>
 
@@ -170,7 +309,8 @@ class extends Component {
             <span class="font-semibold text-primary">Đã chọn: {{ count($selectedImageIds) }}</span>
             <x-button label="Chọn tất cả trang" class="btn-ghost" wire:click="toggleSelectPage" spinner="toggleSelectPage"/>
             <x-button label="Bỏ chọn" class="btn-ghost" wire:click="clearSelection" spinner="clearSelection"/>
-            <x-button label="Xóa đã chọn khỏi album" icon="o-trash" class="btn-primary text-white" wire:click="requestDetachImage" spinner="requestDetachImage" :disabled="count($selectedImageIds) === 0"/>
+            <x-button label="Xóa đã chọn khỏi album" icon="o-trash" class="btn-error text-white" wire:click="requestDetachImage" spinner="requestDetachImage" :disabled="count($selectedImageIds) === 0"/>
+            <x-button icon="o-arrow-up-tray" class="btn-primary text-white" label="Tải ảnh lên" wire:click="openUploadImages" spinner/>
         </x-slot:actions>
     </x-header>
 
@@ -197,7 +337,7 @@ class extends Component {
                 overlay.innerHTML = `
                     <div class='pointer-events-auto flex items-center gap-2 rounded-full bg-black/65 px-3 py-2 text-white shadow-2xl backdrop-blur'>
                         <button type='button' data-action='download' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20' title='Tải ảnh xuống' aria-label='Tải ảnh xuống'>
-                            <span class='text-lg leading-none'><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5'' stroke='currentColor' class='size-6'><path stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3' /></svg></span>
+                            <span class='text-lg leading-none'><svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'><path stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3' /></svg></span>
                         </button>
                         <button type='button' data-action='delete' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-error/80 transition hover:bg-error' title='Xóa khỏi album' aria-label='Xóa khỏi album'>
                             <span class='text-lg leading-none'>
@@ -321,5 +461,123 @@ class extends Component {
             {{ $this->images->links() }}
         </div>
     @endif
+
+    <x-modal wire:model="showUploadModal" title="Tải ảnh vào album" separator class="modalAddImage">
+        <div class="space-y-0">
+            <div class="rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-slate-600">
+                Ảnh tải lên sẽ được thêm trực tiếp vào album:
+                <span class="font-semibold text-primary">{{ $this->album->name }}</span>
+            </div>
+
+            <x-file
+                label="Ảnh"
+                wire:model="uploadImages"
+                multiple
+                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                hint="Có thể chọn tối đa 20 ảnh, mỗi ảnh tối đa 4MB."
+            />
+
+            <div wire:loading wire:target="uploadImages" class="text-sm text-primary">
+                Đang tải ảnh lên để xem trước...
+            </div>
+
+            @if(!empty($uploadImagesError))
+                <div class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+                    {{ $uploadImagesError }}
+                </div>
+            @endif
+
+            @error('uploadImages')
+            <div class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+                {{ $message }}
+            </div>
+            @enderror
+
+            @error('uploadImages.*')
+            <div class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+                {{ $message }}
+            </div>
+            @enderror
+
+{{--            <x-input--}}
+{{--                label="Chú thích"--}}
+{{--                wire:model.live.debounce.300ms="caption"--}}
+{{--                placeholder="Nhập chú thích chung cho các ảnh nếu có..."--}}
+{{--                maxlength="255"--}}
+{{--            />--}}
+
+            @error('caption')
+            <div class="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+                {{ $message }}
+            </div>
+            @enderror
+
+            @if(!empty($this->uploadImagePreviews))
+                <div>
+                    <div class="mb-2 flex items-center justify-between gap-3">
+                        <p class="text-sm font-medium">
+                            Xem trước {{ count($this->uploadImagePreviews) }}/{{ $this->maxUploadImages }} ảnh
+                        </p>
+
+                        <x-button
+                            label="Xóa tất cả"
+                            class="btn-ghost btn-sm"
+                            wire:click="clearUploadImages"
+                            spinner="clearUploadImages"
+                        />
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-80 overflow-y-auto pr-1">
+                        @foreach($this->uploadImagePreviews as $preview)
+                            <div
+                                class="relative overflow-hidden rounded-lg border border-gray-200 bg-white"
+                                wire:key="{{ $preview['key'] }}"
+                            >
+                                <button
+                                    type="button"
+                                    class="absolute top-2 right-2 z-2 btn btn-circle btn-xs btn-error text-white"
+                                    wire:click="removeUploadImage({{ $preview['index'] }})"
+                                    wire:loading.attr="disabled"
+                                    wire:target="removeUploadImage"
+                                    title="Xóa ảnh khỏi danh sách"
+                                >
+                                    ✕
+                                </button>
+
+                                <img
+                                    src="{{ $preview['url'] }}"
+                                    alt="{{ $preview['name'] }}"
+                                    class="h-32 w-full object-cover"
+                                    loading="lazy"
+                                />
+
+                                <div
+                                    class="px-2 py-1 text-xs text-gray-600 truncate"
+                                    title="{{ $preview['name'] }}"
+                                >
+                                    {{ $preview['name'] }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+        </div>
+
+        <x-slot:actions>
+            <x-button
+                label="Hủy"
+                wire:click="closeUploadModal"
+            />
+
+            <x-button
+                label="Tải lên"
+                class="btn-primary text-white"
+                wire:click="saveImages"
+                spinner="saveImages"
+                :disabled="empty($uploadImages)"
+            />
+        </x-slot:actions>
+    </x-modal>
 </div>
 
