@@ -18,10 +18,27 @@ class extends Component {
     #[Url(as: 'album')]
     public ?int $selectedAlbumId = null;
 
+    public function mount(): void
+    {
+        if ($this->selectedAlbumId && ! $this->albumIsAvailable((int) $this->selectedAlbumId)) {
+            $this->selectedAlbumId = null;
+        }
+    }
+
+    private function albumIsAvailable(int $albumId): bool
+    {
+        return Album::query()
+            ->whereKey($albumId)
+            ->where('is_active', true)
+            ->whereHas('images')
+            ->exists();
+    }
+
     public function getAlbumOptionsProperty(): array
     {
         return Album::query()
             ->whereHas('images')
+            ->where('is_active' , true)
             ->orderBy('order')
             ->orderByDesc('id')
             ->get(['id', 'name'])
@@ -32,8 +49,10 @@ class extends Component {
     {
         return AlbumImage::query()
             ->when($this->selectedAlbumId, function ($query) {
+                // Khi chọn album cụ thể: chỉ lấy ảnh của album đang active
                 $query->whereHas('albums', function ($q) {
-                    $q->where('albums.id', $this->selectedAlbumId);
+                    $q->where('albums.is_active', true)
+                        ->where('albums.id', $this->selectedAlbumId);
                 });
             })
             ->orderByDesc('created_at')
@@ -43,7 +62,12 @@ class extends Component {
 
     public function setAlbum(?int $albumId): void
     {
-        $this->selectedAlbumId = $albumId;
+        if ($albumId && ! $this->albumIsAvailable($albumId)) {
+            $this->selectedAlbumId = null;
+        } else {
+            $this->selectedAlbumId = $albumId;
+        }
+
         $this->resetPage();
     }
 };
@@ -71,7 +95,7 @@ class extends Component {
     @endphp
 
     {{-- BỘ LỌC ALBUM --}}
-    @if(!empty($albums))
+{{--    @if(!empty($albums))--}}
         <div
             class="mb-8 flex items-center gap-3"
             x-data="{
@@ -173,7 +197,7 @@ class extends Component {
                 <x-icon name="o-chevron-right" class="w-5 h-5" />
             </button>
         </div>
-    @endif
+{{--    @endif--}}
 
     {{-- KHU VỰC ẢNH --}}
     <div class="relative">

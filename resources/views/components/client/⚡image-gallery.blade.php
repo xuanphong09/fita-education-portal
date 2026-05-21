@@ -20,23 +20,21 @@ new class extends Component
     {
         $this->uuid = 'home-gallery-' . Str::random(10);
         $this->imageLimit = $imageLimit;
-        $featuredAlbum = Album::query()
-            ->orderByDesc('is_featured_home')
+        $this->selectedAlbumId = Album::query()
+            ->where('is_active', true)
+            ->where('is_featured_home', true)
+            ->whereHas('images')
             ->orderBy('order')
-            ->first();
-
-        if ($featuredAlbum && $featuredAlbum->images()->exists()) {
-            $this->selectedAlbumId = $featuredAlbum->id;
-        } else {
-            $this->selectedAlbumId = null;
-        }
+            ->orderByDesc('id')
+            ->value('id');
     }
 
     public function getAlbumOptionsProperty(): array
     {
         return Album::query()
-            ->orderByDesc('is_featured_home')
+            ->where('is_active', true)
             ->whereHas('images')
+            ->orderByDesc('is_featured_home')
             ->orderBy('order')
             ->orderByDesc('id')
             ->get(['id', 'name', 'is_featured_home'])
@@ -47,8 +45,10 @@ new class extends Component
     {
         return AlbumImage::query()
             ->when($this->selectedAlbumId, function ($query) {
+                // Khi chọn 1 album cụ thể thì chỉ lấy ảnh của album active đó
                 $query->whereHas('albums', function ($q) {
-                    $q->where('albums.id', $this->selectedAlbumId);
+                    $q->where('albums.is_active', true)
+                        ->where('albums.id', $this->selectedAlbumId);
                 });
             })
             ->orderByDesc('created_at')
@@ -64,7 +64,14 @@ new class extends Component
 
     public function getDescriptionAlbumProperty()
     {
-        return optional(Album::find($this->selectedAlbumId))->description ?? '';
+        if (! $this->selectedAlbumId) {
+            return '';
+        }
+
+        return Album::query()
+            ->where('is_active', true)
+            ->whereKey($this->selectedAlbumId)
+            ->value('description') ?? '';
     }
 };
 ?>
@@ -77,82 +84,77 @@ new class extends Component
 {{--            </p>--}}
 {{--        </div>--}}
         {{-- FILTERABLE TABS --}}
-        @if(!empty($this->albumOptions))
-            <div
-                class="mb-4 flex items-center gap-3"
-                x-data="{
-            scrollLeft() {
-                this.$refs.tabs.scrollBy({
-                    left: -300,
-                    behavior: 'smooth'
-                });
-            },
+        <div
+            class="mb-4 flex items-center gap-3"
+            x-data="{
+                scrollLeft() {
+                    this.$refs.tabs.scrollBy({
+                        left: -300,
+                        behavior: 'smooth'
+                    });
+                },
 
-            scrollRight() {
-                this.$refs.tabs.scrollBy({
-                    left: 300,
-                    behavior: 'smooth'
-                });
-            }
-        }"
+                scrollRight() {
+                    this.$refs.tabs.scrollBy({
+                        left: 300,
+                        behavior: 'smooth'
+                    });
+                }
+            }"
+        >
+            <button
+                type="button"
+                x-on:click="scrollLeft()"
+                class="shrink-0 w-10 h-10 rounded-full bg-white text-slate-600 shadow-md border border-slate-200
+                hover:bg-fita hover:text-white transition-all flex items-center justify-center"
             >
-                {{-- Nút trái --}}
-                <button
-                    type="button"
-                    x-on:click="scrollLeft()"
-                    class="shrink-0 w-10 h-10 rounded-full bg-white text-slate-600 shadow-md border border-slate-200
-                   hover:bg-fita hover:text-white transition-all flex items-center justify-center"
-                >
-                    <x-icon name="o-chevron-left" class="w-5 h-5" />
-                </button>
+                <x-icon name="o-chevron-left" class="w-5 h-5" />
+            </button>
 
-                {{-- Vùng tabs --}}
-                <div class="min-w-0 flex-1 overflow-hidden">
-                    <div
-                        x-ref="tabs"
-                        class="flex flex-nowrap gap-2 overflow-x-auto py-1
-                       [-ms-overflow-style:none] [scrollbar-width:none]
-                       [&::-webkit-scrollbar]:hidden"
+            <div class="min-w-0 flex-1 overflow-hidden">
+                <div
+                    x-ref="tabs"
+                    class="flex flex-nowrap gap-2 overflow-x-auto py-1
+                        [-ms-overflow-style:none] [scrollbar-width:none]
+                        [&::-webkit-scrollbar]:hidden"
                     >
-                        <button
-                            type="button"
-                            wire:click="setAlbum(null)"
-                            wire:loading.attr="disabled"
-                            class="shrink-0 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-300
+                    <button
+                        type="button"
+                        wire:click="setAlbum(null)"
+                        wire:loading.attr="disabled"
+                        class="shrink-0 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-300
                         {{ is_null($selectedAlbumId)
                             ? 'bg-fita text-white border-fita shadow-md shadow-fita/20'
                             : 'bg-white text-slate-600 border-slate-200 hover:border-fita hover:text-fita' }}"
+                    >
+                        {{ __('Tất cả') }}
+                    </button>
+
+                    @foreach($this->albumOptions as $album)
+                        <button
+                            type="button"
+                            wire:click="setAlbum({{ $album['id'] }})"
+                            wire:loading.attr="disabled"
+                            class="shrink-0 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-300
+                    {{ $selectedAlbumId === $album['id']
+                        ? 'bg-fita text-white border-fita shadow-md shadow-fita/20'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-fita hover:text-fita' }}"
                         >
-                            {{ __('Tất cả') }}
+                            {{ $album['name'] }}
                         </button>
-
-                        @foreach($this->albumOptions as $album)
-                            <button
-                                type="button"
-                                wire:click="setAlbum({{ $album['id'] }})"
-                                wire:loading.attr="disabled"
-                                class="shrink-0 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-300
-                            {{ $selectedAlbumId === $album['id']
-                                ? 'bg-fita text-white border-fita shadow-md shadow-fita/20'
-                                : 'bg-white text-slate-600 border-slate-200 hover:border-fita hover:text-fita' }}"
-                            >
-                                {{ $album['name'] }}
-                            </button>
-                        @endforeach
-                    </div>
+                    @endforeach
                 </div>
-
-                {{-- Nút phải --}}
-                <button
-                    type="button"
-                    x-on:click="scrollRight()"
-                    class="shrink-0 w-10 h-10 rounded-full bg-white text-slate-600 shadow-md border border-slate-200
-                   hover:bg-fita hover:text-white transition-all flex items-center justify-center"
-                >
-                    <x-icon name="o-chevron-right" class="w-5 h-5" />
-                </button>
             </div>
-        @endif
+
+            <button
+                type="button"
+                x-on:click="scrollRight()"
+                class="shrink-0 w-10 h-10 rounded-full bg-white text-slate-600 shadow-md border border-slate-200
+                hover:bg-fita hover:text-white transition-all flex items-center justify-center"
+            >
+                <x-icon name="o-chevron-right" class="w-5 h-5" />
+            </button>
+        </div>
 
         {{-- MASONRY GALLERY --}}
         <div
