@@ -7,54 +7,165 @@ use App\Models\Category;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 new class extends Component {
     use WithPagination, Toast;
 
-    public array $sortBy = ['column' => 'created_at', 'direction' => 'desc'];
+    public array $sortBy = ['column' => 'order', 'direction' => 'asc'];
     public int $perPage = 10;
     #[Url(as: 'search')]
     public string $search = '';
 
-    public function getCategoriesProperty()
+    public function getCategoriesProperty(): LengthAwarePaginator
     {
-        $q = Category::query()
+        $categories = Category::query()
+            ->with('parent')
             ->withCount('posts')
-            ->with('parent');  // eager load để tránh N+1 query
+            ->orderBy('order')
+            ->orderBy('id')
+            ->get();
 
-        if (!empty($this->search)) {
-            $search = trim((string) $this->search);
-            $terms = preg_split('/\s+/u', $search, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $categoriesById = $categories->keyBy('id');
 
-            foreach ($terms as $term) {
-                $keyword = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term) . '%';
+        $groupedByParent = $categories->groupBy(function ($category) {
+            return (int) ($category->parent_id ?? 0);
+        });
 
-                $q->where(function ($inner) use ($keyword) {
-                    $inner->where('slug', 'like', $keyword)
-                        ->orWhereRaw(
-                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
-                            [$keyword]
-                        )
-                        ->orWhereRaw(
-                            "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
-                            [$keyword]
-                        )
-                        ->orWhereHas('parent', function ($parentQuery) use ($keyword) {
-                            $parentQuery->whereRaw(
-                                "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
-                                [$keyword]
-                            )->orWhereRaw(
-                                "COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), '') COLLATE utf8mb4_unicode_ci LIKE ? ESCAPE '\\\\'",
-                                [$keyword]
-                            );
-                        });
-                });
+        $visibleMap = null;
+
+        if (trim($this->search) !== '') {
+            $terms = preg_split('/\s+/u', trim($this->search), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+            $visibleIds = [];
+
+            foreach ($categories as $category) {
+                if ($this->categoryMatchesSearch($category, $terms)) {
+                    $visibleIds[] = (int) $category->id;
+
+                    // Thêm toàn bộ cha / ông nội...
+                    $visibleIds = array_merge(
+                        $visibleIds,
+                        $this->getAncestorIds($categoriesById, $category)
+                    );
+
+                    // Thêm toàn bộ con / cháu...
+                    $visibleIds = array_merge(
+                        $visibleIds,
+                        $this->getDescendantIds($groupedByParent, (int) $category->id)
+                    );
+                }
+            }
+
+            $visibleMap = array_flip(array_unique($visibleIds));
+        }
+
+        $flattened = $this->flattenCategoryTree(
+            groupedByParent: $groupedByParent,
+            parentId: 0,
+            depth: 0,
+            visibleMap: $visibleMap
+        );
+
+        $page = $this->getPage();
+        $items = $flattened
+            ->slice(($page - 1) * $this->perPage, $this->perPage)
+            ->values();
+
+        return new LengthAwarePaginator(
+            items: $items,
+            total: $flattened->count(),
+            perPage: $this->perPage,
+            currentPage: $page,
+            options: [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+    }
+
+    private function flattenCategoryTree(
+        Collection $groupedByParent,
+        int $parentId = 0,
+        int $depth = 0,
+        ?array $visibleMap = null
+    ): Collection {
+        $items = collect();
+
+        foreach ($groupedByParent->get($parentId, collect()) as $category) {
+            $id = (int) $category->id;
+
+            if ($visibleMap === null || isset($visibleMap[$id])) {
+                $category->tree_depth = $depth;
+                $items->push($category);
+            }
+
+            $items = $items->merge(
+                $this->flattenCategoryTree(
+                    groupedByParent: $groupedByParent,
+                    parentId: $id,
+                    depth: $depth + 1,
+                    visibleMap: $visibleMap
+                )
+            );
+        }
+
+        return $items;
+    }
+
+    private function getAncestorIds(Collection $categoriesById, Category $category): array
+    {
+        $ids = [];
+
+        while ($category && $category->parent_id) {
+            $parent = $categoriesById->get((int) $category->parent_id);
+
+            if (! $parent) {
+                break;
+            }
+
+            $ids[] = (int) $parent->id;
+            $category = $parent;
+        }
+
+        return $ids;
+    }
+
+    private function getDescendantIds(Collection $groupedByParent, int $parentId): array
+    {
+        $ids = [];
+
+        foreach ($groupedByParent->get($parentId, collect()) as $child) {
+            $ids[] = (int) $child->id;
+
+            $ids = array_merge(
+                $ids,
+                $this->getDescendantIds($groupedByParent, (int) $child->id)
+            );
+        }
+
+        return $ids;
+    }
+
+    private function categoryMatchesSearch(Category $category, array $terms): bool
+    {
+        $haystack = Str::lower(Str::ascii(
+            $category->getTranslatedName() . ' ' .
+            $category->slug . ' ' .
+            optional($category->parent)->getTranslatedName()
+        ));
+
+        foreach ($terms as $term) {
+            $needle = Str::lower(Str::ascii($term));
+
+            if (! Str::contains($haystack, $needle)) {
+                return false;
             }
         }
 
-        $q->orderBy(...array_values($this->sortBy));
-
-        return $q->paginate($this->perPage);
+        return true;
     }
 
     public function headers(): array
@@ -132,7 +243,7 @@ new class extends Component {
         <x-table
             :headers="$this->headers()"
             :rows="$this->categories"
-            :sort-by="$this->sortBy"
+{{--            :sort-by="$this->sortBy"--}}
             striped
             :per-page-values="[5, 10, 20, 25, 50]"
             per-page="perPage"
@@ -163,8 +274,26 @@ new class extends Component {
 {{--            @endscope--}}
 
             @scope('cell_name', $category)
-            <div class="font-medium">{{ $category->getTranslatedName() }}</div>
-            <div class="text-xs text-gray-400">{{ $category->slug }}</div>
+            @php
+                $depth = (int) ($category->tree_depth ?? 0);
+            @endphp
+
+            <div class="flex items-start gap-2" style="padding-left: {{ $depth * 24 }}px">
+                @if($depth > 0)
+                    <span class="mt-0.5 text-gray-400 select-none">└─</span>
+                @else
+                    <x-icon name="o-folder" class="w-4 h-4 mt-0.5 text-primary"/>
+                @endif
+
+                <div>
+                    <div class="font-medium">
+                        {{ $category->getTranslatedName() }}
+                    </div>
+                    <div class="text-xs text-gray-400">
+                        {{ $category->slug }}
+                    </div>
+                </div>
+            </div>
             @endscope
 
             @scope('cell_parent', $category)
