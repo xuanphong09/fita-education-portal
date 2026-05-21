@@ -223,7 +223,7 @@ class extends Component {
                         />
                     </a>
                     @if(!$album->is_active)
-                        <x-badge class="absolute top-2 right-2 badge-sm text-white badge-error">Ẩn</x-badge>
+                        <x-badge class="absolute top-2 right-2 badge-sm text-white badge-error" value="Ẩn"></x-badge>
                     @endif
                 </div>
 
