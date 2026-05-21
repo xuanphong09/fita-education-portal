@@ -981,10 +981,10 @@ class extends Component {
         </section>
     @endif
 
-    <section class="pt-10 lg:pt-12 bg-slate-50">
+    <section class="py-10 lg:pt-12 bg-slate-50">
         <h1 class="uppercase lg:text-[32px] text-[28px] text-fita font-bold font-barlow flex justify-center gap-1 items-center mb-6 mt-0">
             {{ !empty($sectionTitles['gallery']) ? $sectionTitles['gallery'] : __('Photo library') }}
         </h1>
-        <livewire:client.image-gallery :images="$images" class="h-40 rounded-box"/>
+        <livewire:client.image-gallery class="h-40 rounded-box"/>
     </section>
 </div>
