@@ -44,8 +44,10 @@ new class extends Component
     public function getGalleryImagesProperty()
     {
         return AlbumImage::query()
+            ->select(['id', 'image_path', 'caption', 'created_at'])
+            ->whereNotNull('image_path')
+            ->where('image_path', '!=', '')
             ->when($this->selectedAlbumId, function ($query) {
-                // Khi chọn 1 album cụ thể thì chỉ lấy ảnh của album active đó
                 $query->whereHas('albums', function ($q) {
                     $q->where('albums.is_active', true)
                         ->where('albums.id', $this->selectedAlbumId);
@@ -59,6 +61,10 @@ new class extends Component
 
     public function setAlbum(?int $albumId): void
     {
+        if ($this->selectedAlbumId === $albumId) {
+            return;
+        }
+
         $this->selectedAlbumId = $albumId;
     }
 
@@ -90,7 +96,7 @@ new class extends Component
 <section
     class=""
     x-data="{
-        currentLimit: null,
+        currentLimit: @js($imageLimit),
         resizeTimer: null,
         resizeHandler: null,
 
@@ -98,24 +104,24 @@ new class extends Component
             const width = window.innerWidth;
 
             if (width >= 1536) {
-                return 10; // 2xl: 5 cột x 2 hàng
+                return 10;
             }
 
             if (width >= 1024) {
-                return 8; // lg: 4 cột x 2 hàng
+                return 8;
             }
 
             if (width >= 640) {
-                return 6; // sm: 3 cột x 2 hàng
+                return 6;
             }
 
-            return 4; // mobile: 2 cột x 2 hàng
+            return 4;
         },
 
         syncImageLimit() {
             const limit = this.getImageLimit();
 
-            if (this.currentLimit === limit) {
+            if (Number(this.currentLimit) === Number(limit)) {
                 return;
             }
 
@@ -124,14 +130,16 @@ new class extends Component
         },
 
         init() {
-            this.syncImageLimit();
+            this.$nextTick(() => {
+                this.syncImageLimit();
+            });
 
             this.resizeHandler = () => {
                 clearTimeout(this.resizeTimer);
 
                 this.resizeTimer = setTimeout(() => {
                     this.syncImageLimit();
-                }, 250);
+                }, 350);
             };
 
             window.addEventListener('resize', this.resizeHandler);
@@ -222,12 +230,27 @@ new class extends Component
                 <x-icon name="o-chevron-right" class="w-5 h-5" />
             </button>
         </div>
+        <div class="relative min-h-[260px]">
+            <div
+                wire:loading.flex
+                wire:target="setAlbum,setResponsiveImageLimit"
+                class="absolute inset-0 z-20 bg-white/60 backdrop-blur-[1px] rounded-2xl items-center justify-center"
+            >
+                <div class="flex items-center gap-3 px-4 py-3">
+                    <span class="loading loading-spinner loading-md text-fita"></span>
+                    <span class="text-sm font-semibold text-slate-600">
+                {{ __('Loading data...') }}
+            </span>
+                </div>
+            </div>
 
-        <div
-            id="{{ $uuid }}-{{ $selectedAlbumId ?? 'all' }}"
-            wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}-{{ $imageLimit }}"
-            class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 mt-4"
-            x-data="{
+            <div
+                id="{{ $uuid }}-{{ $selectedAlbumId ?? 'all' }}"
+                wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}-{{ $imageLimit }}"
+                wire:loading.class="opacity-40 pointer-events-none"
+                wire:target="setAlbum,setResponsiveImageLimit"
+                class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 mt-4"
+                x-data="{
                 lightbox: null,
                 captionOverlay: null,
 
@@ -311,75 +334,80 @@ new class extends Component
                     }
                 }
             }"
-            x-on:destroy.window="destroy()"
-        >
-            @forelse($this->galleryImages as $image)
-                @php
-                    $imageUrl = Storage::url($image->image_path);
-                    $caption = $image->caption ?: '';
+                x-on:destroy.window="destroy()"
+            >
+                @forelse($this->galleryImages as $image)
+                    @php
+                        $imageUrl = Storage::url($image->image_path);
+                        $thumbUrl = $image->thumbnail_path
+                            ? Storage::url($image->thumbnail_path)
+                            : $imageUrl;
+                        $caption = $image->caption ?: '';
 
-                    $aspectClass = match ($loop->iteration % 4) {
-                        1 => 'aspect-[8/9]',
-                        2 => 'aspect-[6/5]',
-                        3 => 'aspect-[4/3]',
-                        default => 'aspect-[5/4]',
-                    };
-                @endphp
+                        $aspectClass = match ($loop->iteration % 4) {
+                            1 => 'aspect-[8/9]',
+                            2 => 'aspect-[6/5]',
+                            3 => 'aspect-[4/3]',
+                            default => 'aspect-[5/4]',
+                        };
+                    @endphp
 
-                <div
-                    wire:key="home-gallery-image-{{ $image->id }}"
-                    class="mb-4 lg:mb-6 break-inside-avoid"
-                >
-                    <div class="relative overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100 {{ $aspectClass }}">
-                        <a
-                            href="{{ $imageUrl }}"
-                            data-pswp-width="1200"
-                            data-pswp-height="800"
-                            data-image-caption="{{ e($caption) }}"
-                            aria-label="{{ e($caption) }}"
-                            class="pswp-item relative block w-full h-full cursor-zoom-in group/img"
-                        >
-                            <img
-                                src="{{ $imageUrl }}"
-                                class="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
-                                onload="
-                                    this.parentNode.setAttribute('data-pswp-width', this.naturalWidth);
-                                    this.parentNode.setAttribute('data-pswp-height', this.naturalHeight);
-                                "
-                                loading="lazy"
-                                decoding="async"
-                                alt="{{ $caption }}"
-                            />
+                    <div
+                        wire:key="home-gallery-image-{{ $image->id }}"
+                        class="mb-4 lg:mb-6 break-inside-avoid"
+                    >
+                        <div class="relative overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100 {{ $aspectClass }}">
+                            <a
+                                href="{{ $imageUrl }}"
+                                data-pswp-width="1200"
+                                data-pswp-height="800"
+                                data-image-caption="{{ e($caption) }}"
+                                aria-label="{{ e($caption) }}"
+                                class="pswp-item relative block w-full h-full cursor-zoom-in group/img"
+                            >
+                                <img
+                                    src="{{ $thumbUrl  }}"
+                                    class="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
+                                    onload="
+                                        this.parentNode.setAttribute('data-pswp-width', this.naturalWidth);
+                                        this.parentNode.setAttribute('data-pswp-height', this.naturalHeight);
+                                    "
+                                    loading="{{ $loop->iteration <= 4 ? 'eager' : 'lazy' }}"
+                                    decoding="async"
+                                    fetchpriority="{{ $loop->iteration <= 2 ? 'high' : 'low' }}"
+                                    alt="{{ $caption }}"
+                                />
 
-                            {{-- Lớp phủ hover --}}
-                            <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/35 transition-colors duration-300"></div>
+                                {{-- Lớp phủ hover --}}
+                                <div class="absolute inset-0 bg-black/0 group-hover/img:bg-black/35 transition-colors duration-300"></div>
 
-                            {{-- Icon zoom --}}
-                            <div class="absolute inset-0 flex items-center justify-center">
-                                <div class="w-11 h-11 rounded-full bg-white/90 text-fita flex items-center justify-center opacity-0 scale-75 group-hover/img:opacity-100 group-hover/img:scale-100 transition-all duration-300 shadow-lg">
-                                    <x-icon name="o-magnifying-glass-plus" class="w-6 h-6" />
+                                {{-- Icon zoom --}}
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="w-11 h-11 rounded-full bg-white/90 text-fita flex items-center justify-center opacity-0 scale-75 group-hover/img:opacity-100 group-hover/img:scale-100 transition-all duration-300 shadow-lg">
+                                        <x-icon name="o-magnifying-glass-plus" class="w-6 h-6" />
+                                    </div>
                                 </div>
-                            </div>
 
-                            {{-- Caption --}}
-                            @if($caption)
-                                <div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover/img:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                                    <p class="text-white text-sm font-semibold leading-snug line-clamp-2">
-                                        {{ $caption }}
-                                    </p>
-                                </div>
-                            @endif
-                        </a>
+                                {{-- Caption --}}
+                                @if($caption)
+                                    <div class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover/img:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                                        <p class="text-white text-sm font-semibold leading-snug line-clamp-2">
+                                            {{ $caption }}
+                                        </p>
+                                    </div>
+                                @endif
+                            </a>
+                        </div>
                     </div>
-                </div>
-            @empty
-                <div class="break-inside-avoid">
-                    <div class="py-16 flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                        <x-icon name="o-photo" class="w-16 h-16 mb-3 text-slate-300" />
-                        <p>{{ __('Hiện tại chưa có hình ảnh nào.') }}</p>
+                @empty
+                    <div class="break-inside-avoid">
+                        <div class="py-16 flex flex-col items-center justify-center text-slate-400 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                            <x-icon name="o-photo" class="w-16 h-16 mb-3 text-slate-300" />
+                            <p>{{ __('Hiện tại chưa có hình ảnh nào.') }}</p>
+                        </div>
                     </div>
-                </div>
-            @endforelse
+                @endforelse
+            </div>
         </div>
 
         {{-- NÚT XEM THÊM --}}
