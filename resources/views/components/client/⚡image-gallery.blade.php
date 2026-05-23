@@ -62,6 +62,17 @@ new class extends Component
         $this->selectedAlbumId = $albumId;
     }
 
+    public function setResponsiveImageLimit(int $limit): void
+    {
+        $allowedLimits = [4, 6, 8, 10, 12];
+
+        if (! in_array($limit, $allowedLimits, true)) {
+            $limit = 8;
+        }
+
+        $this->imageLimit = $limit;
+    }
+
     public function getDescriptionAlbumProperty()
     {
         if (! $this->selectedAlbumId) {
@@ -76,7 +87,63 @@ new class extends Component
 };
 ?>
 
-<section class="">
+<section
+    class=""
+    x-data="{
+        currentLimit: null,
+        resizeTimer: null,
+        resizeHandler: null,
+
+        getImageLimit() {
+            const width = window.innerWidth;
+
+            if (width >= 1536) {
+                return 10; // 2xl: 5 cột x 2 hàng
+            }
+
+            if (width >= 1024) {
+                return 8; // lg: 4 cột x 2 hàng
+            }
+
+            if (width >= 640) {
+                return 6; // sm: 3 cột x 2 hàng
+            }
+
+            return 4; // mobile: 2 cột x 2 hàng
+        },
+
+        syncImageLimit() {
+            const limit = this.getImageLimit();
+
+            if (this.currentLimit === limit) {
+                return;
+            }
+
+            this.currentLimit = limit;
+            this.$wire.setResponsiveImageLimit(limit);
+        },
+
+        init() {
+            this.syncImageLimit();
+
+            this.resizeHandler = () => {
+                clearTimeout(this.resizeTimer);
+
+                this.resizeTimer = setTimeout(() => {
+                    this.syncImageLimit();
+                }, 250);
+            };
+
+            window.addEventListener('resize', this.resizeHandler);
+        },
+
+        destroy() {
+            if (this.resizeHandler) {
+                window.removeEventListener('resize', this.resizeHandler);
+            }
+        }
+    }"
+>
     <div class="container mx-auto px-4">
 {{--        <div class="mb-4 text-center">--}}
 {{--            <p class="max-w-2xl mx-auto text-gray-600 text-[16px]">--}}
@@ -156,10 +223,9 @@ new class extends Component
             </button>
         </div>
 
-        {{-- MASONRY GALLERY --}}
         <div
             id="{{ $uuid }}-{{ $selectedAlbumId ?? 'all' }}"
-            wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}"
+            wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}-{{ $imageLimit }}"
             class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 mt-4"
             x-data="{
                 lightbox: null,
@@ -254,8 +320,8 @@ new class extends Component
 
                     $aspectClass = match ($loop->iteration % 4) {
                         1 => 'aspect-[8/9]',
-                        2 => 'aspect-[6/4]',
-                        3 => 'aspect-video',
+                        2 => 'aspect-[6/5]',
+                        3 => 'aspect-[4/3]',
                         default => 'aspect-[5/4]',
                     };
                 @endphp
