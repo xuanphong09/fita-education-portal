@@ -224,16 +224,52 @@ class extends Component {
             class="columns-2 md:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 transition-opacity duration-300"
             x-data="{
                 lightbox: null,
+                captionOverlay: null,
+
+                getActiveCaption(pswp) {
+                    const element = pswp?.currSlide?.data?.element;
+                    return element?.dataset?.imageCaption || element?.getAttribute('aria-label') || '';
+                },
+
+                createCaptionOverlay(pswp) {
+                    this.removeCaptionOverlay();
+
+                    const caption = this.getActiveCaption(pswp);
+
+                    if (!caption) {
+                        return;
+                    }
+
+                    const overlay = document.createElement('div');
+                    overlay.className = 'pswp-caption-overlay';
+
+                    overlay.style.position = 'absolute';
+                    overlay.style.left = '50%';
+                    overlay.style.bottom = '28px';
+                    overlay.style.transform = 'translateX(-50%)';
+                    overlay.style.zIndex = '60';
+                    overlay.style.maxWidth = '80vw';
+                    overlay.style.pointerEvents = 'none';
+
+                    const captionBox = document.createElement('div');
+                    captionBox.className = 'rounded-xl bg-black/65 px-4 py-2 text-center text-sm font-medium text-white shadow-2xl backdrop-blur';
+                    captionBox.textContent = caption;
+
+                    overlay.appendChild(captionBox);
+                    pswp.element?.appendChild(overlay);
+
+                    this.captionOverlay = overlay;
+                },
+
+                removeCaptionOverlay() {
+                    this.captionOverlay?.remove();
+                    this.captionOverlay = null;
+                },
 
                 init() {
                     this.$nextTick(() => {
                         if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') {
                             return;
-                        }
-
-                        if (this.lightbox) {
-                            this.lightbox.destroy();
-                            this.lightbox = null;
                         }
 
                         this.lightbox = new PhotoSwipeLightbox({
@@ -245,11 +281,25 @@ class extends Component {
                             arrowKeys: true,
                         });
 
+                        this.lightbox.on('openingAnimationEnd', () => {
+                            this.createCaptionOverlay(this.lightbox.pswp);
+                        });
+
+                        this.lightbox.on('change', () => {
+                            this.createCaptionOverlay(this.lightbox.pswp);
+                        });
+
+                        this.lightbox.on('close', () => {
+                            this.removeCaptionOverlay();
+                        });
+
                         this.lightbox.init();
                     });
                 },
 
                 destroy() {
+                    this.removeCaptionOverlay();
+
                     if (this.lightbox) {
                         this.lightbox.destroy();
                         this.lightbox = null;
@@ -257,6 +307,7 @@ class extends Component {
                 }
             }"
             x-on:destroy.window="destroy()"
+            x-on:livewire:navigating.window="destroy()"
         >
             @forelse($images as $image)
                 @php
@@ -273,7 +324,9 @@ class extends Component {
                             href="{{ $imageUrl }}"
                             data-pswp-width="1200"
                             data-pswp-height="800"
-                            class="pswp-item relative block w-full cursor-zoom-in"
+                            data-image-caption="{{ e($caption) }}"
+                            aria-label="{{ e($caption) }}"
+                            class="pswp-item relative block w-full h-full cursor-zoom-in group/img"
                         >
                             <img
                                 src="{{ $imageUrl }}"
@@ -298,11 +351,13 @@ class extends Component {
                             </div>
 
                             {{-- Caption --}}
-                            <figcaption class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover/img:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
-                                <p class="text-white text-sm font-semibold leading-snug line-clamp-2">
-                                    {{ $caption }}
-                                </p>
-                            </figcaption>
+                            @if($caption)
+                                <figcaption class="absolute inset-x-0 bottom-0 p-4 translate-y-full group-hover/img:translate-y-0 transition-transform duration-300 bg-gradient-to-t from-black/80 via-black/40 to-transparent">
+                                    <p class="text-white text-sm font-semibold leading-snug line-clamp-2">
+                                        {{ $caption }}
+                                    </p>
+                                </figcaption>
+                            @endif
                         </a>
                     </figure>
                 </div>
