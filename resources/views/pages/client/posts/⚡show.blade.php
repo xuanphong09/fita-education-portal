@@ -251,19 +251,19 @@ class extends Component {
 {{--                    @endif--}}
 {{--                </div>--}}
                 @if($post->thumbnail)
-                    <div class="relative aspect-video bg-gray-200 overflow-hidden relative">
+                    <div class="aspect-video bg-gray-200 overflow-hidden relative">
                         <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
-                    </div>
-                    @if($post->is_featured)
-                    <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">
-                        {{ __('Featured News') }}
-                    </div>
+                        @if($post->is_featured)
+                            <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">
+                                {{ __('Featured News') }}
+                            </div>
 
-                    @elseif($this->isNewPost($post) && !$post->is_featured)
-                        <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">
-                            {{ __('New') }}
-                        </div>
-                    @endif
+                        @elseif($this->isNewPost($post) && !$post->is_featured)
+                            <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-[#F6A309] pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">
+                                {{ __('New') }}
+                            </div>
+                        @endif
+                    </div>
                 @endif
                 <div class="p-4 lg:p-6">
                     {{-- Category Badge --}}
