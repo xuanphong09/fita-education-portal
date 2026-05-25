@@ -415,13 +415,19 @@ class extends Component {
                         ? Storage::url($image->thumbnail_path)
                         : $imageUrl;
                     $caption = $image->caption ?: '';
+                    $aspectClass = match ($loop->iteration % 4) {
+                        1 => 'aspect-[8/9]',
+                        2 => 'aspect-[6/5]',
+                        3 => 'aspect-[4/3]',
+                        default => 'aspect-[5/4]',
+                    };
                 @endphp
 
                 <div
                     class="mb-4 lg:mb-6 break-inside-avoid"
                     wire:key="gallery-image-{{ $image->id }}"
                 >
-                    <figure class="relative overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100 group/img">
+                    <figure class="relative overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100 group/img {{ $aspectClass }}">
                         <a
                             href="{{ $imageUrl }}"
                             data-pswp-width="1200"
@@ -432,7 +438,7 @@ class extends Component {
                         >
                             <img
                                 src="{{ $thumbUrl }}"
-                                class="w-full h-auto object-cover transition-transform duration-700 group-hover/img:scale-110"
+                                class="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
                                 onload="
                                     this.parentNode.setAttribute('data-pswp-width', this.naturalWidth);
                                     this.parentNode.setAttribute('data-pswp-height', this.naturalHeight);
