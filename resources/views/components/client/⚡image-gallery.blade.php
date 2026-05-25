@@ -249,7 +249,7 @@ new class extends Component
                 wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}-{{ $imageLimit }}"
                 wire:loading.class="opacity-40 pointer-events-none"
                 wire:target="setAlbum,setResponsiveImageLimit"
-                class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 mt-4"
+                class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 mt-4 transition-opacity duration-300"
                 x-data="{
                 lightbox: null,
                 captionOverlay: null,

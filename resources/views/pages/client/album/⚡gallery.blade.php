@@ -182,13 +182,6 @@ class extends Component {
         $galleryId = 'public-gallery-' . ($selectedAlbumId ?? 'all') . '-' . $images->currentPage() . '-' . $imagePerPage;
 
         $imageCount = $images->count();
-
-        $galleryColumnClass = match (true) {
-//            $imageCount <= 1 => 'columns-1 max-w-xl mx-auto',
-//            $imageCount <= 4 => 'columns-1 sm:columns-2 lg:columns-2 max-w-5xl mx-auto',
-//            $imageCount <= 6 => 'columns-1 sm:columns-2 lg:columns-3 max-w-7xl mx-auto',
-            default => 'columns-2 sm:columns-3 lg:columns-4 2xl:columns-5',
-        };
     @endphp
 
     {{-- BỘ LỌC ALBUM --}}
@@ -420,16 +413,12 @@ class extends Component {
             @forelse($images as $image)
                 @php
                     $imageUrl = Storage::url($image->image_path);
-                    $thumbUrl = $image->thumbnail_path
-                        ? Storage::url($image->thumbnail_path)
-                        : $imageUrl;
                     $caption = $image->caption ?: '';
+
                     $aspectClass = match ($loop->iteration % 4) {
                         1 => 'aspect-[8/9]',
-                        2 => 'aspect-video',
-                        3 => 'aspect-[6/5]',
-                        4 => 'aspect-[4/3]',
-                        5 => 'aspect-[7/4]',
+                        2 => 'aspect-[6/5]',
+                        3 => 'aspect-[4/3]',
                         default => 'aspect-[5/4]',
                     };
                 @endphp
@@ -448,12 +437,12 @@ class extends Component {
                             class="pswp-item relative block w-full h-full cursor-zoom-in group/img"
                         >
                             <img
-                                src="{{ $thumbUrl }}"
+                                src="{{ $imageUrl }}"
                                 class="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
                                 onload="
-                                    this.parentNode.setAttribute('data-pswp-width', this.naturalWidth);
-                                    this.parentNode.setAttribute('data-pswp-height', this.naturalHeight);
-                                "
+                        this.parentNode.setAttribute('data-pswp-width', this.naturalWidth);
+                        this.parentNode.setAttribute('data-pswp-height', this.naturalHeight);
+                    "
                                 loading="{{ $loop->iteration <= 4 ? 'eager' : 'lazy' }}"
                                 decoding="async"
                                 fetchpriority="{{ $loop->iteration <= 2 ? 'high' : 'low' }}"
