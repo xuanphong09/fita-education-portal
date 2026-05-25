@@ -417,8 +417,9 @@ class extends Component {
                     $caption = $image->caption ?: '';
                     $aspectClass = match ($loop->iteration % 4) {
                         1 => 'aspect-[8/9]',
-                        2 => 'aspect-[6/5]',
-                        3 => 'aspect-[4/3]',
+                        2 => 'aspect-video',
+                        3 => 'aspect-[6/5]',
+                        4 => 'aspect-[4/3]',
                         default => 'aspect-[5/4]',
                     };
                 @endphp
