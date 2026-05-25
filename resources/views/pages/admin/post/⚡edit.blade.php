@@ -745,20 +745,20 @@ new class extends Component {
         $post->setTranslation('content', 'vi', $content_vi);
         $post->setTranslation('content', 'en', $content_en);
 
-        if ($this->excerpt_vi !== '' || $this->excerpt_en !== '') {
+//        if ($this->excerpt_vi !== '' || $this->excerpt_en !== '') {
             $post->setTranslation('excerpt', 'vi', $this->excerpt_vi);
             $post->setTranslation('excerpt', 'en', $this->excerpt_en);
-        }
+//        }
 
-        if ($this->seo_title_vi !== '' || $this->seo_title_en !== '') {
+//        if ($this->seo_title_vi !== '' || $this->seo_title_en !== '') {
             $post->setTranslation('seo_title', 'vi', $this->seo_title_vi);
             $post->setTranslation('seo_title', 'en', $this->seo_title_en);
-        }
+//        }
 
-        if ($this->seo_description_vi !== '' || $this->seo_description_en !== '') {
+//        if ($this->seo_description_vi !== '' || $this->seo_description_en !== '') {
             $post->setTranslation('seo_description', 'vi', $this->seo_description_vi);
             $post->setTranslation('seo_description', 'en', $this->seo_description_en);
-        }
+//        }
 
         $post->fill([
             'slug' => $this->slug,
