@@ -251,7 +251,7 @@ class extends Component {
 {{--                    @endif--}}
 {{--                </div>--}}
                 @if($post->thumbnail)
-                    <div class="aspect-video bg-gray-200 overflow-hidden relative">
+                    <div class="relative aspect-video bg-gray-200 overflow-hidden relative">
                         <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
                     </div>
                     @if($post->is_featured)
