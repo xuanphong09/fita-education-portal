@@ -5,39 +5,81 @@ use App\Models\AlbumImage;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Livewire\WithPagination;
+use Livewire\WithoutUrlPagination;
 
 new class extends Component
 {
+    use WithPagination, WithoutUrlPagination;
+
     public string $uuid = '';
 
-    // Trang chủ chỉ nên lấy ít ảnh để nhẹ website
+    // Số ảnh mỗi trang, thay đổi theo kích thước màn hình
     public int $imageLimit = 8;
 
-    // null = tất cả album
+    // null = Tất cả, chỉ dùng khi không có album nào active + có ảnh
     public ?int $selectedAlbumId = null;
 
     public function mount(int $imageLimit = 8): void
     {
         $this->uuid = 'home-gallery-' . Str::random(10);
         $this->imageLimit = $imageLimit;
-        $this->selectedAlbumId = Album::query()
+
+        // Có album nổi bật thì chọn album nổi bật
+        // Không có album nổi bật thì chọn album đầu tiên
+        // Không có album nào thì giữ null => tab Tất cả
+        $this->selectedAlbumId = $this->featuredAvailableAlbumId()
+            ?? $this->firstAvailableAlbumId();
+    }
+
+    private function availableAlbumsQuery()
+    {
+        return Album::query()
             ->where('is_active', true)
+            ->whereHas('images');
+    }
+
+    private function featuredAvailableAlbumId(): ?int
+    {
+        $id = $this->availableAlbumsQuery()
             ->where('is_featured_home', true)
-            ->whereHas('images')
             ->orderBy('order')
             ->orderByDesc('id')
             ->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function firstAvailableAlbumId(): ?int
+    {
+        $id = $this->availableAlbumsQuery()
+            ->orderByDesc('is_featured_home')
+            ->orderBy('order')
+            ->orderByDesc('id')
+            ->value('id');
+
+        return $id ? (int) $id : null;
+    }
+
+    private function albumIsAvailable(int $albumId): bool
+    {
+        return $this->availableAlbumsQuery()
+            ->whereKey($albumId)
+            ->exists();
     }
 
     public function getAlbumOptionsProperty(): array
     {
-        return Album::query()
-            ->where('is_active', true)
-            ->whereHas('images')
+        return $this->availableAlbumsQuery()
             ->orderByDesc('is_featured_home')
             ->orderBy('order')
             ->orderByDesc('id')
             ->get(['id', 'name', 'is_featured_home'])
+            ->map(fn ($album) => [
+                'id' => (int) $album->id,
+                'name' => $album->name,
+                'is_featured_home' => (bool) $album->is_featured_home,
+            ])
             ->toArray();
     }
 
@@ -55,17 +97,29 @@ new class extends Component
             })
             ->orderByDesc('created_at')
             ->orderByDesc('id')
-            ->limit($this->imageLimit)
-            ->get();
+            ->paginate($this->imageLimit, ['*'], 'homeGalleryPage');
     }
 
     public function setAlbum(?int $albumId): void
     {
+        // Nếu đang có album thì không cho chọn Tất cả nữa
+        if ($albumId === null && $this->firstAvailableAlbumId()) {
+            $albumId = $this->firstAvailableAlbumId();
+        }
+
+        // Nếu album không hợp lệ thì quay về album đầu tiên
+        if ($albumId && ! $this->albumIsAvailable((int) $albumId)) {
+            $albumId = $this->firstAvailableAlbumId();
+        }
+
         if ($this->selectedAlbumId === $albumId) {
             return;
         }
 
         $this->selectedAlbumId = $albumId;
+
+        // Đổi album thì quay về trang đầu
+        $this->resetPage('homeGalleryPage');
     }
 
     public function setResponsiveImageLimit(int $limit): void
@@ -76,7 +130,14 @@ new class extends Component
             $limit = 8;
         }
 
+        if ($this->imageLimit === $limit) {
+            return;
+        }
+
         $this->imageLimit = $limit;
+
+        // Đổi số ảnh mỗi trang thì quay về trang đầu
+        $this->resetPage('homeGalleryPage');
     }
 
     public function getDescriptionAlbumProperty()
@@ -94,7 +155,6 @@ new class extends Component
 ?>
 
 <section
-    class=""
     x-data="{
         currentLimit: @js($imageLimit),
         resizeTimer: null,
@@ -153,11 +213,13 @@ new class extends Component
     }"
 >
     <div class="container mx-auto px-4">
-{{--        <div class="mb-4 text-center">--}}
-{{--            <p class="max-w-2xl mx-auto text-gray-600 text-[16px]">--}}
-{{--                {{ $this->descriptionAlbum }}--}}
-{{--            </p>--}}
-{{--        </div>--}}
+        @php
+            $albums = $this->albumOptions;
+            $galleryImages = $this->galleryImages;
+            $currentPage = $galleryImages->currentPage();
+            $galleryId = $uuid . '-' . ($selectedAlbumId ?? 'all') . '-' . $currentPage;
+        @endphp
+
         {{-- FILTERABLE TABS --}}
         <div
             class="mb-4 flex items-center gap-3"
@@ -190,34 +252,34 @@ new class extends Component
                 <div
                     x-ref="tabs"
                     class="flex flex-nowrap gap-2 overflow-x-auto py-1
-                        [-ms-overflow-style:none] [scrollbar-width:none]
-                        [&::-webkit-scrollbar]:hidden"
-                    >
-                    <button
-                        type="button"
-                        wire:click="setAlbum(null)"
-                        wire:loading.attr="disabled"
-                        class="shrink-0 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-300
-                        {{ is_null($selectedAlbumId)
-                            ? 'bg-fita text-white border-fita shadow-md shadow-fita/20'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-fita hover:text-fita' }}"
-                    >
-                        {{ __('Tất cả') }}
-                    </button>
-
-                    @foreach($this->albumOptions as $album)
+                    [-ms-overflow-style:none] [scrollbar-width:none]
+                    [&::-webkit-scrollbar]:hidden"
+                >
+                    @if(empty($albums))
                         <button
                             type="button"
-                            wire:click="setAlbum({{ $album['id'] }})"
+                            wire:click="setAlbum(null)"
                             wire:loading.attr="disabled"
                             class="shrink-0 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-300
-                    {{ $selectedAlbumId === $album['id']
-                        ? 'bg-fita text-white border-fita shadow-md shadow-fita/20'
-                        : 'bg-white text-slate-600 border-slate-200 hover:border-fita hover:text-fita' }}"
+                            bg-fita text-white border-fita shadow-md shadow-fita/20"
                         >
-                            {{ $album['name'] }}
+                            {{ __('Tất cả') }}
                         </button>
-                    @endforeach
+                    @else
+                        @foreach($albums as $album)
+                            <button
+                                type="button"
+                                wire:click="setAlbum({{ $album['id'] }})"
+                                wire:loading.attr="disabled"
+                                class="shrink-0 px-4 py-2 rounded-md text-sm font-semibold border transition-all duration-300
+                                {{ (int) $selectedAlbumId === (int) $album['id']
+                                    ? 'bg-fita text-white border-fita shadow-md shadow-fita/20'
+                                    : 'bg-white text-slate-600 border-slate-200 hover:border-fita hover:text-fita' }}"
+                            >
+                                {{ $album['name'] }}
+                            </button>
+                        @endforeach
+                    @endif
                 </div>
             </div>
 
@@ -230,118 +292,118 @@ new class extends Component
                 <x-icon name="o-chevron-right" class="w-5 h-5" />
             </button>
         </div>
+
+        {{-- GALLERY --}}
         <div class="relative min-h-[260px]">
             <div
                 wire:loading.flex
-                wire:target="setAlbum,setResponsiveImageLimit"
+                wire:target="setAlbum,setResponsiveImageLimit,nextPage,previousPage,gotoPage"
                 class="absolute inset-0 z-20 bg-white/60 backdrop-blur-[1px] rounded-2xl items-center justify-center"
             >
                 <div class="flex items-center gap-3 px-4 py-3">
                     <span class="loading loading-spinner loading-md text-fita"></span>
                     <span class="text-sm font-semibold text-slate-600">
-                {{ __('Loading data...') }}
-            </span>
+                        {{ __('Loading data...') }}
+                    </span>
                 </div>
             </div>
 
             <div
-                id="{{ $uuid }}-{{ $selectedAlbumId ?? 'all' }}"
-                wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}-{{ $imageLimit }}"
+                id="{{ $galleryId }}"
+                wire:key="home-gallery-{{ $selectedAlbumId ?? 'all' }}-{{ $imageLimit }}-{{ $currentPage }}"
                 wire:loading.class="opacity-40 pointer-events-none"
-                wire:target="setAlbum,setResponsiveImageLimit"
+                wire:target="setAlbum,setResponsiveImageLimit,nextPage,previousPage,gotoPage"
                 class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 mt-4 transition-opacity duration-300"
                 x-data="{
-                lightbox: null,
-                captionOverlay: null,
+                    lightbox: null,
+                    captionOverlay: null,
 
-                getActiveCaption(pswp) {
-                    const element = pswp?.currSlide?.data?.element;
-                    return element?.dataset?.imageCaption || element?.getAttribute('aria-label') || '';
-                },
+                    getActiveCaption(pswp) {
+                        const element = pswp?.currSlide?.data?.element;
+                        return element?.dataset?.imageCaption || element?.getAttribute('aria-label') || '';
+                    },
 
-                createCaptionOverlay(pswp) {
-                    this.removeCaptionOverlay();
+                    createCaptionOverlay(pswp) {
+                        this.removeCaptionOverlay();
 
-                    const caption = this.getActiveCaption(pswp);
+                        const caption = this.getActiveCaption(pswp);
 
-                    if (!caption) {
-                        return;
-                    }
-
-                    const overlay = document.createElement('div');
-                    overlay.className = 'pswp-caption-overlay';
-
-                    overlay.style.position = 'absolute';
-                    overlay.style.left = '50%';
-                    overlay.style.bottom = '28px';
-                    overlay.style.transform = 'translateX(-50%)';
-                    overlay.style.zIndex = '60';
-                    overlay.style.maxWidth = '80vw';
-                    overlay.style.pointerEvents = 'none';
-
-                    const captionBox = document.createElement('div');
-                    captionBox.className = 'rounded-xl bg-black/65 px-4 py-2 text-center text-sm font-medium text-white shadow-2xl backdrop-blur';
-                    captionBox.textContent = caption;
-
-                    overlay.appendChild(captionBox);
-                    pswp.element?.appendChild(overlay);
-
-                    this.captionOverlay = overlay;
-                },
-
-                removeCaptionOverlay() {
-                    this.captionOverlay?.remove();
-                    this.captionOverlay = null;
-                },
-
-                init() {
-                    this.$nextTick(() => {
-                        if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') {
+                        if (!caption) {
                             return;
                         }
 
-                        this.lightbox = new PhotoSwipeLightbox({
-                            gallery: '#{{ $uuid }}-{{ $selectedAlbumId ?? 'all' }}',
-                            children: 'a.pswp-item',
-                            showHideAnimationType: 'zoom',
-                            pswpModule: PhotoSwipe,
-                            zoom: true,
-                            arrowKeys: true,
+                        const overlay = document.createElement('div');
+                        overlay.className = 'pswp-caption-overlay';
+
+                        overlay.style.position = 'absolute';
+                        overlay.style.left = '50%';
+                        overlay.style.bottom = '28px';
+                        overlay.style.transform = 'translateX(-50%)';
+                        overlay.style.zIndex = '60';
+                        overlay.style.maxWidth = '80vw';
+                        overlay.style.pointerEvents = 'none';
+
+                        const captionBox = document.createElement('div');
+                        captionBox.className = 'rounded-xl bg-black/65 px-4 py-2 text-center text-sm font-medium text-white shadow-2xl backdrop-blur';
+                        captionBox.textContent = caption;
+
+                        overlay.appendChild(captionBox);
+                        pswp.element?.appendChild(overlay);
+
+                        this.captionOverlay = overlay;
+                    },
+
+                    removeCaptionOverlay() {
+                        this.captionOverlay?.remove();
+                        this.captionOverlay = null;
+                    },
+
+                    init() {
+                        this.$nextTick(() => {
+                            if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') {
+                                return;
+                            }
+
+                            this.lightbox = new PhotoSwipeLightbox({
+                                gallery: '#{{ $galleryId }}',
+                                children: 'a.pswp-item',
+                                showHideAnimationType: 'zoom',
+                                pswpModule: PhotoSwipe,
+                                zoom: true,
+                                arrowKeys: true,
+                            });
+
+                            this.lightbox.on('openingAnimationEnd', () => {
+                                this.createCaptionOverlay(this.lightbox.pswp);
+                            });
+
+                            this.lightbox.on('change', () => {
+                                this.createCaptionOverlay(this.lightbox.pswp);
+                            });
+
+                            this.lightbox.on('close', () => {
+                                this.removeCaptionOverlay();
+                            });
+
+                            this.lightbox.init();
                         });
+                    },
 
-                        this.lightbox.on('openingAnimationEnd', () => {
-                            this.createCaptionOverlay(this.lightbox.pswp);
-                        });
+                    destroy() {
+                        this.removeCaptionOverlay();
 
-                        this.lightbox.on('change', () => {
-                            this.createCaptionOverlay(this.lightbox.pswp);
-                        });
-
-                        this.lightbox.on('close', () => {
-                            this.removeCaptionOverlay();
-                        });
-
-                        this.lightbox.init();
-                    });
-                },
-
-                destroy() {
-                    this.removeCaptionOverlay();
-
-                    if (this.lightbox) {
-                        this.lightbox.destroy();
-                        this.lightbox = null;
+                        if (this.lightbox) {
+                            this.lightbox.destroy();
+                            this.lightbox = null;
+                        }
                     }
-                }
-            }"
+                }"
                 x-on:destroy.window="destroy()"
+                x-on:livewire:navigating.window="destroy()"
             >
-                @forelse($this->galleryImages as $image)
+                @forelse($galleryImages as $image)
                     @php
                         $imageUrl = Storage::url($image->image_path);
-                        $thumbUrl = $image->thumbnail_path
-                            ? Storage::url($image->thumbnail_path)
-                            : $imageUrl;
                         $caption = $image->caption ?: '';
 
                         $aspectClass = match ($loop->iteration % 4) {
@@ -366,16 +428,16 @@ new class extends Component
                                 class="pswp-item relative block w-full h-full cursor-zoom-in group/img"
                             >
                                 <img
-                                    src="{{ $thumbUrl  }}"
+                                    src="{{ $imageUrl }}"
                                     class="w-full h-full object-cover transition-transform duration-700 group-hover/img:scale-110"
                                     onload="
                                         this.parentNode.setAttribute('data-pswp-width', this.naturalWidth);
                                         this.parentNode.setAttribute('data-pswp-height', this.naturalHeight);
                                     "
-                                    loading="{{ $loop->iteration <= 4 ? 'eager' : 'lazy' }}"
+                                    loading="{{ $loop->iteration <= 2 ? 'eager' : 'lazy' }}"
                                     decoding="async"
-                                    fetchpriority="{{ $loop->iteration <= 2 ? 'high' : 'low' }}"
-                                    alt="{{ $caption }}"
+                                    fetchpriority="{{ $loop->iteration <= 2 ? 'high' : 'auto' }}"
+                                    alt="{{ $caption ?: __('Image') }}"
                                 />
 
                                 {{-- Lớp phủ hover --}}
@@ -410,16 +472,29 @@ new class extends Component
             </div>
         </div>
 
-        {{-- NÚT XEM THÊM --}}
-        <div class="mt-10 text-center">
-            <a
-                href="{{ route('client.album.gallery',['album'=>$selectedAlbumId]) }}"
-                class="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-fita text-white font-semibold hover:bg-fita/90 transition-all shadow-md shadow-fita/20"
-                wire:navigate
+        {{-- PHÂN TRANG XEM THÊM --}}
+        @if($galleryImages->hasPages())
+            <div
+                class="mt-10"
+                wire:loading.class="opacity-40 pointer-events-none"
+                wire:target="setAlbum,setResponsiveImageLimit,nextPage,previousPage,gotoPage"
             >
-                {{ __('Read more') }}
-                <x-icon name="o-arrow-right" class="w-5 h-5" />
-            </a>
-        </div>
+                {{ $galleryImages->onEachSide(1)->links(data: ['scrollTo' => false]) }}
+            </div>
+        @endif
+
+        {{-- NÚT XEM THÊM SANG TRANG THƯ VIỆN --}}
+{{--        <div class="mt-10 text-center">--}}
+{{--            <a--}}
+{{--                href="{{ $selectedAlbumId--}}
+{{--                    ? route('client.album.gallery', ['album' => $selectedAlbumId])--}}
+{{--                    : route('client.album.gallery') }}"--}}
+{{--                class="inline-flex items-center gap-2 px-6 py-2 rounded-md bg-fita text-white font-semibold hover:bg-fita/90 transition-all shadow-md shadow-fita/20"--}}
+{{--                wire:navigate--}}
+{{--            >--}}
+{{--                {{ __('Read more') }}--}}
+{{--                <x-icon name="o-arrow-right" class="w-5 h-5" />--}}
+{{--            </a>--}}
+{{--        </div>--}}
     </div>
 </section>
