@@ -180,6 +180,15 @@ class extends Component {
         $albums = $this->albumOptions;
         $images = $this->allImages;
         $galleryId = 'public-gallery-' . ($selectedAlbumId ?? 'all') . '-' . $images->currentPage() . '-' . $imagePerPage;
+
+        $imageCount = $images->count();
+
+        $galleryColumnClass = match (true) {
+            $imageCount <= 1 => 'columns-1 max-w-xl mx-auto',
+            $imageCount <= 4 => 'columns-1 sm:columns-2 lg:columns-2 max-w-5xl mx-auto',
+            $imageCount <= 6 => 'columns-1 sm:columns-2 lg:columns-3 max-w-7xl mx-auto',
+            default => 'columns-2 sm:columns-3 lg:columns-4 2xl:columns-5',
+        };
     @endphp
 
     {{-- BỘ LỌC ALBUM --}}
@@ -320,7 +329,7 @@ class extends Component {
             wire:key="gallery-shell-{{ $galleryId }}"
             wire:loading.class="opacity-40 pointer-events-none"
             wire:target="setAlbum,setResponsiveImagePerPage,nextPage,previousPage,gotoPage"
-            class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 transition-opacity duration-300"
+            class="{{ $galleryColumnClass }} gap-4 lg:gap-6 transition-opacity duration-300"
             x-data="{
                 lightbox: null,
                 captionOverlay: null,
@@ -420,6 +429,7 @@ class extends Component {
                         2 => 'aspect-video',
                         3 => 'aspect-[6/5]',
                         4 => 'aspect-[4/3]',
+                        5 => 'aspect-[7/4]',
                         default => 'aspect-[5/4]',
                     };
                 @endphp
