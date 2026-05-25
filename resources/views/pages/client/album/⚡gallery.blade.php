@@ -415,10 +415,12 @@ class extends Component {
                     $imageUrl = Storage::url($image->image_path);
                     $caption = $image->caption ?: '';
 
-                    $aspectClass = match ($loop->iteration % 4) {
+                    $aspectClass = match ($loop->iteration % 6) {
                         1 => 'aspect-[8/9]',
-                        2 => 'aspect-[6/5]',
-                        3 => 'aspect-[4/3]',
+                        2 => 'aspect-video',
+                        3 => 'aspect-[6/5]',
+                        4 => 'aspect-[5/6]',
+                        5 => 'aspect-[4/3]',
                         default => 'aspect-[5/4]',
                     };
                 @endphp
