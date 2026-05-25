@@ -184,9 +184,9 @@ class extends Component {
         $imageCount = $images->count();
 
         $galleryColumnClass = match (true) {
-            $imageCount <= 1 => 'columns-1 max-w-xl mx-auto',
-            $imageCount <= 4 => 'columns-1 sm:columns-2 lg:columns-2 max-w-5xl mx-auto',
-            $imageCount <= 6 => 'columns-1 sm:columns-2 lg:columns-3 max-w-7xl mx-auto',
+//            $imageCount <= 1 => 'columns-1 max-w-xl mx-auto',
+//            $imageCount <= 4 => 'columns-1 sm:columns-2 lg:columns-2 max-w-5xl mx-auto',
+//            $imageCount <= 6 => 'columns-1 sm:columns-2 lg:columns-3 max-w-7xl mx-auto',
             default => 'columns-2 sm:columns-3 lg:columns-4 2xl:columns-5',
         };
     @endphp
@@ -329,7 +329,7 @@ class extends Component {
             wire:key="gallery-shell-{{ $galleryId }}"
             wire:loading.class="opacity-40 pointer-events-none"
             wire:target="setAlbum,setResponsiveImagePerPage,nextPage,previousPage,gotoPage"
-            class="{{ $galleryColumnClass }} gap-4 lg:gap-6 transition-opacity duration-300"
+            class="columns-2 sm:columns-3 lg:columns-4 2xl:columns-5 gap-4 lg:gap-6 transition-opacity duration-300"
             x-data="{
                 lightbox: null,
                 captionOverlay: null,
