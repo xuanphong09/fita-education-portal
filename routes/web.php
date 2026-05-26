@@ -68,6 +68,11 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/banner/trash', 'pages::admin.banner.trash')->name('admin.banner.trash');
     });
 
+    // ---- Cấu hình email (admin UI) ----
+    Route::middleware('permission:cau_hinh_he_thong')->group(function () {
+        Route::livewire('/configuration/email', 'pages::admin.configuration.mail')->name('admin.configuration.email');
+    });
+
 //    anh
     Route::middleware('permission:quan_ly_anh')->group(function () {
         Route::livewire('/album/index', 'pages::admin.album.index')->name('admin.album.index');

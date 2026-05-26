@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Schema;
+use App\Models\Setting;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,6 +26,36 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        try {
+            if (Schema::hasTable('settings') && Setting::get('MAIL_IS_ACTIVE', '1') === '1') {
+                $mailKeys = [
+                    'MAIL_MAILER'       => 'mail.default',
+                    'MAIL_HOST'         => 'mail.mailers.smtp.host',
+                    'MAIL_PORT'         => 'mail.mailers.smtp.port',
+                    'MAIL_USERNAME'     => 'mail.mailers.smtp.username',
+                    'MAIL_PASSWORD'     => 'mail.mailers.smtp.password',
+                    'MAIL_SCHEME'       => 'mail.mailers.smtp.scheme',
+                    'MAIL_FROM_ADDRESS' => 'mail.from.address',
+                    'MAIL_FROM_NAME'    => 'mail.from.name',
+                ];
+
+                foreach ($mailKeys as $key => $configKey) {
+                    $value = Setting::get($key, null);
+
+                    if (filled($value)) {
+                        config([$configKey => $value]);
+                    }
+                }
+
+                config([
+                    'mail.mailers.smtp.transport' => 'smtp',
+                    'mail.mailers.smtp.encryption' => null,
+                ]);
+            }
+        } catch (Throwable $e) {
+            // Ignore during migrations or when DB is not ready
+        }
+
         // Super Admin bypass — vượt qua mọi permission check
         Gate::before(function ($user, $ability) {
             return $user->hasRole('super_admin') ? true : null;

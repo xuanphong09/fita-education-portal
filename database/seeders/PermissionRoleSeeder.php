@@ -24,6 +24,7 @@ class PermissionRoleSeeder extends Seeder
             ['name' => 'quan_ly_anh', 'display_name' => 'Quản lý ảnh'],
             ['name' => 'quan_ly_lien_he', 'display_name' => 'Quản lý liên hệ'],
             ['name' => 'trang_quan_tri', 'display_name' => 'Truy cập trang quản trị'],
+            ['name' => 'cau_hinh_he_thong', 'display_name' => 'Cấu hình hệ thống'],
         ];
 
         foreach ($permissions as $permission) {

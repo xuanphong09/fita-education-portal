@@ -115,7 +115,7 @@
                     <x-menu-item title="{{__('Home page')}}" link="{{route('admin.configuration.home3')}}" :active="request()->routeIs('admin.configuration.home3')" />
                     <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
                 </x-menu-sub>
-                <x-menu-sub title="{{__('Interface configuration')}}" icon="o-cog-6-tooth">
+                <x-menu-sub title="{{__('Interface configuration')}}" icon="o-window">
                     <x-menu-item title="Menu tiêu đề" link="{{route('admin.configuration.header')}}" :active="request()->routeIs('admin.configuration.header')"/>
                     <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
                     <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
@@ -143,7 +143,11 @@
                 <livewire:admin.contact-message-menu-item />
             @endcan
 
-
+            @can('cau_hinh_he_thong')
+                <x-menu-sub title="Cài đặt hệ thống" icon="o-cog-6-tooth">
+                    <x-menu-item title="Email" link="{{route('admin.configuration.email')}}" :active="request()->routeIs('admin.configuration.email')"/>
+                </x-menu-sub>
+            @endcan
 
         </x-menu>
     </x-slot:sidebar>
