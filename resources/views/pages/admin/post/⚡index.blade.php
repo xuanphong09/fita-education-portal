@@ -518,8 +518,8 @@ new class extends Component {
     public function headers(): array
     {
         return [
-            ['key' => 'id', 'label' => '#', 'class' => 'w-10'],
-            ['key' => 'thumbnail', 'label' => 'Ảnh', 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'id', 'label' => '#', 'class' => 'w-10 p-2! text-center'],
+            ['key' => 'thumbnail', 'label' => 'Ảnh', 'sortable' => false, 'class' => 'w-16 p-0!'],
             ['key' => 'title', 'label' => 'Tiêu đề', 'class' => 'min-w-44'],
             ['key' => 'category', 'label' => 'Danh mục', 'sortable' => false, 'class' => 'w-36'],
             ['key' => 'status', 'label' => 'Trạng thái', 'sortable' => false, 'class' => 'w-28'],
@@ -814,14 +814,36 @@ new class extends Component {
             @endscope
 
             @scope('cell_thumbnail', $post)
-            @if($post->thumbnail)
-                <img src="{{ Storage::url($post->thumbnail) }}" alt="{{ $post->getTranslation('title','vi',false) }}"
-                     class="w-10 h-10 rounded object-cover ring-1 ring-gray-200"/>
-            @else
-                <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">
-                    <x-icon name="o-photo" class="w-5 h-5 text-gray-400"/>
-                </div>
-            @endif
+{{--                @if($post->thumbnail)--}}
+{{--                    <img src="{{ Storage::url($post->thumbnail) }}" alt="{{ $post->getTranslation('title','vi',false) }}"--}}
+{{--                         class="w-10 h-10 rounded object-cover ring-1 ring-gray-200"/>--}}
+{{--                @else--}}
+{{--                    <div class="w-10 h-10 rounded bg-gray-100 flex items-center justify-center ring-1 ring-gray-200">--}}
+{{--                        <x-icon name="o-photo" class="w-5 h-5 text-gray-400"/>--}}
+{{--                    </div>--}}
+{{--                @endif--}}
+                <a href="{{route('admin.post.edit',$post->id)}}" class="w-full relative" wire:navigate>
+                    @if($post->thumbnail)
+                        <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="{{ $post->getTranslation('title', app()->getLocale()) }}" loading="lazy" decoding="async">
+                    @elseif($post->post_default_image_id)
+                        <img src="{{ Storage::url($post->defaultImage?->image_path) }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">
+                        @if($post->defaultImage?->show_title)
+                            <div class="absolute inset-0 flex items-center justify-center p-5" style="container-type: inline-size;">
+                                <p class="line-clamp-4 font-bold"
+                                   :style="{
+                                                                color: '{{ $post->defaultImage?->text_color ?? '#ffffff' }}',
+                                                                fontSize: 'clamp(4px, calc({{ $post->defaultImage?->text_size ?? 18 }} / 1200 * 100cqw), 60px)',
+                                                                lineHeight: 1.1,
+                                                                textAlign: '{{$post->defaultImage?->text_alignment ?? 'center'}}',
+                                                            }"
+                                   x-text="'{{ $post->getTranslation('title', app()->getLocale()) }}'"
+                                ></p>
+                            </div>
+                        @endif
+                    @else
+                        <img src="{{ asset('assets/images/post-6.jpg') }}" class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300" alt="No image" loading="lazy" decoding="async">
+                    @endif
+                </a>
             @endscope
 
             @scope('cell_title', $post)
