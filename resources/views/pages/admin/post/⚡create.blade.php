@@ -484,6 +484,7 @@
             $post->update([
                 'status' => Post::APPROVAL_PENDING,
                 'submitted_at' => now(),
+                'updated_by' => auth()->id(),
                 'reviewed_by' => null,
                 'reviewed_at' => null,
                 'rejection_reason' => null,
@@ -547,6 +548,7 @@
                 'category_id' => $primaryCategoryId,
                 'status' => $postStatus,
                 'submitted_at' => null,
+                'updated_by' => Auth::id(),
                 'reviewed_by' => $postStatus === 'published' ? auth()->id() : null,
                 'reviewed_at' => $postStatus === 'published' ? now() : null,
                 'rejection_reason' => null,

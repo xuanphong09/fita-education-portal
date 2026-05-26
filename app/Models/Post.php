@@ -57,6 +57,7 @@ class Post extends Model
         'show_category',
         'show_related_posts',
         'submitted_at',
+        'updated_by',
         'reviewed_by',
         'reviewed_at',
         'rejection_reason',
@@ -98,6 +99,11 @@ class Post extends Model
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function updater(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
     }
 
     public function defaultImage(): BelongsTo

@@ -171,6 +171,7 @@ new class extends Component {
         $post->update([
             'status' => 'published',
             'published_at' => $publishAt,
+            'updated_by' => auth()->id(),
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
             'rejection_reason' => null,
@@ -226,6 +227,7 @@ new class extends Component {
         $post->update([
             'status' => Post::APPROVAL_REJECTED,
             'published_at' => null,
+            'updated_by' => auth()->id(),
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
             'rejection_reason' => $rejectNote,
@@ -306,6 +308,7 @@ new class extends Component {
         $post->update([
             'status' => Post::APPROVAL_PENDING,
             'published_at' => null,
+            'updated_by' => auth()->id(),
         ]);
 
         $this->currentStatus = Post::APPROVAL_PENDING;

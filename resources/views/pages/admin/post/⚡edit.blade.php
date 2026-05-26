@@ -412,6 +412,10 @@ new class extends Component {
                 ];
             }
         }
+        else{
+            // Nếu chưa phải là Đã đăng thì không cho chọn Lưu trữ
+            $allOptions = array_filter($allOptions, fn($opt) => $opt['id'] !== 'archived');
+        }
 
         return $allOptions;
     }
@@ -766,6 +770,7 @@ new class extends Component {
             'is_featured' => $this->canToggleFeatured() ? $this->is_featured : $post->is_featured,
             'thumbnail' => $thumbnailPath ?: null,
             'post_default_image_id' => $this->post_default_image_id ?: null,
+            'updated_by' => auth()->id(),
             'show_author' => $this->show_author,
             'show_published_at' => $this->show_published_at,
             'show_views' => $this->show_views,
@@ -1227,6 +1232,7 @@ new class extends Component {
                     <div class="flex justify-between"><span>Tác giả:</span><span class="font-medium truncate">{{ $post?->user?->name ?? '—' }}</span></div>
                     <div class="flex justify-between"><span>Ngày tạo:</span><span class="font-medium">{{ $post?->created_at?->format('H:i d/m/Y') }}</span></div>
                     <div class="flex justify-between"><span>Cập nhật:</span><span class="font-medium">{{ $post?->updated_at?->format('H:i d/m/Y') }}</span></div>
+                    <div class="flex justify-between"><span>Người cập nhật:</span><span class="font-medium truncate">{{ $post?->updater?->name ?? '—' }}</span></div>
                 </div>
             </x-card>
         </div>
