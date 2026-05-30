@@ -101,32 +101,51 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/role/role-create', 'pages::admin.role.create')->name('admin.role.create');
         Route::livewire('/role/role-edit/{id}', 'pages::admin.role.edit')->name('admin.role.edit');
     });
+// ---- Quản lý bài viết, duyệt bài viết, danh mục, ảnh mặc định ----
+    Route::middleware('post.permission:access')->group(function () {
+        Route::livewire('/post/index', 'pages::admin.post.index')->name('admin.post.index');
+    });
 
-    // ---- Quản lý bài viết & danh mục ----
-    Route::middleware('permission:quan_ly_bai_viet')->group(function () {
+    Route::middleware('post.permission:write')->group(function () {
+        Route::livewire('/post/create', 'pages::admin.post.create')->name('admin.post.create');
+        Route::livewire('/post/edit/{id}', 'pages::admin.post.edit')->name('admin.post.edit');
+    });
+
+    Route::middleware('post.permission:review')->group(function () {
+        Route::livewire('/post/pending', 'pages::admin.post.index')->name('admin.posts.pending');
+        Route::livewire('/post/review/{id}', 'pages::admin.post.review')->name('admin.posts.review');
+    });
+
+    Route::middleware('post.permission:write')->group(function () {
+        Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
+    });
+
+    Route::middleware('post.permission:manage')->group(function () {
         Route::livewire('/category/index', 'pages::admin.category.index')->name('admin.category.index');
         Route::livewire('/category/create', 'pages::admin.category.create')->name('admin.category.create');
         Route::livewire('/category/edit/{id}', 'pages::admin.category.edit')->name('admin.category.edit');
-        Route::livewire('/post-default-image/index', 'pages::admin.post-default-image.index')->name('admin.post-default-image.index');
     });
 
-//    Route::middleware('permission:quan_ly_bai_viet|viet_bai_viet|duyet_bai_viet')->group(function () {
-        Route::livewire('/post/index', 'pages::admin.post.index')->name('admin.post.index');
-        Route::livewire('/post/pending', 'pages::admin.post.index')->name('admin.posts.pending');
-        Route::livewire('/post/create', 'pages::admin.post.create')->name('admin.post.create');
-        Route::livewire('/post/review/{id}', 'pages::admin.post.review')->name('admin.posts.review');
-        Route::livewire('/post/edit/{id}', 'pages::admin.post.edit')->name('admin.post.edit');
-        Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
-//    });
-    Route::livewire('/post/trash', 'pages::admin.post.trash')->name('admin.post.trash');
 
-    Route::middleware('permission:quan_ly_bai_viet')->group(function () {
+    /*
+    |--------------------------------------------------------------------------
+    | Ảnh mặc định bài viết
+    |--------------------------------------------------------------------------
+    | Quyền:
+    | - quan_ly_bai_viet
+    */
+    Route::middleware('post.permission:manage')->group(function () {
+        Route::livewire('/post-default-image/index', 'pages::admin.post-default-image.index')
+            ->name('admin.post-default-image.index');
+    });
+
+    Route::middleware('permission:quan_ly_lien_he')->group(function () {
         Route::livewire('/contact-message/index', 'pages::admin.contact-message.index')->name('admin.contact-message.index');
         Route::livewire('/contact-message/trash', 'pages::admin.contact-message.trash')->name('admin.contact-message.trash');
     });
 
     // ---- Quản lý đào tạo ----
-    Route::middleware('permission:quan_ly_dao_tao|quan_ly_bai_viet')->group(function () {
+    Route::middleware('permission:quan_ly_dao_tao')->group(function () {
         Route::livewire('/training-program/index', 'pages::admin.training-program.index')->name('admin.training-program.index');
         Route::livewire('/training-program/trash', 'pages::admin.training-program.trash')->name('admin.training-program.trash');
         Route::livewire('/training-program/create', 'pages::admin.training-program.create')->name('admin.training-program.create');
