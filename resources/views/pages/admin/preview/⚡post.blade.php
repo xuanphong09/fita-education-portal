@@ -57,7 +57,7 @@ class extends Component {
         $this->post->published_at = !empty($data['published_at']) ? Carbon::parse($data['published_at']) : now();
         $this->post->views = 0;
         $this->post->thumbnail = $data['thumbnail'] ?? null;
-
+        $this->post->preview_thumbnail_url = $data['thumbnail_url'] ?? null;
         // Các cờ (flags) ẩn hiện metadata
         $this->post->post_default_image_id = $data['post_default_image_id'] ?? null;
         $this->post->show_author = $data['show_author'] ?? true;
@@ -218,7 +218,9 @@ class extends Component {
                     <article class="bg-white rounded-lg shadow-lg overflow-hidden">
 
                         <div class="aspect-auto bg-gray-200 overflow-hidden relative min-h-40">
-                            @if($post->thumbnail)
+                            @if(!empty($post->preview_thumbnail_url))
+                                <img src="{{ $post->preview_thumbnail_url }}" class="w-full h-full object-cover object-top" alt="Thumbnail">
+                            @elseif($post->thumbnail)
                                 <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top" alt="Thumbnail">
                             @elseif($post->post_default_image_id && $post->relationLoaded('defaultImage') && $post->defaultImage)
                                 <img src="{{ Storage::url($post->defaultImage->image_path) }}" class="w-full h-full object-cover object-top" alt="Template">

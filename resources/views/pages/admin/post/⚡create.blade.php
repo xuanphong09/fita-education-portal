@@ -451,10 +451,24 @@
 
         public function previewDraft(): void
         {
-            $cacheKey = isset($this->id) ? 'post_preview_' . $this->id . '_' . auth()->id() : 'post_preview_new_' . auth()->id();
+            $cacheKey = isset($this->id)
+                ? 'post_preview_' . $this->id . '_' . auth()->id()
+                : 'post_preview_new_' . auth()->id();
+
+            $thumbnailPreviewUrl = null;
+
+            if ($this->thumbnail) {
+                $this->validateOnly('thumbnail');
+
+                // Không lưu vào storage, chỉ lấy URL tạm để xem trước
+                $thumbnailPreviewUrl = $this->thumbnail->temporaryUrl();
+            } elseif (!empty($this->currentThumbnail ?? null)) {
+                // Trường hợp bài viết cũ đã có ảnh thật
+                $thumbnailPreviewUrl = Storage::url($this->currentThumbnail);
+            }
 
             Cache::put($cacheKey, [
-                'title'                 => ['vi' => $this->title_vi,   'en' => $this->title_en],
+                'title'                 => ['vi' => $this->title_vi, 'en' => $this->title_en],
                 'content'               => ['vi' => $this->content_vi, 'en' => $this->content_en],
                 'excerpt'               => ['vi' => $this->excerpt_vi, 'en' => $this->excerpt_en],
                 'slug'                  => $this->slug,
@@ -462,7 +476,10 @@
                 'status'                => $this->status,
                 'is_featured'           => $this->is_featured,
                 'published_at'          => $this->published_at,
-                'thumbnail'             => $this->currentThumbnail ?? $this->thumbnail ?? null,
+
+                // Lưu URL string, không lưu object TemporaryUploadedFile
+                'thumbnail_url'         => $thumbnailPreviewUrl,
+
                 'post_default_image_id' => $this->post_default_image_id ?? null,
                 'show_author'           => $this->show_author ?? true,
                 'show_published_at'     => $this->show_published_at ?? true,
@@ -470,7 +487,7 @@
                 'show_category'         => $this->show_category ?? true,
                 'show_related_posts'    => $this->show_related_posts ?? true,
                 'user_id'               => auth()->id(),
-            ], now()->addMinutes(30));
+            ], now()->addMinutes(10));
 
             $url = isset($this->id)
                 ? route('admin.preview.post', ['id' => $this->id, 'draft' => 1])
