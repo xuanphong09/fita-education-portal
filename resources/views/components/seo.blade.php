@@ -20,11 +20,17 @@
             return $fallback;
         }
 
+        // Link ngoài
         if (Str::startsWith($path, ['http://', 'https://'])) {
             return $path;
         }
 
         $path = ltrim($path, '/');
+
+        // Nếu ảnh nằm trong public/assets
+        if (Str::startsWith($path, 'assets/')) {
+            return asset($path);
+        }
 
         // Nếu DB đã lưu: storage/posts/a.jpg
         if (Str::startsWith($path, 'storage/')) {
@@ -36,31 +42,44 @@
             $path = Str::after($path, 'public/');
         }
 
+        // Còn lại coi như ảnh trong storage/app/public
         return asset('storage/' . $path);
     };
 
    if ($post) {
-        $rawPostTitle = strip_tags((string) $post->getTranslation('title', $locale, false));
-        $rawSeoTitle  = strip_tags((string) $post->getTranslation('seo_title', $locale, false));
+    $rawPostTitle = strip_tags((string) $post->getTranslation('title', $locale, false));
+    $rawSeoTitle  = strip_tags((string) $post->getTranslation('seo_title', $locale, false));
 
-        $seoTitle = $title
-            ?: ($rawSeoTitle ?: (Str::limit($rawPostTitle, 50, '...') . ' | ' . $siteName));
+    $seoTitle = $title
+        ?: ($rawSeoTitle ?: (Str::limit($rawPostTitle, 50, '...') . ' | ' . $siteName));
 
-        $seoDescription = $description
-            ?: ($post->getTranslation('seo_description', $locale, false)
-                ?: $post->getExcerptOrAuto($locale, 160));
+    $seoDescription = $description
+        ?: ($post->getTranslation('seo_description', $locale, false)
+            ?: $post->getExcerptOrAuto($locale, 160));
 
-        $thumbnail = data_get($post, 'thumbnail')
-            ?: data_get($post, 'thumbnail_path')
+    $thumbnail = null;
+
+    if (data_get($post, 'thumbnail')) {
+        $thumbnail = data_get($post, 'thumbnail');
+    } elseif (data_get($post, 'defaultImage.image_path')) {
+        if (data_get($post, 'defaultImage.show_title')) {
+            $thumbnail = 'assets/images/FITA.png';
+        } else {
+            $thumbnail = data_get($post, 'defaultImage.image_path');
+        }
+    } else {
+        $thumbnail = data_get($post, 'thumbnail_path')
             ?: data_get($post, 'image')
             ?: data_get($post, 'featured_image')
-            ?: $image;
+            ?: $image
+            ?: 'assets/images/post-6.jpg';
+    }
 
-        $ogImage = $toAbsoluteImageUrl($thumbnail);
+    $ogImage = $toAbsoluteImageUrl($thumbnail);
 
-        $canonical = url()->current();
-        $ogType = $type ?: 'article';
-    } else {
+    $canonical = url()->current();
+    $ogType = $type ?: 'article';
+} else {
         $rawTitle = strip_tags((string) $title);
 
         $seoTitle = $rawTitle
@@ -88,6 +107,9 @@
 <meta property="og:title" content="{{ $seoTitle }}">
 <meta property="og:description" content="{{ $seoDescription }}">
 <meta property="og:image" content="{{ $ogImage }}">
+<meta property="og:image:secure_url" content="{{ $ogImage }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta property="og:site_name" content="{{ $siteName }}">
 <meta property="og:locale" content="{{ $locale === 'vi' ? 'vi_VN' : 'en_US' }}">
 
