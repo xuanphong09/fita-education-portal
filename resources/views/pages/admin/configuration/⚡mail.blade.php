@@ -479,7 +479,7 @@ new class extends Component {
                     />
 
                     <p class="mt-2 text-xs text-gray-500 leading-5">
-                        Khi bật, hệ thống sẽ dùng cấu hình email lưu trong database.
+                        Nếu không kích hoạt thì hệ thống sẽ dùng email mặc định.
                     </p>
                 </div>
 

@@ -71,11 +71,16 @@ new class extends Component {
             $visibleMap = array_flip(array_unique($visibleIds));
         }
 
+        $collapsedMap = trim($this->search) === ''
+            ? array_flip($this->collapsedCategoryIds)
+            : [];
+
         $flattened = $this->flattenCategoryTree(
             groupedByParent: $groupedByParent,
             parentId: 0,
             depth: 0,
-            visibleMap: $visibleMap
+            visibleMap: $visibleMap,
+            collapsedMap: $collapsedMap
         );
 
         $page = $this->getPage();
@@ -99,26 +104,38 @@ new class extends Component {
         Collection $groupedByParent,
         int $parentId = 0,
         int $depth = 0,
-        ?array $visibleMap = null
+        ?array $visibleMap = null,
+        array $collapsedMap = []
     ): Collection {
         $items = collect();
 
         foreach ($groupedByParent->get($parentId, collect()) as $category) {
             $id = (int) $category->id;
 
+            $hasChildren = $groupedByParent->has($id)
+                && $groupedByParent->get($id)->isNotEmpty();
+
+            $isCollapsed = isset($collapsedMap[$id]);
+
             if ($visibleMap === null || isset($visibleMap[$id])) {
                 $category->tree_depth = $depth;
+                $category->tree_has_children = $hasChildren;
+                $category->tree_is_collapsed = $isCollapsed;
+
                 $items->push($category);
             }
 
-            $items = $items->merge(
-                $this->flattenCategoryTree(
-                    groupedByParent: $groupedByParent,
-                    parentId: $id,
-                    depth: $depth + 1,
-                    visibleMap: $visibleMap
-                )
-            );
+            if ($hasChildren && ! $isCollapsed) {
+                $items = $items->merge(
+                    $this->flattenCategoryTree(
+                        groupedByParent: $groupedByParent,
+                        parentId: $id,
+                        depth: $depth + 1,
+                        visibleMap: $visibleMap,
+                        collapsedMap: $collapsedMap
+                    )
+                );
+            }
         }
 
         return $items;
@@ -219,6 +236,22 @@ new class extends Component {
     {
         $this->resetPage();
     }
+
+    public array $collapsedCategoryIds = [];
+
+    public function toggleCategory(int $id): void
+    {
+        if (in_array($id, $this->collapsedCategoryIds, true)) {
+            $this->collapsedCategoryIds = array_values(array_filter(
+                $this->collapsedCategoryIds,
+                fn ($value) => (int) $value !== $id
+            ));
+        } else {
+            $this->collapsedCategoryIds[] = $id;
+        }
+
+        $this->resetPage();
+    }
 };
 ?>
 
@@ -285,9 +318,17 @@ new class extends Component {
             @scope('cell_name', $category)
             @php
                 $depth = (int) ($category->tree_depth ?? 0);
+                $hasChildren = (bool) ($category->tree_has_children ?? false);
+                $isCollapsed = (bool) ($category->tree_is_collapsed ?? false);
             @endphp
 
-            <div class="flex items-start gap-2" style="padding-left: {{ $depth * 24 }}px">
+            <div
+                class="flex items-start gap-2 {{ $hasChildren ? 'cursor-pointer select-none' : '' }}"
+                style="padding-left: {{ $depth * 24 }}px"
+                @if($hasChildren)
+                    wire:click="toggleCategory({{ $category->id }})"
+                @endif
+            >
                 @if($depth > 0)
                     <span class="mt-0.5 text-gray-400 select-none">└─</span>
                 @else
@@ -302,6 +343,12 @@ new class extends Component {
                         {{ $category->slug }}
                     </div>
                 </div>
+                    @if($hasChildren)
+                        <x-icon
+                            name="{{ $isCollapsed ? 'o-chevron-right' : 'o-chevron-down' }}"
+                            class="w-4 h-4 mt-0.5 text-gray-500"
+                        />
+                    @endif
             </div>
             @endscope
 
