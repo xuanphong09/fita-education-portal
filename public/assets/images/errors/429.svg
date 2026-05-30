@@ -1,0 +1,128 @@
+<svg width="1200" height="740" viewBox="0 0 1200 740" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="403 Bạn không có quyền truy cập">
+  <defs>
+    <linearGradient id="numberGrad" x1="250" y1="150" x2="955" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0065A8"/>
+      <stop offset="0.55" stop-color="#7C3AED"/>
+      <stop offset="1" stop-color="#F4A000"/>
+    </linearGradient>
+
+    <linearGradient id="softBg" x1="195" y1="90" x2="1020" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EAF5FF"/>
+      <stop offset="0.48" stop-color="#F4FBF8"/>
+      <stop offset="1" stop-color="#FFF3DF"/>
+    </linearGradient>
+
+    <linearGradient id="screenGrad" x1="400" y1="185" x2="800" y2="510" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B63A3"/>
+      <stop offset="1" stop-color="#063F6D"/>
+    </linearGradient>
+
+    <filter id="shadow" x="110" y="45" width="980" height="620" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="28" stdDeviation="28" flood-color="#0065A8" flood-opacity="0.12"/>
+    </filter>
+
+    <pattern id="circuit" width="72" height="72" patternUnits="userSpaceOnUse">
+      <path d="M8 20H34V44H63" stroke="#0065A8" stroke-width="2" opacity="0.075" fill="none" stroke-linecap="round"/>
+      <circle cx="8" cy="20" r="3" fill="#0065A8" opacity="0.08"/>
+      <circle cx="34" cy="44" r="3" fill="#0065A8" opacity="0.08"/>
+      <circle cx="63" cy="44" r="3" fill="#0065A8" opacity="0.08"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="740" fill="#f8fafc"/>
+
+  <!-- blob nền giống phong cách illustration -->
+  <path d="M225.6 182.7C267.9 89.5 381.7 109.4 469.8 134.9C557.9 160.5 623.5 68.1 751.8 58.2C880.1 48.3 882.5 145.4 953.6 168.9C1024.7 192.4 1110.5 156.8 1140.2 245.5C1169.9 334.2 1066.5 392.4 1055.1 475.5C1043.7 558.6 1104.7 640.3 1004.1 678.8C903.5 717.3 785.6 626.2 665.6 612.6C545.5 599 464.4 689.1 355.8 670.2C247.2 651.3 199.9 544.3 147.9 461.1C95.9 377.9 183.3 275.9 225.6 182.7Z" fill="url(#softBg)"/>
+  <rect x="130" y="94" width="940" height="540" fill="url(#circuit)" opacity="0.9"/>
+
+  <!-- các chấm màu FITA/footer -->
+  <circle cx="186" cy="540" r="10" fill="#F4A000" opacity="0.75"/>
+  <circle cx="1018" cy="176" r="9" fill="#009B72" opacity="0.75"/>
+  <circle cx="994" cy="542" r="7" fill="#0065A8" opacity="0.75"/>
+  <circle cx="268" cy="142" r="7" fill="#7C3AED" opacity="0.65"/>
+
+  <!-- laptop phía sau số -->
+  <g filter="url(#shadow)">
+    <rect x="386" y="174" width="428" height="282" rx="28" fill="white" stroke="#D8E6F1" stroke-width="3"/>
+    <rect x="414" y="205" width="372" height="206" rx="18" fill="url(#screenGrad)"/>
+    <rect x="334" y="452" width="532" height="44" rx="17" fill="#E8F1F8" stroke="#D3E1EC" stroke-width="3"/>
+    <path d="M520 452H680L704 478H496L520 452Z" fill="#C9DCEB"/>
+  </g>
+
+  <!-- code trên màn hình -->
+  <path d="M455 258L416 306L455 354" stroke="#9BE7D0" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M745 258L784 306L745 354" stroke="#9BE7D0" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M639 244L560 370" stroke="#F4A000" stroke-width="14" stroke-linecap="round"/>
+  <rect x="502" y="224" width="70" height="10" rx="5" fill="#FFFFFF" opacity="0.35"/>
+  <rect x="502" y="392" width="196" height="10" rx="5" fill="#FFFFFF" opacity="0.28"/>
+
+  <!-- số lỗi lớn -->
+  <text x="600" y="430"
+        text-anchor="middle"
+        font-family="Segoe UI, Tahoma, Arial, sans-serif"
+        font-size="250"
+        font-weight="900"
+        letter-spacing="-18"
+        fill="url(#numberGrad)"
+        stroke="#05395F"
+        stroke-width="4"
+        paint-order="stroke fill">
+    429
+  </text>
+
+  <!-- nhân vật trái: coder kiểm tra lỗi -->
+  <g transform="translate(232 312)">
+    <ellipse cx="60" cy="194" rx="76" ry="14" fill="#0065A8" opacity="0.12"/>
+    <rect x="86" y="79" width="12" height="132" rx="6" fill="#4A5568"/>
+    <rect x="25" y="72" width="12" height="139" rx="6" fill="#4A5568"/>
+    <path d="M28 124H97" stroke="#4A5568" stroke-width="10" stroke-linecap="round"/>
+    <path d="M27 164H94" stroke="#4A5568" stroke-width="10" stroke-linecap="round"/>
+    <path d="M47 45C54 37 69 36 77 46C87 59 82 77 66 79C49 81 36 61 47 45Z" fill="#0B1F3A"/>
+    <path d="M62 73L68 98" stroke="#F5B7A6" stroke-width="13" stroke-linecap="round"/>
+    <path d="M36 105C42 84 60 91 75 98C88 104 93 111 91 124L81 173H38C32 142 31 123 36 105Z" fill="#7C3AED"/>
+    <path d="M75 106C95 117 103 124 119 138" stroke="#7C3AED" stroke-width="15" stroke-linecap="round"/>
+    <path d="M119 138L139 130" stroke="#0B1F3A" stroke-width="9" stroke-linecap="round"/>
+    <path d="M51 173L45 222" stroke="#222B3A" stroke-width="15" stroke-linecap="round"/>
+    <path d="M75 173L102 219" stroke="#222B3A" stroke-width="15" stroke-linecap="round"/>
+    <path d="M37 223H57" stroke="#0B1F3A" stroke-width="10" stroke-linecap="round"/>
+    <path d="M96 221H117" stroke="#0B1F3A" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <!-- nhân vật phải: làm việc với laptop -->
+  <g transform="translate(858 322)">
+    <ellipse cx="64" cy="184" rx="86" ry="14" fill="#0065A8" opacity="0.12"/>
+    <path d="M52 52C49 35 62 25 79 29C97 33 102 50 94 64C86 78 57 76 52 52Z" fill="#0B1F3A"/>
+    <path d="M72 66L68 91" stroke="#F5B7A6" stroke-width="13" stroke-linecap="round"/>
+    <path d="M42 98C56 82 83 84 98 100C110 113 112 142 102 167H49C39 142 31 112 42 98Z" fill="#F4A000"/>
+    <path d="M99 111C117 122 127 137 139 151" stroke="#F4A000" stroke-width="14" stroke-linecap="round"/>
+    <rect x="110" y="132" width="74" height="45" rx="7" fill="#0B1F3A"/>
+    <rect x="116" y="138" width="60" height="31" rx="4" fill="#EAF6FF"/>
+    <path d="M53 166L31 211" stroke="#3B2740" stroke-width="15" stroke-linecap="round"/>
+    <path d="M90 166L127 208" stroke="#3B2740" stroke-width="15" stroke-linecap="round"/>
+    <path d="M23 212H44" stroke="#0B1F3A" stroke-width="10" stroke-linecap="round"/>
+    <path d="M121 210H143" stroke="#0B1F3A" stroke-width="10" stroke-linecap="round"/>
+
+    <!-- cây xanh công nghệ -->
+    <path d="M-8 194C-6 159 14 137 37 119C41 153 30 178 7 199" fill="#00A36C"/>
+    <path d="M184 193C188 159 168 136 145 119C139 153 150 178 176 199" fill="#00A36C"/>
+    <path d="M10 202H186" stroke="#F4A000" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+  </g>
+
+  <!-- tiêu đề tiếng Việt -->
+  <text x="600" y="590"
+        text-anchor="middle"
+        font-family="Segoe UI, Tahoma, Arial, sans-serif"
+        font-size="42"
+        font-weight="900"
+        fill="#0B1F3A">
+    Bạn thao tác quá nhanh
+  </text>
+  <rect x="465" y="618" width="270" height="6" rx="3" fill="#7C3AED"/>
+  <text x="600" y="665"
+        text-anchor="middle"
+        font-family="Segoe UI, Tahoma, Arial, sans-serif"
+        font-size="28"
+        font-weight="600"
+        fill="#53667A">
+    Hệ thống đang tạm giới hạn yêu cầu. Vui lòng thử lại sau.
+  </text></svg>
