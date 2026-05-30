@@ -173,22 +173,29 @@ class extends Component {
         @php
             $seo = $this->getSeoMetaProperty();
         @endphp
+{{--        <x-seo--}}
+{{--            :title="$seo['title']"--}}
+{{--            :description="$seo['description']"--}}
+{{--            :image="$seo['image']"--}}
+{{--            :type="$seo['type']"--}}
+{{--        >--}}
+{{--            @if($seo['published_time'])--}}
+{{--                <meta property="article:published_time" content="{{ $seo['published_time'] }}">--}}
+{{--            @endif--}}
+{{--            @if($post->categories->isNotEmpty())--}}
+{{--                <meta property="article:section" content="{{ $post->categories->first()->getTranslation('name', app()->getLocale()) }}">--}}
+{{--            @endif--}}
+{{--            @if($post->user)--}}
+{{--                <meta property="article:author" content="{{ $post->user->name }}">--}}
+{{--            @endif--}}
+{{--        </x-seo>--}}
         <x-seo
+            :post="$post"
             :title="$seo['title']"
             :description="$seo['description']"
             :image="$seo['image']"
             :type="$seo['type']"
-        >
-            @if($seo['published_time'])
-                <meta property="article:published_time" content="{{ $seo['published_time'] }}">
-            @endif
-            @if($post->categories->isNotEmpty())
-                <meta property="article:section" content="{{ $post->categories->first()->getTranslation('name', app()->getLocale()) }}">
-            @endif
-            @if($post->user)
-                <meta property="article:author" content="{{ $post->user->name }}">
-            @endif
-        </x-seo>
+        />
     </x-slot:seo>
 
     <x-slot:breadcrumb>
