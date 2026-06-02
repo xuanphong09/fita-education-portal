@@ -57,6 +57,11 @@ class extends Component {
         return Str::lower(trim(Str::ascii((string) $text)));
     }
 
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
+    }
+
     private function localizeAcademicTitle(?string $value): ?string
     {
         if (!$value) {
@@ -124,9 +129,104 @@ class extends Component {
         PostSearchService::applyLocaleFilter($query, $isEn);
         PostSearchService::applyTerms($query, $terms, $isEn);
 
+        return $query;
+    }
+
+    /**
+     * Sắp xếp bài viết bằng SQL để tối ưu khi dữ liệu lớn.
+     *
+     * Không dùng get()->sortByDesc() nữa.
+     * Database sẽ:
+     * - lọc bằng PostSearchService
+     * - ưu tiên khớp đúng dấu/cụm từ
+     * - ưu tiên khớp không dấu qua *_search
+     * - phân trang trực tiếp
+     */
+    private function applyPostRelevanceOrder($query)
+    {
+        $keyword = $this->keyword();
+
+        if ($keyword === '') {
+            return $query
+                ->orderByDesc('is_featured')
+                ->orderByDesc('published_at');
+        }
+
+        $locale = app()->getLocale() === 'en' ? 'en' : 'vi';
+
+        $keywordLower = Str::lower($keyword);
+        $keywordAscii = Str::lower(Str::ascii($keyword));
+        $keywordSlug = Str::slug($keyword);
+
+        $exactKeyword = '%' . $this->escapeLike($keywordLower) . '%';
+        $asciiKeyword = '%' . $this->escapeLike($keywordAscii) . '%';
+        $slugKeyword = '%' . $this->escapeLike($keywordSlug) . '%';
+
+        $titleExpr = "LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(title, '$.{$locale}')), ''))";
+        $excerptExpr = "LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(excerpt, '$.{$locale}')), ''))";
+        $contentExpr = "LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(content, '$.{$locale}')), ''))";
+
+        $titleSearchColumn = $locale === 'en' ? 'title_en_search' : 'title_vi_search';
+        $excerptSearchColumn = $locale === 'en' ? 'excerpt_en_search' : 'excerpt_vi_search';
+        $contentSearchColumn = $locale === 'en' ? 'content_en_search' : 'content_vi_search';
+        $slugSearchColumn = $locale === 'en' ? 'slug_en_search' : 'slug_vi_search';
+
+        if (PostSearchService::hasSearchColumns()) {
+            return $query
+                ->orderByRaw("
+                    (
+                        CASE
+                            WHEN {$titleExpr} COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\' THEN 1000
+                            WHEN {$excerptExpr} COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\' THEN 500
+                            WHEN {$contentExpr} COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\' THEN 250
+
+                            WHEN {$titleSearchColumn} LIKE ? ESCAPE '\\\\' THEN 200
+                            WHEN {$excerptSearchColumn} LIKE ? ESCAPE '\\\\' THEN 120
+                            WHEN {$contentSearchColumn} LIKE ? ESCAPE '\\\\' THEN 80
+
+                            WHEN {$slugSearchColumn} LIKE ? ESCAPE '\\\\' THEN 70
+                            WHEN slug LIKE ? ESCAPE '\\\\' THEN 60
+
+                            ELSE 0
+                        END
+                    ) DESC
+                ", [
+                    $exactKeyword,
+                    $exactKeyword,
+                    $exactKeyword,
+
+                    $asciiKeyword,
+                    $asciiKeyword,
+                    $asciiKeyword,
+
+                    $slugKeyword,
+                    $slugKeyword,
+                ])
+                ->orderByDesc('is_featured')
+                ->orderByDesc('published_at')
+                ->orderByDesc('id');
+        }
+
         return $query
+            ->orderByRaw("
+                (
+                    CASE
+                        WHEN {$titleExpr} COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\' THEN 1000
+                        WHEN {$excerptExpr} COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\' THEN 500
+                        WHEN {$contentExpr} COLLATE utf8mb4_bin LIKE ? ESCAPE '\\\\' THEN 250
+                        WHEN slug LIKE ? ESCAPE '\\\\' THEN 60
+                        ELSE 0
+                    END
+                ) DESC
+            ", [
+                $exactKeyword,
+                $exactKeyword,
+                $exactKeyword,
+                $slugKeyword,
+            ])
             ->orderByDesc('is_featured')
-            ->orderByDesc('published_at');
+            ->orderByDesc('published_at')
+            ->orderByDesc('id');
     }
 
     protected function lecturerItems()
@@ -193,27 +293,11 @@ class extends Component {
             ];
         }
 
-        $postItems = $this->postQuery()
-            ->take(100)
-            ->get()
-            ->sortByDesc(fn (Post $post) => $this->postSearchScore($post, $this->keyword()))
-            ->values();
+        $posts = $this->applyPostRelevanceOrder($this->postQuery())
+            ->paginate($this->postsPerPage, ['*'], 'postsPage')
+            ->withQueryString();
 
-        $postsPage = $this->getPage('postsPage');
-        $postsTotal = $postItems->count();
-
-        $posts = new LengthAwarePaginator(
-            $postItems->forPage($postsPage, $this->postsPerPage)->values(),
-            $postsTotal,
-            $this->postsPerPage,
-            $postsPage,
-            [
-                'path' => request()->url(),
-                'pageName' => 'postsPage',
-            ]
-        );
-
-        $posts->appends(request()->query());
+        $postsTotal = $posts->total();
 
         $lecturerItems = $this->lecturerItems();
 
@@ -248,6 +332,18 @@ class extends Component {
         $this->tab = 'all';
     }
 
+    public function setTab(string $tab): void
+    {
+        if (! in_array($tab, ['all', 'posts', 'lecturers'], true)) {
+            $tab = 'all';
+        }
+
+        $this->tab = $tab;
+
+        $this->resetPage('postsPage');
+        $this->resetPage('lecturersPage');
+    }
+
     private function lecturerSearchScore(Lecturer $lecturer, string $keyword): int
     {
         $keyword = trim($keyword);
@@ -280,52 +376,6 @@ class extends Component {
         }
 
         return $score;
-    }
-    private function postSearchScore(Post $post, string $keyword): int
-    {
-        $keyword = trim($keyword);
-        $normalizedKeyword = $this->normalizeText($keyword);
-
-        $title = (string) $post->getTranslation('title', app()->getLocale(), false);
-
-        $excerpt = method_exists($post, 'getExcerptOrAuto')
-            ? (string) $post->getExcerptOrAuto(app()->getLocale(), 300)
-            : '';
-
-        $score = 0;
-
-        if ($keyword !== '' && mb_stripos($title, $keyword) !== false) {
-            $score += 1000;
-        }
-
-        if ($keyword !== '' && mb_stripos($excerpt, $keyword) !== false) {
-            $score += 500;
-        }
-
-        if ($normalizedKeyword !== '' && str_contains($this->normalizeText($title), $normalizedKeyword)) {
-            $score += 300;
-        }
-
-        if ($normalizedKeyword !== '' && str_contains($this->normalizeText($excerpt), $normalizedKeyword)) {
-            $score += 100;
-        }
-
-        if ($post->is_featured) {
-            $score += 20;
-        }
-
-        return $score;
-    }
-    public function setTab(string $tab): void
-    {
-        if (! in_array($tab, ['all', 'posts', 'lecturers'], true)) {
-            $tab = 'all';
-        }
-
-        $this->tab = $tab;
-
-        $this->resetPage('postsPage');
-        $this->resetPage('lecturersPage');
     }
 };
 ?>
@@ -369,6 +419,7 @@ class extends Component {
             </p>
         @endif
     </section>
+
     @php
         $showTabs = $this->isValidSearch() && $postsTotal > 0 && $lecturersTotal > 0;
 
@@ -376,6 +427,7 @@ class extends Component {
             ? $tab
             : 'all';
     @endphp
+
     @if($showTabs)
         <div class="mb-4 flex flex-wrap gap-2">
             <button
@@ -389,8 +441,8 @@ class extends Component {
             >
                 Tất cả
                 <span class="ml-1 text-xs opacity-80">
-                {{ $postsTotal + $lecturersTotal }}
-            </span>
+                    {{ $postsTotal + $lecturersTotal }}
+                </span>
             </button>
 
             <button
@@ -404,8 +456,8 @@ class extends Component {
             >
                 Bài viết
                 <span class="ml-1 text-xs opacity-80">
-                {{ $postsTotal }}
-            </span>
+                    {{ $postsTotal }}
+                </span>
             </button>
 
             <button
@@ -419,15 +471,16 @@ class extends Component {
             >
                 Giảng viên
                 <span class="ml-1 text-xs opacity-80">
-                {{ $lecturersTotal }}
-            </span>
+                    {{ $lecturersTotal }}
+                </span>
             </button>
         </div>
     @endif
+
     <div class="relative">
         <div
             wire:loading.delay.short
-            wire:target="search,gotoPage,nextPage,previousPage,setPage, postsPage,lecturersPage, setTab"
+            wire:target="search,gotoPage,nextPage,previousPage,setPage,postsPage,lecturersPage,setTab"
             class="absolute inset-0 z-30 bg-white/65 backdrop-blur-[2px] rounded-xl transition-all duration-300"
         >
             <div class="sticky top-[50vh] w-full flex flex-col items-center gap-2 mt-10">
@@ -442,14 +495,14 @@ class extends Component {
             <div class="bg-white rounded-lg shadow-md p-12 text-center">
                 <x-icon name="o-magnifying-glass" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
                 <p class="text-gray-500 text-lg">
-                    {{__('Please enter at least 2 characters to search')}}.
+                    {{ __('Please enter at least 2 characters to search') }}.
                 </p>
             </div>
         @elseif($postsTotal === 0 && $lecturersTotal === 0)
             <div class="bg-white rounded-lg shadow-md p-12 text-center">
                 <x-icon name="o-document-magnifying-glass" class="w-16 h-16 mx-auto text-gray-300 mb-4" />
                 <p class="text-gray-500 text-lg">
-                    {{__('No matching results found')}}.
+                    {{ __('No matching results found') }}.
                 </p>
             </div>
         @else
@@ -460,20 +513,18 @@ class extends Component {
                     <div class="flex items-center justify-between mb-2">
                         <div>
                             <h2 class="text-2xl font-bold text-gray-900">
-                                {{__('Posts')}}
+                                {{ __('Posts') }}
                             </h2>
                             <p class="text-gray-500 text-sm mt-1">
-                                {{ $postsTotal }} {{__('relevant article results')}}
+                                {{ $postsTotal }} {{ __('relevant article results') }}
                             </p>
                         </div>
 
-                        @if($postsTotal > 0)
-                            <a href="{{ route('client.posts.index', ['tim-kiem' => $search]) }}"
-                               wire:navigate
-                               class="text-sm font-semibold text-fita hover:underline">
-                                {{__('View in posts page')}}
-                            </a>
-                        @endif
+                        <a href="{{ route('client.posts.index', ['tim-kiem' => $search]) }}"
+                           wire:navigate
+                           class="text-sm font-semibold text-fita hover:underline">
+                            {{ __('View in posts page') }}
+                        </a>
                     </div>
 
                     <div class="bg-white rounded-2xl shadow-md divide-y">
@@ -581,35 +632,34 @@ class extends Component {
                     <div class="mt-8">
                         {{ $posts->links() }}
                     </div>
-
                 </section>
             @endif
+
             {{-- GIẢNG VIÊN --}}
             @if($lecturersTotal > 0 && (!$showTabs || in_array($activeTab, ['all', 'lecturers'], true)))
                 <section>
                     <div class="flex items-center justify-between mb-2">
                         <div>
                             <h2 class="text-2xl font-bold text-gray-900">
-                                {{__('Lecturers')}}
+                                {{ __('Lecturers') }}
                             </h2>
                             <p class="text-gray-500 text-sm mt-1">
-                                {{ $lecturersTotal }} {{__('suitable faculty results')}}
+                                {{ $lecturersTotal }} {{ __('suitable faculty results') }}
                             </p>
                         </div>
 
-                        @if($lecturersTotal > 0)
-                            <a href="{{ route('client.lecturers.index', ['tim-kiem' => $search]) }}"
-                               wire:navigate
-                               class="text-md font-semibold text-fita hover:underline">
-                                {{__('View in lecturers page')}}
-                            </a>
-                        @endif
+                        <a href="{{ route('client.lecturers.index', ['tim-kiem' => $search]) }}"
+                           wire:navigate
+                           class="text-md font-semibold text-fita hover:underline">
+                            {{ __('View in lecturers page') }}
+                        </a>
                     </div>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
                         @foreach($lecturers as $lecturer)
                             @php
                                 $profileUrl = route('client.lecturers.profile', ['slug' => $lecturer->slug]);
+
                                 $avatar = $lecturer->user?->avatar
                                     ? asset($lecturer->user->avatar)
                                     : asset('/assets/images/default-user-image.png');
