@@ -340,69 +340,202 @@ class extends Component {
 
     @if(!empty($slides))
         <div
+            wire:ignore
             x-data="{
+            currentIndex: 0,
             paused: false,
-            autoplay: {{ !empty($configBanner->content_data['autoplay']) ? 'true' : 'false' }},
-            interval: {{ (int) ($configBanner->content_data['interval'] ?? 5000) }},
-            startCustomAutoplay() {
-                if (this.autoplay) {
-                    setInterval(() => {
-                        // Nếu chuột không nằm trong vùng banner thì mới bấm nút Next
-                        if (!this.paused) {
-                            let nextBtn = this.$el.querySelector(`button[aria-label='Next image']`);
-                            if (nextBtn) nextBtn.click();
-                        }
-                    }, this.interval);
+            intervalId: null,
+            total: {{ count($slides) }},
+            autoplay: {{ data_get($configBanner, 'content_data.autoplay') ? 'true' : 'false' }},
+            intervalTime: {{ (int) data_get($configBanner, 'content_data.interval', 5000) }},
+
+            init() {
+                this.start();
+
+                document.addEventListener('livewire:navigating', () => {
+                    this.stop();
+                });
+            },
+
+            start() {
+                this.stop();
+
+                if (!this.autoplay || this.total <= 1) {
+                    return;
                 }
+
+                this.intervalId = setInterval(() => {
+                    if (!this.paused) {
+                        this.next();
+                    }
+                }, this.intervalTime);
+            },
+
+            stop() {
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+            },
+
+            next() {
+                this.currentIndex = this.currentIndex >= this.total - 1
+                    ? 0
+                    : this.currentIndex + 1;
+            },
+
+            prev() {
+                this.currentIndex = this.currentIndex <= 0
+                    ? this.total - 1
+                    : this.currentIndex - 1;
+            },
+
+            goTo(index) {
+                this.currentIndex = index;
+            },
+
+            destroy() {
+                this.stop();
             }
         }"
-            x-init="startCustomAutoplay()"
+            x-init="init()"
             @mouseenter="paused = true"
             @mouseleave="paused = false"
-            class="relative w-full home-banner-carousel"
+            class="relative w-full home-banner-carousel overflow-hidden group/banner"
         >
-            <x-carousel
-                :slides="$slides"
-                class="h-[40vw] md:h-65 lg:h-91 2xl:h-110 rounded-none w-full [&_img]:w-full [&_img]:h-full [&_img]:object-fill"
-            >
-                @scope('content', $slide)
-                <div
-                    @class([
-                        "absolute inset-0 z-[1] flex flex-col gap-1 md:gap-2 px-4 py-4 md:px-20 md:py-12",
-                        "bg-gradient-to-b justify-start text-left" => data_get($slide, 'position') === 'top left',
-                        "bg-gradient-to-b justify-start items-center text-center" => data_get($slide, 'position') === 'top center',
-                        "bg-gradient-to-b justify-start items-end text-right" => data_get($slide, 'position') === 'top right',
+            <div class="relative h-[40vw] md:h-65 lg:h-91 2xl:h-110 w-full bg-slate-900">
+                @foreach($slides as $index => $slide)
+                    @php
+                        $position = data_get($slide, 'position', 'bottom center');
+                        $hasContent = data_get($slide, 'urlText') || data_get($slide, 'title') || data_get($slide, 'description');
+                    @endphp
 
-                        "bg-gradient-to-t justify-center items-center text-center" => data_get($slide, 'position') === 'center center',
-                        "bg-gradient-to-t justify-center items-end text-right" => data_get($slide, 'position') === 'center right',
-                        "bg-gradient-to-t justify-center text-left" => data_get($slide, 'position') === 'center left',
+                    <div
+                        x-show="currentIndex === {{ $index }}"
+                        x-transition.opacity.duration.500ms
+                        class="absolute inset-0"
+                    >
+                        <img
+                            src="{{ data_get($slide, 'image') }}"
+                            alt="{{ data_get($slide, 'title') ?: 'Banner' }}"
+                            class="w-full h-full object-fill"
+                            loading="{{ $index === 0 ? 'eager' : 'lazy' }}"
+                            decoding="async"
+                        >
 
-                        "bg-gradient-to-t justify-end text-left" => data_get($slide, 'position') === 'bottom left',
-                        "bg-gradient-to-t justify-end items-center text-center" => data_get($slide, 'position') === 'bottom center',
-                        "bg-gradient-to-t justify-end items-end text-right" => data_get($slide, 'position') === 'bottom right',
+                        <div
+                            @class([
+                                "absolute inset-0 z-[1] flex flex-col gap-1 md:gap-2 px-4 py-4 md:px-20 md:py-12",
 
-                        "from-slate-900/45" => data_get($slide, 'urlText') || data_get($slide, 'title') || data_get($slide, 'description')
-                    ])
-                >
-                    <h1 class="w-full md:w-[60%] text-xl md:text-2xl lg:text-[64px]/[68px] font-bold text-white">
-                        {{ data_get($slide, 'title') }}
-                    </h1>
+                                "bg-gradient-to-b justify-start text-left" => $position === 'top left',
+                                "bg-gradient-to-b justify-start items-center text-center" => $position === 'top center',
+                                "bg-gradient-to-b justify-start items-end text-right" => $position === 'top right',
 
-                    <h5 class="w-full md:w-[60%] text-sm md:text-[16px] lg:text-[30px] font-bold text-white">
-                        {{ data_get($slide, 'description') }}
-                    </h5>
+                                "bg-gradient-to-t justify-center items-center text-center" => $position === 'center center',
+                                "bg-gradient-to-t justify-center items-end text-right" => $position === 'center right',
+                                "bg-gradient-to-t justify-center text-left" => $position === 'center left',
 
-                    @if(data_get($slide, 'urlText'))
-                        <div class="hidden md:block">
-                            <x-button link="{{ data_get($slide, 'url') }}" icon-right="o-arrow-right"
-                                      class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105">
-                                {{ __(data_get($slide, 'urlText')) }}
-                            </x-button>
+                                "bg-gradient-to-t justify-end text-left" => $position === 'bottom left',
+                                "bg-gradient-to-t justify-end items-center text-center" => $position === 'bottom center',
+                                "bg-gradient-to-t justify-end items-end text-right" => $position === 'bottom right',
+
+                                "from-slate-900/45" => $hasContent,
+                            ])
+                        >
+                            @if(data_get($slide, 'title'))
+                                <h1 class="w-full md:w-[60%] text-xl md:text-2xl lg:text-[64px]/[68px] font-bold text-white">
+                                    {{ data_get($slide, 'title') }}
+                                </h1>
+                            @endif
+
+                            @if(data_get($slide, 'description'))
+                                <h5 class="w-full md:w-[60%] text-sm md:text-[16px] lg:text-[30px] font-bold text-white">
+                                    {{ data_get($slide, 'description') }}
+                                </h5>
+                            @endif
+
+                            @if(data_get($slide, 'urlText'))
+                                <div class="hidden md:block">
+                                    <x-button
+                                        link="{{ data_get($slide, 'url') }}"
+                                        icon-right="o-arrow-right"
+                                        class="btn btn-sm lg:btn-md max-w-40 bg-fita text-white border-transparent shadow-none hover:bg-fita2 my-3 hover:scale-105"
+                                    >
+                                        {{ __(data_get($slide, 'urlText')) }}
+                                    </x-button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+
+                    @if(count($slides) > 1)
+                        {{-- Nút trái --}}
+                        <button
+                            type="button"
+                            @click="prev()"
+                            class="
+                                absolute left-4 top-1/2 z-20 -translate-y-1/2
+                                hidden md:flex items-center justify-center
+                                w-8 h-8 rounded-full
+                                bg-white/75 text-gray-700 shadow-lg backdrop-blur-sm
+                                opacity-0 pointer-events-none -translate-x-2
+                                transition-all duration-300 ease-out
+                                group-hover/banner:opacity-100 group-hover/banner:pointer-events-auto group-hover/banner:translate-x-0
+                                hover:bg-white hover:text-fita hover:scale-105
+                            "
+                            aria-label="Previous image"
+                        >
+                            <x-icon name="o-chevron-left" class="w-5 h-5" />
+                        </button>
+
+                        {{-- Nút phải --}}
+                        <button
+                            type="button"
+                            @click="next()"
+                            class="
+                                absolute right-4 top-1/2 z-20 -translate-y-1/2
+                                hidden md:flex items-center justify-center
+                                w-8 h-8 rounded-full
+                                bg-white/75 text-gray-700 shadow-lg backdrop-blur-sm
+                                opacity-0 pointer-events-none translate-x-2
+                                transition-all duration-300 ease-out
+                                group-hover/banner:opacity-100 group-hover/banner:pointer-events-auto group-hover/banner:translate-x-0
+                                hover:bg-white hover:text-fita hover:scale-105
+                            "
+                                                aria-label="Next image"
+                                            >
+                                <x-icon name="o-chevron-right" class="w-5 h-5" />
+                            </button>
+
+                                            {{-- Dot --}}
+                            <div
+                                class="
+                                absolute bottom-5 left-1/2 z-20 -translate-x-1/2
+                                flex items-center gap-2 rounded-full
+                                bg-black/25 px-2 py-1.5 backdrop-blur-sm shadow-lg
+                                opacity-0 pointer-events-none translate-y-2
+                                transition-all duration-300 ease-out
+                                group-hover/banner:opacity-100 group-hover/banner:pointer-events-auto group-hover/banner:translate-y-0
+                            "
+                        >
+                            @foreach($slides as $index => $slide)
+                                <button
+                                    type="button"
+                                    @click="goTo({{ $index }})"
+                                    class="
+                                        h-2.5 rounded-full transition-all duration-300
+                                        border border-white/40
+                                    "
+                                    :class="currentIndex === {{ $index }}
+                                        ? 'w-7 bg-white'
+                                        : 'w-2.5 bg-white/60 hover:bg-white/90'"
+                                    aria-label="Go to slide {{ $index + 1 }}"
+                                ></button>
+                            @endforeach
                         </div>
                     @endif
-                </div>
-                @endscope
-            </x-carousel>
+            </div>
         </div>
     @endif
 
