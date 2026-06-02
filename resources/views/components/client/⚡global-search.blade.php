@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Models\Post;
 use App\Services\PostSearchService;
 use Livewire\Component;
+use Illuminate\Support\Str;
 
 new class extends Component {
 
@@ -42,18 +43,31 @@ new class extends Component {
         $this->results['posts'] = $postQuery
             ->orderByDesc('is_featured')
             ->orderByDesc('published_at')
+            ->take(30)
+            ->get()
+            ->sortByDesc(fn ($post) => $this->postSearchScore($post, $search))
             ->take(5)
-            ->get();
+            ->values();
 
         $this->results['users'] = User::search($search)
+            ->query(fn ($query) => $query
+                ->with('lecturer')
+                ->where('user_type', 'lecturer')
+                ->whereHas('lecturer', function ($q) {
+                    $q->whereNotNull('slug');
+                })
+            )
+            ->take(30)
+            ->get()
+            ->sortByDesc(fn ($user) => $this->userSearchScore($user, $search))
             ->take(5)
-            ->get();
+            ->values();
     }
 
     public function searchAction()
     {
         if (trim($this->search) !== '') {
-            return $this->redirect(route('client.posts.index', ['tim-kiem' => trim($this->search)]), navigate: true);
+            return $this->redirect(route('client.search', ['q' => trim($this->search)]), navigate: true);
         }
     }
 
@@ -61,6 +75,90 @@ new class extends Component {
     {
         $this->search = '';
         $this->results = ['posts' => [], 'users' => []];
+    }
+
+    private function normalizeText(?string $text): string
+    {
+        return Str::lower(trim(Str::ascii(strip_tags((string) $text))));
+    }
+
+    private function postSearchScore(Post $post, string $keyword): int
+    {
+        $keyword = trim($keyword);
+        $normalizedKeyword = $this->normalizeText($keyword);
+
+        $title = (string) $post->getTranslation('title', app()->getLocale(), false);
+        $excerpt = method_exists($post, 'getExcerptOrAuto')
+            ? (string) $post->getExcerptOrAuto(app()->getLocale(), 300)
+            : '';
+
+        $score = 0;
+
+        // Ưu tiên cao nhất: khớp đúng dấu trong tiêu đề
+        if ($keyword !== '' && mb_stripos($title, $keyword) !== false) {
+            $score += 1000;
+        }
+
+        // Khớp đúng dấu trong mô tả
+        if ($keyword !== '' && mb_stripos($excerpt, $keyword) !== false) {
+            $score += 500;
+        }
+
+        // Khớp không dấu trong tiêu đề
+        if ($normalizedKeyword !== '' && str_contains($this->normalizeText($title), $normalizedKeyword)) {
+            $score += 300;
+        }
+
+        // Khớp không dấu trong mô tả
+        if ($normalizedKeyword !== '' && str_contains($this->normalizeText($excerpt), $normalizedKeyword)) {
+            $score += 100;
+        }
+
+        // Cộng nhẹ điểm cho bài nổi bật
+        if ($post->is_featured) {
+            $score += 20;
+        }
+
+        return $score;
+    }
+
+    private function userSearchScore(User $user, string $keyword): int
+    {
+        $keyword = trim($keyword);
+        $normalizedKeyword = $this->normalizeText($keyword);
+
+        $name = (string) ($user->name ?? '');
+        $email = (string) ($user->email ?? '');
+        $position = (string) ($user->lecturer?->positionForLocale(app()->getLocale()) ?? '');
+
+        $score = 0;
+
+        // Ưu tiên cao nhất: tên khớp đúng dấu
+        if ($keyword !== '' && mb_stripos($name, $keyword) !== false) {
+            $score += 1000;
+        }
+
+        // Chức vụ khớp đúng dấu
+        if ($keyword !== '' && mb_stripos($position, $keyword) !== false) {
+            $score += 500;
+        }
+
+        // Tên khớp không dấu
+        if ($normalizedKeyword !== '' && str_contains($this->normalizeText($name), $normalizedKeyword)) {
+            $score += 300;
+        }
+
+        // Chức vụ khớp không dấu
+        if ($normalizedKeyword !== '' && str_contains($this->normalizeText($position), $normalizedKeyword)) {
+            $score += 150;
+        }
+
+        // Email khớp
+        if ($normalizedKeyword !== '' && str_contains($this->normalizeText($email), $normalizedKeyword)) {
+            $score += 50;
+        }
+
+        return $score;
     }
 };
 ?>
@@ -117,9 +215,11 @@ new class extends Component {
                                     @foreach($results['posts'] as $post)
                                         <a href="{{ $post->client_url }}"
                                            class="block px-2 py-2 hover:bg-blue-50 rounded-lg transition" wire:navigate>
-                                            <div class="text-sm font-medium text-gray-700 truncate flex items-center gap-2">
+                                            <div class="text-sm font-medium text-gray-700 truncate flex items-center">
                                                 @if($post->is_featured)
-                                                    <span class="inline-flex items-center rounded bg-warning/20 text-warning px-1.5 py-0.5 text-[10px] font-semibold">Hot</span>
+                                                    <span class="inline-flex items-center rounded text-red-500 px-1.5 py-0.5 text-[10px] font-semibold">
+                                                        <x-icon name="s-star"></x-icon>
+                                                    </span>
                                                 @endif
                                                 <span>{{ $post->getTranslation('title', app()->getLocale()) }}</span>
                                             </div>
@@ -133,7 +233,8 @@ new class extends Component {
                                         viên
                                     </div>
                                     @foreach($results['users'] as $user)
-                                        <a href="/giang-vien/{{ $user->id }}"
+                                        @continue(!$user->lecturer?->slug)
+                                        <a href="{{ route('client.lecturers.profile', ['slug' => $user->lecturer->slug]) }}"
                                            class="flex items-center gap-2 px-2 py-2 hover:bg-blue-50 rounded-lg transition"
                                            wire:navigate>
                                             <div class="avatar placeholder">
@@ -149,7 +250,7 @@ new class extends Component {
                             </div>
 
                             {{-- Nút Xem tất cả --}}
-                            <a href="{{ route('client.posts.index', ['tim-kiem' => $search]) }}"
+                            <a href="{{ route('client.search', ['q' => $search]) }}"
                                class="block mt-2 text-center py-2 text-xs font-bold text-[#005aab] bg-blue-50 rounded-lg hover:bg-blue-100 transition"
                                wire:navigate>
                                 {{__('View all')}}

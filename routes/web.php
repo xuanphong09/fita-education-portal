@@ -12,7 +12,7 @@ Route::livewire('/', 'pages::client.home')->name('client.home');
 Route::livewire('/trang-chu-v2', 'pages::client.home3')->name('client.home2');
 Route::livewire('/gioi-thieu', 'pages::client.information')->name('client.information');
 Route::livewire('/lien-he', 'pages::client.contact')->name('client.contact');
-Route::livewire('/search', 'pages::client.search')->name('client.search');
+Route::livewire('/tim-kiem', 'pages::client.search')->name('client.search');
 //Route::livewire('/dao-tao/chuong-trinh', 'pages::client.training-programs.index')->name('client.training-programs.index');
 Route::livewire('/chuong-trinh-dao-tao', 'pages::client.training-programs.major')->name('client.training-programs.major');
 Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}/stream', [SubjectSyllabusController::class, 'stream'])

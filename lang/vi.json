@@ -292,5 +292,11 @@
     "Featured": "Nổi bật",
     "No general training program for this major yet. Please choose a specialization to continue.": "Chưa có chương trình đào tạo chung cho ngành này. Vui lòng chọn chuyên ngành/hướng chuyên sâu để tiếp tục.",
     "The system automatically displays training programs based on your personal profile.": "Hệ thống tự động hiển thị chương trình đào tạo dựa trên hồ sơ cá nhân của bạn.",
-    "View full": "Xem đầy đủ"
+    "View full": "Xem đầy đủ",
+    "View in lecturers page": "Xem trong trang giảng viên",
+    "View in posts page": "Xem trong trang bài viết",
+    "No matching results found": "Không tìm thấy kết quả phù hợp",
+    "Please enter at least 2 characters to search": "Vui lòng nhập ít nhất 2 ký tự để tìm kiếm",
+    "relevant article results": "kết quả bài viết phù hợp",
+    "suitable faculty results": "kết quả giảng viên phù hợp"
 }
