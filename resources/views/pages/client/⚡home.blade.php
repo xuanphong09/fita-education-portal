@@ -235,9 +235,9 @@ class extends Component {
             ->values();
 
         $latestPosts = (clone $baseQuery)
-            ->whereHas('categories', function ($query) {
-                $query->where('categories.slug', 'tin-tuc')->orWhere('categories.slug', 'su-kien');
-            })
+//            ->whereHas('categories', function ($query) {
+//                $query->where('categories.slug', 'tin-tuc')->orWhere('categories.slug', 'su-kien');
+//            })
             ->when($featuredPosts->isNotEmpty(), fn($q) => $q->whereNotIn('id', $featuredPosts->pluck('id')))
             ->latest('published_at')
             ->limit($locale === 'en' ? 24 : 4)
