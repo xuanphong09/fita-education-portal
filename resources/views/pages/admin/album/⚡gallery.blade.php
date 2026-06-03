@@ -793,30 +793,30 @@ class extends Component {
                     this.actionOverlay = null;
                 },
 
-                syncPswpSizes() {
-                    const gallery = document.getElementById('my-gallery');
-
-                    if (! gallery) return;
-
-                    gallery.querySelectorAll('a.pswp-item img').forEach((img) => {
-                        const link = img.closest('a.pswp-item');
-
-                        if (! link) return;
-
-                        const setSize = () => {
-                            if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                                link.setAttribute('data-pswp-width', img.naturalWidth);
-                                link.setAttribute('data-pswp-height', img.naturalHeight);
-                            }
-                        };
-
-                        if (img.complete) {
-                            setSize();
-                        } else {
-                            img.addEventListener('load', setSize, { once: true });
-                        }
-                    });
-                },
+                // syncPswpSizes() {
+                //     const gallery = document.getElementById('my-gallery');
+                //
+                //     if (! gallery) return;
+                //
+                //     gallery.querySelectorAll('a.pswp-item img').forEach((img) => {
+                //         const link = img.closest('a.pswp-item');
+                //
+                //         if (! link) return;
+                //
+                //         const setSize = () => {
+                //             if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+                //                 link.setAttribute('data-pswp-width', img.naturalWidth);
+                //                 link.setAttribute('data-pswp-height', img.naturalHeight);
+                //             }
+                //         };
+                //
+                //         if (img.complete) {
+                //             setSize();
+                //         } else {
+                //             img.addEventListener('load', setSize, { once: true });
+                //         }
+                //     });
+                // },
 
                 destroyLightbox() {
                     this.removeActionOverlay();
@@ -836,7 +836,7 @@ class extends Component {
                     if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') return;
 
                     this.$nextTick(() => {
-                        this.syncPswpSizes();
+                        // this.syncPswpSizes();
 
                         window.__adminPhotoSwipeInstances ??= {};
 
@@ -882,17 +882,42 @@ class extends Component {
         wire:key="image-library-gallery-{{ $this->allImages->currentPage() }}-{{ $assignmentFilter }}-{{ $imagePerPage }}"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
         x-data="imageLibraryGallery()"
+        x-on:click.capture="
+            const link = $event.target.closest('a.pswp-item');
+            if (link && !lightbox) {
+                $event.preventDefault();
+                $event.stopPropagation();
+            }
+        "
         x-on:livewire:navigating.window="destroyLightbox()"
     >
         @forelse($this->allImages as $image)
             @php
                 $imageUrl = Storage::url($image->image_path);
+
                 $displayCaption = filled($image->caption)
                     ? $image->caption
                     : 'Chưa có chú thích';
             @endphp
 
-            <div class="relative group/card" wire:key="gallery-image-{{ $image->id }}">
+            <div
+                class="relative group/card"
+                wire:key="gallery-image-{{ $image->id }}"
+                x-data="{
+                w: 1200,
+                h: 800,
+                init() {
+                    this.$nextTick(() => {
+                        const img = this.$refs.img;
+
+                        if (img && img.complete && img.naturalWidth > 0) {
+                            this.w = img.naturalWidth;
+                            this.h = img.naturalHeight;
+                        }
+                    });
+                }
+            }"
+            >
                 <label class="absolute top-2 left-2 z-2 cursor-pointer rounded-full px-2 py-1 text-white text-xs">
                     <input
                         type="checkbox"
@@ -905,8 +930,9 @@ class extends Component {
                 <div class="h-55">
                     <a
                         href="{{ $imageUrl }}"
-                        data-pswp-width="1200"
-                        data-pswp-height="800"
+                        onclick="return false;"
+                        x-bind:data-pswp-width="w"
+                        x-bind:data-pswp-height="h"
                         data-image-id="{{ $image->id }}"
                         data-image-url="{{ $imageUrl }}"
                         data-image-caption="{{ e($image->caption ?? '') }}"
@@ -914,15 +940,10 @@ class extends Component {
                         class="pswp-item block w-full h-55 cursor-pointer group/img relative overflow-hidden rounded-lg {{ in_array($image->id, $selectedImageIds) ? 'ring-2 ring-primary ring-offset-2' : '' }}"
                     >
                         <img
+                            x-ref="img"
+                            x-on:load="w = $event.target.naturalWidth; h = $event.target.naturalHeight"
                             src="{{ $imageUrl }}"
                             class="w-full h-full object-cover transition-transform duration-500 group-hover/img:scale-105"
-                            onload="
-                                const link = this.closest('a.pswp-item');
-                                if (link && this.naturalWidth > 0 && this.naturalHeight > 0) {
-                                    link.setAttribute('data-pswp-width', this.naturalWidth);
-                                    link.setAttribute('data-pswp-height', this.naturalHeight);
-                                }
-                            "
                             loading="lazy"
                             decoding="async"
                             alt="{{ e($displayCaption) }}"

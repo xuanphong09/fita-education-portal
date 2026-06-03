@@ -625,6 +625,7 @@ class extends Component {
                 <div class="h-55">
                     <a
                         href="{{ Storage::url($image->image_path) }}"
+                        onclick="return false;"
                         x-bind:data-pswp-width="w"
                         x-bind:data-pswp-height="h"
                         data-image-id="{{ $image->id }}"

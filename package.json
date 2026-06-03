@@ -14,5 +14,10 @@
         "laravel-vite-plugin": "^2.0.0",
         "tailwindcss": "^4.2.2",
         "vite": "^7.0.7"
+    },
+    "dependencies": {
+        "chart.js": "^4.5.1",
+        "photoswipe": "^5.4.4",
+        "sortablejs": "^1.15.7"
     }
 }
