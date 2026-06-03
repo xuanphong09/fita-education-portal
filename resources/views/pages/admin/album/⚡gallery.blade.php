@@ -646,242 +646,242 @@ class extends Component {
         </x-slot:actions>
     </x-header>
 
-    <script>
-        window.imageLibraryGallery = function () {
-            return {
-                lightbox: null,
-                actionOverlay: null,
-                lightboxKey: 'image-library-gallery',
+{{--    <script>--}}
+{{--        window.imageLibraryGallery = function () {--}}
+{{--            return {--}}
+{{--                lightbox: null,--}}
+{{--                actionOverlay: null,--}}
+{{--                lightboxKey: 'image-library-gallery',--}}
 
-                escapeHtml(value) {
-                    const map = {
-                        '&': '&amp;',
-                        '<': '&lt;',
-                        '>': '&gt;',
-                        '"': '&quot;',
-                        "'": '&#039;',
-                    };
+{{--                escapeHtml(value) {--}}
+{{--                    const map = {--}}
+{{--                        '&': '&amp;',--}}
+{{--                        '<': '&lt;',--}}
+{{--                        '>': '&gt;',--}}
+{{--                        '"': '&quot;',--}}
+{{--                        "'": '&#039;',--}}
+{{--                    };--}}
 
-                    return String(value ?? '').replace(/[&<>"']/g, (char) => map[char] ?? char);
-                },
+{{--                    return String(value ?? '').replace(/[&<>"']/g, (char) => map[char] ?? char);--}}
+{{--                },--}}
 
-                getActiveImageMeta(pswp) {
-                    const element = pswp?.currSlide?.data?.element;
+{{--                getActiveImageMeta(pswp) {--}}
+{{--                    const element = pswp?.currSlide?.data?.element;--}}
 
-                    return {
-                        id: Number(element?.dataset?.imageId || 0) || null,
-                        src: pswp?.currSlide?.data?.src || element?.href || '',
-                        caption: element?.dataset?.imageCaption || '',
-                    };
-                },
+{{--                    return {--}}
+{{--                        id: Number(element?.dataset?.imageId || 0) || null,--}}
+{{--                        src: pswp?.currSlide?.data?.src || element?.href || '',--}}
+{{--                        caption: element?.dataset?.imageCaption || '',--}}
+{{--                    };--}}
+{{--                },--}}
 
-                createActionOverlay(pswp) {
-                    this.removeActionOverlay();
+{{--                createActionOverlay(pswp) {--}}
+{{--                    this.removeActionOverlay();--}}
 
-                    const image = this.getActiveImageMeta(pswp);
-                    const overlay = document.createElement('div');
+{{--                    const image = this.getActiveImageMeta(pswp);--}}
+{{--                    const overlay = document.createElement('div');--}}
 
-                    overlay.className = 'pswp-admin-overlay';
-                    overlay.innerHTML = `
-                        <div class='pointer-events-auto flex flex-col items-center gap-2'>
-                            ${image.caption ? `
-                                <div class='max-w-[80vw] rounded-xl bg-black/65 px-4 py-2 text-center text-sm font-medium text-white shadow-2xl backdrop-blur'>
-                                    ${this.escapeHtml(image.caption)}
-                                </div>
-                            ` : ''}
+{{--                    overlay.className = 'pswp-admin-overlay';--}}
+{{--                    overlay.innerHTML = `--}}
+{{--                        <div class='pointer-events-auto flex flex-col items-center gap-2'>--}}
+{{--                            ${image.caption ? `--}}
+{{--                                <div class='max-w-[80vw] rounded-xl bg-black/65 px-4 py-2 text-center text-sm font-medium text-white shadow-2xl backdrop-blur'>--}}
+{{--                                    ${this.escapeHtml(image.caption)}--}}
+{{--                                </div>--}}
+{{--                            ` : ''}--}}
 
-                            <div class='flex items-center gap-2 rounded-full bg-black/65 px-3 py-2 text-white shadow-2xl backdrop-blur'>
-                                <button type='button' data-action='caption' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20' title='Sửa chú thích' aria-label='Sửa chú thích'>
-                                    <span class='text-lg leading-none'>
-                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>
-                                            <path stroke-linecap='round' stroke-linejoin='round' d='m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z' />
-                                            <path stroke-linecap='round' stroke-linejoin='round' d='M19.5 7.125 16.875 4.5' />
-                                        </svg>
-                                    </span>
-                                </button>
+{{--                            <div class='flex items-center gap-2 rounded-full bg-black/65 px-3 py-2 text-white shadow-2xl backdrop-blur'>--}}
+{{--                                <button type='button' data-action='caption' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20' title='Sửa chú thích' aria-label='Sửa chú thích'>--}}
+{{--                                    <span class='text-lg leading-none'>--}}
+{{--                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>--}}
+{{--                                            <path stroke-linecap='round' stroke-linejoin='round' d='m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Z' />--}}
+{{--                                            <path stroke-linecap='round' stroke-linejoin='round' d='M19.5 7.125 16.875 4.5' />--}}
+{{--                                        </svg>--}}
+{{--                                    </span>--}}
+{{--                                </button>--}}
 
-                                <button type='button' data-action='download' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20' title='Tải ảnh xuống' aria-label='Tải ảnh xuống'>
-                                    <span class='text-lg leading-none'>
-                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>
-                                            <path stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3' />
-                                        </svg>
-                                    </span>
-                                </button>
+{{--                                <button type='button' data-action='download' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20' title='Tải ảnh xuống' aria-label='Tải ảnh xuống'>--}}
+{{--                                    <span class='text-lg leading-none'>--}}
+{{--                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>--}}
+{{--                                            <path stroke-linecap='round' stroke-linejoin='round' d='M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3' />--}}
+{{--                                        </svg>--}}
+{{--                                    </span>--}}
+{{--                                </button>--}}
 
-                                <button type='button' data-action='move' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20' title='Thêm vào album' aria-label='Thêm vào album'>
-                                    <span class='text-lg leading-none'>
-                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>
-                                            <path stroke-linecap='round' stroke-linejoin='round' d='M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12A1.5 1.5 0 0 0 9.88 3.75H4.5A2.25 2.25 0 0 0 2.25 6v12A2.25 2.25 0 0 0 4.5 20.25h15A2.25 2.25 0 0 0 21.75 18V9A2.25 2.25 0 0 0 19.5 6.75h-5.38a1.5 1.5 0 0 1-1.06-.44Z' />
-                                            <path stroke-linecap='round' stroke-linejoin='round' d='M12 11.25v6m3-3H9' />
-                                        </svg>
-                                    </span>
-                                </button>
+{{--                                <button type='button' data-action='move' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition hover:bg-white/20' title='Thêm vào album' aria-label='Thêm vào album'>--}}
+{{--                                    <span class='text-lg leading-none'>--}}
+{{--                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>--}}
+{{--                                            <path stroke-linecap='round' stroke-linejoin='round' d='M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12A1.5 1.5 0 0 0 9.88 3.75H4.5A2.25 2.25 0 0 0 2.25 6v12A2.25 2.25 0 0 0 4.5 20.25h15A2.25 2.25 0 0 0 21.75 18V9A2.25 2.25 0 0 0 19.5 6.75h-5.38a1.5 1.5 0 0 1-1.06-.44Z' />--}}
+{{--                                            <path stroke-linecap='round' stroke-linejoin='round' d='M12 11.25v6m3-3H9' />--}}
+{{--                                        </svg>--}}
+{{--                                    </span>--}}
+{{--                                </button>--}}
 
-                                <button type='button' data-action='delete' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-error/80 transition hover:bg-error' title='Xóa ảnh' aria-label='Xóa ảnh'>
-                                    <span class='text-lg leading-none'>
-                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>
-                                            <path stroke-linecap='round' stroke-linejoin='round' d='m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0' />
-                                        </svg>
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-                    `;
+{{--                                <button type='button' data-action='delete' class='inline-flex h-10 w-10 items-center justify-center rounded-full bg-error/80 transition hover:bg-error' title='Xóa ảnh' aria-label='Xóa ảnh'>--}}
+{{--                                    <span class='text-lg leading-none'>--}}
+{{--                                        <svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='size-6'>--}}
+{{--                                            <path stroke-linecap='round' stroke-linejoin='round' d='m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0' />--}}
+{{--                                        </svg>--}}
+{{--                                    </span>--}}
+{{--                                </button>--}}
+{{--                            </div>--}}
+{{--                        </div>--}}
+{{--                    `;--}}
 
-                    overlay.style.position = 'absolute';
-                    overlay.style.left = '50%';
-                    overlay.style.bottom = '24px';
-                    overlay.style.transform = 'translateX(-50%)';
-                    overlay.style.zIndex = '60';
+{{--                    overlay.style.position = 'absolute';--}}
+{{--                    overlay.style.left = '50%';--}}
+{{--                    overlay.style.bottom = '24px';--}}
+{{--                    overlay.style.transform = 'translateX(-50%)';--}}
+{{--                    overlay.style.zIndex = '60';--}}
 
-                    overlay.querySelector('[data-action="download"]')?.addEventListener('click', () => {
-                        const image = this.getActiveImageMeta(pswp);
+{{--                    overlay.querySelector('[data-action="download"]')?.addEventListener('click', () => {--}}
+{{--                        const image = this.getActiveImageMeta(pswp);--}}
 
-                        if (! image.src) {
-                            return;
-                        }
+{{--                        if (! image.src) {--}}
+{{--                            return;--}}
+{{--                        }--}}
 
-                        const link = document.createElement('a');
-                        link.href = image.src;
-                        link.target = '_blank';
-                        link.rel = 'noopener noreferrer';
-                        link.download = '';
-                        document.body.appendChild(link);
-                        link.click();
-                        link.remove();
-                    });
+{{--                        const link = document.createElement('a');--}}
+{{--                        link.href = image.src;--}}
+{{--                        link.target = '_blank';--}}
+{{--                        link.rel = 'noopener noreferrer';--}}
+{{--                        link.download = '';--}}
+{{--                        document.body.appendChild(link);--}}
+{{--                        link.click();--}}
+{{--                        link.remove();--}}
+{{--                    });--}}
 
-                    overlay.querySelector('[data-action="caption"]')?.addEventListener('click', () => {
-                        const image = this.getActiveImageMeta(pswp);
+{{--                    overlay.querySelector('[data-action="caption"]')?.addEventListener('click', () => {--}}
+{{--                        const image = this.getActiveImageMeta(pswp);--}}
 
-                        if (! image.id) {
-                            return;
-                        }
+{{--                        if (! image.id) {--}}
+{{--                            return;--}}
+{{--                        }--}}
 
-                        this.$wire.openEditCaption(image.id);
-                        pswp.close();
-                    });
+{{--                        this.$wire.openEditCaption(image.id);--}}
+{{--                        pswp.close();--}}
+{{--                    });--}}
 
-                    overlay.querySelector('[data-action="move"]')?.addEventListener('click', () => {
-                        const image = this.getActiveImageMeta(pswp);
+{{--                    overlay.querySelector('[data-action="move"]')?.addEventListener('click', () => {--}}
+{{--                        const image = this.getActiveImageMeta(pswp);--}}
 
-                        if (! image.id) {
-                            return;
-                        }
+{{--                        if (! image.id) {--}}
+{{--                            return;--}}
+{{--                        }--}}
 
-                        this.$wire.openMoveImage(image.id);
-                        pswp.close();
-                    });
+{{--                        this.$wire.openMoveImage(image.id);--}}
+{{--                        pswp.close();--}}
+{{--                    });--}}
 
-                    overlay.querySelector('[data-action="delete"]')?.addEventListener('click', () => {
-                        const image = this.getActiveImageMeta(pswp);
+{{--                    overlay.querySelector('[data-action="delete"]')?.addEventListener('click', () => {--}}
+{{--                        const image = this.getActiveImageMeta(pswp);--}}
 
-                        if (! image.id) {
-                            return;
-                        }
+{{--                        if (! image.id) {--}}
+{{--                            return;--}}
+{{--                        }--}}
 
-                        this.$wire.deleteImage(image.id);
-                        pswp.close();
-                    });
+{{--                        this.$wire.deleteImage(image.id);--}}
+{{--                        pswp.close();--}}
+{{--                    });--}}
 
-                    pswp.element?.appendChild(overlay);
-                    this.actionOverlay = overlay;
-                },
+{{--                    pswp.element?.appendChild(overlay);--}}
+{{--                    this.actionOverlay = overlay;--}}
+{{--                },--}}
 
-                removeActionOverlay() {
-                    this.actionOverlay?.remove();
-                    this.actionOverlay = null;
-                },
+{{--                removeActionOverlay() {--}}
+{{--                    this.actionOverlay?.remove();--}}
+{{--                    this.actionOverlay = null;--}}
+{{--                },--}}
 
-                // syncPswpSizes() {
-                //     const gallery = document.getElementById('my-gallery');
-                //
-                //     if (! gallery) return;
-                //
-                //     gallery.querySelectorAll('a.pswp-item img').forEach((img) => {
-                //         const link = img.closest('a.pswp-item');
-                //
-                //         if (! link) return;
-                //
-                //         const setSize = () => {
-                //             if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-                //                 link.setAttribute('data-pswp-width', img.naturalWidth);
-                //                 link.setAttribute('data-pswp-height', img.naturalHeight);
-                //             }
-                //         };
-                //
-                //         if (img.complete) {
-                //             setSize();
-                //         } else {
-                //             img.addEventListener('load', setSize, { once: true });
-                //         }
-                //     });
-                // },
+{{--                // syncPswpSizes() {--}}
+{{--                //     const gallery = document.getElementById('my-gallery');--}}
+{{--                //--}}
+{{--                //     if (! gallery) return;--}}
+{{--                //--}}
+{{--                //     gallery.querySelectorAll('a.pswp-item img').forEach((img) => {--}}
+{{--                //         const link = img.closest('a.pswp-item');--}}
+{{--                //--}}
+{{--                //         if (! link) return;--}}
+{{--                //--}}
+{{--                //         const setSize = () => {--}}
+{{--                //             if (img.naturalWidth > 0 && img.naturalHeight > 0) {--}}
+{{--                //                 link.setAttribute('data-pswp-width', img.naturalWidth);--}}
+{{--                //                 link.setAttribute('data-pswp-height', img.naturalHeight);--}}
+{{--                //             }--}}
+{{--                //         };--}}
+{{--                //--}}
+{{--                //         if (img.complete) {--}}
+{{--                //             setSize();--}}
+{{--                //         } else {--}}
+{{--                //             img.addEventListener('load', setSize, { once: true });--}}
+{{--                //         }--}}
+{{--                //     });--}}
+{{--                // },--}}
 
-                destroyLightbox() {
-                    this.removeActionOverlay();
+{{--                destroyLightbox() {--}}
+{{--                    this.removeActionOverlay();--}}
 
-                    if (this.lightbox) {
-                        this.lightbox.destroy();
-                        this.lightbox = null;
-                    }
+{{--                    if (this.lightbox) {--}}
+{{--                        this.lightbox.destroy();--}}
+{{--                        this.lightbox = null;--}}
+{{--                    }--}}
 
-                    if (window.__adminPhotoSwipeInstances?.[this.lightboxKey]) {
-                        window.__adminPhotoSwipeInstances[this.lightboxKey].destroy();
-                        delete window.__adminPhotoSwipeInstances[this.lightboxKey];
-                    }
-                },
+{{--                    if (window.__adminPhotoSwipeInstances?.[this.lightboxKey]) {--}}
+{{--                        window.__adminPhotoSwipeInstances[this.lightboxKey].destroy();--}}
+{{--                        delete window.__adminPhotoSwipeInstances[this.lightboxKey];--}}
+{{--                    }--}}
+{{--                },--}}
 
-                init() {
-                    if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') return;
+{{--                init() {--}}
+{{--                    if (typeof PhotoSwipeLightbox === 'undefined' || typeof PhotoSwipe === 'undefined') return;--}}
 
-                    this.$nextTick(() => {
-                        // this.syncPswpSizes();
+{{--                    this.$nextTick(() => {--}}
+{{--                        // this.syncPswpSizes();--}}
 
-                        window.__adminPhotoSwipeInstances ??= {};
+{{--                        window.__adminPhotoSwipeInstances ??= {};--}}
 
-                        if (window.__adminPhotoSwipeInstances[this.lightboxKey]) {
-                            window.__adminPhotoSwipeInstances[this.lightboxKey].destroy();
-                            delete window.__adminPhotoSwipeInstances[this.lightboxKey];
-                        }
+{{--                        if (window.__adminPhotoSwipeInstances[this.lightboxKey]) {--}}
+{{--                            window.__adminPhotoSwipeInstances[this.lightboxKey].destroy();--}}
+{{--                            delete window.__adminPhotoSwipeInstances[this.lightboxKey];--}}
+{{--                        }--}}
 
-                        this.lightbox = new PhotoSwipeLightbox({
-                            gallery: '#my-gallery',
-                            children: 'a.pswp-item',
-                            showHideAnimationType: 'none',
-                            pswpModule: PhotoSwipe,
-                        });
+{{--                        this.lightbox = new PhotoSwipeLightbox({--}}
+{{--                            gallery: '#my-gallery',--}}
+{{--                            children: 'a.pswp-item',--}}
+{{--                            showHideAnimationType: 'none',--}}
+{{--                            pswpModule: PhotoSwipe,--}}
+{{--                        });--}}
 
-                        this.lightbox.on('openingAnimationEnd', () => {
-                            this.createActionOverlay(this.lightbox.pswp);
-                        });
+{{--                        this.lightbox.on('openingAnimationEnd', () => {--}}
+{{--                            this.createActionOverlay(this.lightbox.pswp);--}}
+{{--                        });--}}
 
-                        this.lightbox.on('change', () => {
-                            this.removeActionOverlay();
-                            this.createActionOverlay(this.lightbox.pswp);
-                        });
+{{--                        this.lightbox.on('change', () => {--}}
+{{--                            this.removeActionOverlay();--}}
+{{--                            this.createActionOverlay(this.lightbox.pswp);--}}
+{{--                        });--}}
 
-                        this.lightbox.on('close', () => {
-                            this.removeActionOverlay();
-                        });
+{{--                        this.lightbox.on('close', () => {--}}
+{{--                            this.removeActionOverlay();--}}
+{{--                        });--}}
 
-                        this.lightbox.init();
-                        window.__adminPhotoSwipeInstances[this.lightboxKey] = this.lightbox;
-                    });
-                },
+{{--                        this.lightbox.init();--}}
+{{--                        window.__adminPhotoSwipeInstances[this.lightboxKey] = this.lightbox;--}}
+{{--                    });--}}
+{{--                },--}}
 
-                destroy() {
-                    this.destroyLightbox();
-                }
-            };
-        };
-    </script>
+{{--                destroy() {--}}
+{{--                    this.destroyLightbox();--}}
+{{--                }--}}
+{{--            };--}}
+{{--        };--}}
+{{--    </script>--}}
 
     <div
         id="my-gallery"
         wire:key="image-library-gallery-{{ $this->allImages->currentPage() }}-{{ $assignmentFilter }}-{{ $imagePerPage }}"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-        x-data="imageLibraryGallery()"
+        x-data="window.imageLibraryGallery()"
 {{--        x-on:click.capture="--}}
 {{--            const link = $event.target.closest('a.pswp-item');--}}
 {{--            if (link && !lightbox) {--}}
