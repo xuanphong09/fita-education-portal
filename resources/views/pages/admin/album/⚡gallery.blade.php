@@ -882,13 +882,13 @@ class extends Component {
         wire:key="image-library-gallery-{{ $this->allImages->currentPage() }}-{{ $assignmentFilter }}-{{ $imagePerPage }}"
         class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
         x-data="imageLibraryGallery()"
-        x-on:click.capture="
-            const link = $event.target.closest('a.pswp-item');
-            if (link && !lightbox) {
-                $event.preventDefault();
-                $event.stopPropagation();
-            }
-        "
+{{--        x-on:click.capture="--}}
+{{--            const link = $event.target.closest('a.pswp-item');--}}
+{{--            if (link && !lightbox) {--}}
+{{--                $event.preventDefault();--}}
+{{--                $event.stopPropagation();--}}
+{{--            }--}}
+{{--        "--}}
         x-on:livewire:navigating.window="destroyLightbox()"
     >
         @forelse($this->allImages as $image)
