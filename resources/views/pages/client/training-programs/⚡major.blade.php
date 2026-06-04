@@ -835,7 +835,7 @@ class extends Component {
             this.saveToLocal();
         }
     }">
-    <x-slot:title>{{ __('Training Programs') }} - {{!$this->selectedMajorSlug?__('Major'): __('Specialized') }} {{ $this->specializationLabel }}</x-slot:title>
+    <x-slot:title>{{ __('Training Programs') }} - {{!$this->selectedMajorSlug?__('Major'): ($activeProgram->intake->year_number>68?__('Area of specialization'):__('Specialized')) }} {{ $this->specializationLabel }}</x-slot:title>
 
 {{--    <x-slot:breadcrumb>--}}
 {{--        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>--}}
@@ -858,7 +858,8 @@ class extends Component {
             </div>
             <div class="relative z-20">
                 <h2 class="text-center text-[35px]/[44px] font-semibold uppercase line-clamp-2">
-                    {{ $this->specializationLabel ? !$this->selectedMajorSlug?__('Major'). ' ' . $this->specializationLabel : __('Specialized training program ') . ' ' . $this->specializationLabel : __('Training Programs') }}
+                    {{ $this->specializationLabel ? !$this->selectedMajorSlug?__('Major training program'). ' ' . $this->specializationLabel : ($activeProgram->intake->year_number>68?__('Area of specialization training program'):__('Specialized training program ')) . ' ' . $this->specializationLabel : __('Training Programs') }}
+{{--                    {{$activeProgram->intake->year_number}}--}}
                 </h2>
                 <div class="flex items-center gap-1 text-gray-500 justify-center w-full">
                     <a href="{{route('client.home')}}" wire:navigate class="whitespace-nowrap hover:text-fita font-semibold text-slate-700">{{__('Home page')}}</a>
@@ -1054,7 +1055,12 @@ class extends Component {
                                 $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
                             } else {
                                 $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
-                                $title .= ' - ' . __('Specialization/Area of specialization') . ' ' . $this->specializationLabel;
+                                if($activeProgram->intake->year_number>68){
+                                    $title .= ' - ' . __('Area of specialization') . ' ' . $this->specializationLabel;
+                                }
+                                else{
+                                    $title .= ' - ' . __('Specialization') . ' ' . $this->specializationLabel;
+                                }
                             }
                         }
                     @endphp

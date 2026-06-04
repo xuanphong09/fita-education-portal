@@ -9,6 +9,7 @@ class Intake extends Model
 {
     protected $fillable = [
         'name',
+        'year_number',
     ];
 
     public function students():HasMany
