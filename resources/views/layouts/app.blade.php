@@ -48,7 +48,7 @@
 
                     {{-- Tên User (Chỉ hiện trên PC) --}}
                     <div class="hidden md:flex flex-col items-start text-left leading-tight">
-                        <span class="font-semibold text-white truncate max-w-25 select-none">
+                        <span class="font-semibold text-white truncate max-w-40 select-none">
                             {{ auth()->user()->name ?? 'Guest' }}
                         </span>
                         <span class="text-[13px] text-gray-400 select-none">{{ auth()->user()->email ?? 'Guest' }}</span>
