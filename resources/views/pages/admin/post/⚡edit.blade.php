@@ -73,6 +73,7 @@ new class extends Component {
     public bool $show_views = true;
     public bool $show_category = true;
     public bool $show_related_posts = true;
+    public int $historyLimit = 10;
 
     public function canReview(): bool
     {
@@ -384,40 +385,90 @@ new class extends Component {
 
     public function getStatusOptionsProperty(): array
     {
-        $allOptions = [
-            ['id' => 'draft',          'name' => 'Nháp'],
-            ['id' => 'pending_review', 'name' => 'Chờ duyệt'],
-            ['id' => 'rejected',       'name' => 'Từ chối'],
-            ['id' => 'published',      'name' => 'Đã đăng'],
-            ['id' => 'archived',       'name' => 'Lưu trữ'],
+        $labels = [
+            'draft' => 'Nháp',
+            Post::APPROVAL_PENDING => 'Chờ duyệt',
+            Post::APPROVAL_REJECTED => 'Từ chối',
+            'published' => 'Đã đăng',
+            'archived' => 'Lưu trữ',
         ];
 
-        // Đang lưu trữ thì chỉ được chọn xuất bản lại hoặc giữ nguyên
-        if ($this->currentStatus === 'archived') {
+        $post = Post::find($this->id);
+
+        if (! $post) {
             return [
-                ['id' => 'published', 'name' => 'Đã đăng'],
-                ['id' => 'archived',  'name' => 'Lưu trữ'],
+                ['id' => $this->status, 'name' => $labels[$this->status] ?? $this->status],
             ];
         }
 
-        // Đã đăng quá 24h thì không được quay lùi về Nháp/Chờ duyệt/Từ chối nữa
-        if ($this->currentStatus === 'published') {
-            $post = Post::find($this->id);
-            $publishDate = $post->published_at ?? $post->created_at;
+        $allowedStatuses = $this->allowedStatusValues($post);
 
-            if ($publishDate && Carbon::parse($publishDate)->diffInHours(now()) > 24) {
-                return [
-                    ['id' => 'published', 'name' => 'Đã đăng'],
-                    ['id' => 'archived',  'name' => 'Lưu trữ'],
-                ];
-            }
-        }
-        else{
-            // Nếu chưa phải là Đã đăng thì không cho chọn Lưu trữ
-            $allOptions = array_filter($allOptions, fn($opt) => $opt['id'] !== 'archived');
+        return collect($allowedStatuses)
+            ->map(fn ($status) => [
+                'id' => $status,
+                'name' => $labels[$status] ?? $status,
+            ])
+            ->values()
+            ->all();
+    }
+
+    private function allowedStatusValues(Post $post): array
+    {
+        // Người không có quyền duyệt thì không được đổi trạng thái bằng dropdown
+        if (! $this->canReviewOriginalPost()) {
+            return [$post->status];
         }
 
-        return $allOptions;
+        return match ($post->status) {
+            'draft' => [
+                'draft',
+                'published',
+            ],
+
+            Post::APPROVAL_PENDING => [
+                Post::APPROVAL_PENDING,
+            ],
+
+            Post::APPROVAL_REJECTED => [
+                Post::APPROVAL_REJECTED,
+                Post::APPROVAL_PENDING,
+            ],
+
+            'published' => $this->isPublishedOver24Hours($post)
+                ? [
+                    'published',
+                    'archived',
+                ]
+                : [
+                    'published',
+                    Post::APPROVAL_PENDING,
+                    'archived',
+                ],
+
+            'archived' => [
+                'archived',
+                'published',
+            ],
+
+            default => [
+                $post->status,
+            ],
+        };
+    }
+
+    private function isPublishedOver24Hours(Post $post): bool
+    {
+        if ($post->status !== 'published') {
+            return false;
+        }
+
+        $publishDate = $post->published_at ?? $post->created_at;
+
+        if (! $publishDate) {
+            return false;
+        }
+
+        return Carbon::parse($publishDate)->diffInHours(now()) > 24;
     }
 
     public function getCategoryOptionsProperty(): array
@@ -622,14 +673,39 @@ new class extends Component {
     public function submitForReview(): void
     {
         $post = Post::findOrFail($this->id);
+        $this->authorizePostAccess($post);
+
+        if (! $this->isAuthor()) {
+            $this->warning('Chỉ tác giả của bài viết mới được gửi duyệt.');
+            return;
+        }
+
         if ($this->canReviewOriginalPost()) {
             $this->warning('Bạn đang có quyền duyệt, không cần gửi chờ duyệt.');
             return;
         }
 
+        if (! in_array($post->status, ['draft', Post::APPROVAL_REJECTED, Post::APPROVAL_PENDING], true)) {
+            $this->warning('Chỉ có thể gửi duyệt bài nháp, bài bị từ chối hoặc bài đang chờ duyệt.');
+            return;
+        }
+
+        $oldStatus = $post->status;
+        $wasPending = $oldStatus === Post::APPROVAL_PENDING;
+
         $this->persistData($post);
-        $wasPending = $post->status === Post::APPROVAL_PENDING;
-        $isResubmitted = $post->status === Post::APPROVAL_REJECTED || $this->currentStatus === Post::APPROVAL_PENDING;
+
+        $action = match ($oldStatus) {
+            Post::APPROVAL_REJECTED => 'resubmitted',
+            Post::APPROVAL_PENDING => 'updated_pending',
+            default => 'submitted',
+        };
+
+        $note = match ($action) {
+            'resubmitted' => 'Tác giả gửi lại duyệt.',
+            'updated_pending' => 'Tác giả cập nhật nội dung bài đang chờ duyệt.',
+            default => 'Tác giả gửi chờ duyệt.',
+        };
 
         $post->update([
             'status' => Post::APPROVAL_PENDING,
@@ -645,14 +721,25 @@ new class extends Component {
         $this->reviewed_at = null;
         $this->rejection_reason = null;
 
-        $this->logApprovalHistory($post, $isResubmitted ? 'resubmitted' : 'submitted', $isResubmitted ? 'Tác giả gửi lại duyệt.' : 'Tác giả gửi chờ duyệt.');
-        app(PostNotificationService::class)->notifySubmitted(
-            $post,
-            auth()->user()?->name ?? '—'
-        );
-        if (!$wasPending) {
+        $this->logApprovalHistory($post, $action, $note);
+
+        if (in_array($oldStatus, ['draft', Post::APPROVAL_REJECTED], true)) {
+            $this->sendPostNotificationOnce(
+                "submitted_{$oldStatus}",
+                $post,
+                function () use ($post) {
+                    app(PostNotificationService::class)->notifySubmitted(
+                        $post,
+                        auth()->user()?->name ?? '—'
+                    );
+                }
+            );
+        }
+
+        if (! $wasPending) {
             $this->dispatch('post:pending-count-changed', delta: 1);
         }
+
         $this->success('Đã gửi bài viết chờ duyệt!');
     }
 
@@ -660,14 +747,26 @@ new class extends Component {
     {
         $post = Post::findOrFail($this->id);
         $this->authorizePostAccess($post);
-        $this->persistData($post);
+//        $this->persistData($post);
 
         if (!$this->canReviewOriginalPost()) {
-            $this->warning('Bài viết đã lưu nhưng bạn không có quyền Duyệt bài này.');
+            $this->warning('Bạn không có quyền duyệt bài này.');
             return;
         }
-        $safeDate = str_replace('/', '-', $this->published_at);
-        $publishAt = $this->published_at ? Carbon::parse($safeDate) : now();
+
+        if ($post->status !== Post::APPROVAL_PENDING) {
+            $this->warning('Chỉ có thể duyệt bài đang ở trạng thái chờ duyệt.');
+            return;
+        }
+
+        $this->persistData($post);
+
+//        $safeDate = str_replace('/', '-', $this->published_at);
+//        $publishAt = $this->published_at ? Carbon::parse($safeDate) : now();
+        $publishAt = filled($this->published_at)
+            ? Carbon::parse(str_replace('/', '-', $this->published_at))
+            : now();
+
         $post->update([
             'status' => 'published',
             'published_at' => $publishAt,
@@ -682,9 +781,15 @@ new class extends Component {
         $this->rejection_reason = null;
 
         $this->logApprovalHistory($post, 'approved', 'Duyệt bài viết.', $publishAt->toDateTimeString());
-        app(PostNotificationService::class)->notifyApproved(
+        $this->sendPostNotificationOnce(
+            'approved',
             $post,
-            auth()->user()?->name ?? '—'
+            function () use ($post) {
+                app(PostNotificationService::class)->notifyApproved(
+                    $post,
+                    auth()->user()?->name ?? '—'
+                );
+            }
         );
         $this->dispatch('post:pending-count-changed', delta: -1);
         $this->success($publishAt->greaterThan(now()) ? 'Đã duyệt và lên lịch đăng bài.' : 'Đã duyệt và đăng bài viết.');
@@ -693,37 +798,56 @@ new class extends Component {
     public function rejectPost(): void
     {
         $this->validate(['reviewNote' => 'required|string|min:5|max:1000']);
+
         $post = Post::findOrFail($this->id);
         $this->authorizePostAccess($post);
-        $this->persistData($post);
 
-        if (!$this->canReviewOriginalPost()) {
-            $this->warning('Bài viết đã lưu nhưng bạn không có quyền Từ chối bài này.');
+        if (! $this->canReviewOriginalPost()) {
+            $this->warning('Bạn không có quyền từ chối bài này.');
             return;
         }
+
+        if ($post->status !== Post::APPROVAL_PENDING) {
+            $this->warning('Chỉ có thể từ chối bài đang ở trạng thái chờ duyệt.');
+            return;
+        }
+
+        $this->persistData($post);
+
+        $rejectReason = $this->reviewNote;
 
         $post->update([
             'status' => Post::APPROVAL_REJECTED,
             'published_at' => null,
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
-            'rejection_reason' => $this->reviewNote,
+            'rejection_reason' => $rejectReason,
         ]);
 
         $this->status = Post::APPROVAL_REJECTED;
         $this->currentStatus = Post::APPROVAL_REJECTED;
         $this->published_at = null;
         $this->reviewed_at = now()->format('d/m/Y H:i');
-        $this->rejection_reason = $this->reviewNote;
+        $this->rejection_reason = $rejectReason;
 
-        $this->logApprovalHistory($post, 'rejected', $this->reviewNote);
+        $this->logApprovalHistory($post, 'rejected', $rejectReason);
+
         $this->reviewNote = '';
-        app(PostNotificationService::class)->notifyRejected(
+
+        $this->sendPostNotificationOnce(
+            'rejected',
             $post,
-            auth()->user()?->name ?? '—',
-            $this->rejection_reason ?? ''
+            function () use ($post, $rejectReason) {
+                app(PostNotificationService::class)->notifyRejected(
+                    $post,
+                    auth()->user()?->name ?? '—',
+                    $rejectReason
+                );
+            }
         );
+
         $this->dispatch('post:pending-count-changed', delta: -1);
+
         $this->warning('Đã từ chối bài viết.');
     }
 
@@ -818,6 +942,10 @@ new class extends Component {
         }
 
         $nextStatus = $this->canReviewOriginalPost() ? $this->status : $post->status;
+        if (! in_array($nextStatus, $this->allowedStatusValues($post), true)) {
+            $this->warning('Trạng thái chuyển đổi không hợp lệ theo quy trình duyệt bài.');
+            return;
+        }
         if ($post->status === Post::APPROVAL_PENDING && in_array($nextStatus, ['published', 'rejected'])) {
             $this->warning('Vui lòng sử dụng các nút bên trong khối "Duyệt bài viết" để thao tác chính xác!');
             return;
@@ -825,13 +953,87 @@ new class extends Component {
         $this->persistData($post);
 
         $nextPublishedAt = null;
+
         if ($nextStatus === 'published') {
-            $safeDate = str_replace('/', '-', $this->published_at);
-            $nextPublishedAt = $this->published_at ? Carbon::parse($safeDate) : now();
+            $nextPublishedAt = filled($this->published_at)
+                ? Carbon::parse(str_replace('/', '-', $this->published_at))
+                : ($post->published_at ?? now());
         } elseif ($nextStatus === 'archived') {
             $nextPublishedAt = $post->published_at;
         }
-        $post->update(['status' => $nextStatus, 'published_at' => $nextPublishedAt]);
+
+        $oldStatus = $post->status;
+
+        $updateData = [
+            'status' => $nextStatus,
+            'published_at' => $nextPublishedAt,
+        ];
+
+        if (
+            in_array($oldStatus, ['published', Post::APPROVAL_REJECTED], true)
+            && $nextStatus === Post::APPROVAL_PENDING
+        ) {
+            $updateData['submitted_at'] = now();
+            $updateData['reviewed_by'] = null;
+            $updateData['reviewed_at'] = null;
+            $updateData['rejection_reason'] = null;
+        }
+
+        if ($nextStatus === 'archived') {
+            $updateData['reviewed_by'] = auth()->id();
+            $updateData['reviewed_at'] = now();
+        }
+
+        if ($oldStatus === 'archived' && $nextStatus === 'published') {
+            $updateData['reviewed_by'] = auth()->id();
+            $updateData['reviewed_at'] = now();
+            $updateData['rejection_reason'] = null;
+        }
+
+        $post->update($updateData);
+
+        if ($oldStatus !== $nextStatus) {
+            $action = match (true) {
+                $nextStatus === 'archived' => 'archived',
+                $oldStatus === 'archived' && $nextStatus === 'published' => 'restored',
+                $oldStatus === 'published' && $nextStatus === Post::APPROVAL_PENDING => 'reverted_to_pending',
+                $oldStatus === Post::APPROVAL_REJECTED && $nextStatus === Post::APPROVAL_PENDING => 'restored_to_pending',
+                default => 'status_changed',
+            };
+
+            $note = match ($action) {
+                'archived' => 'Bài viết được chuyển sang lưu trữ.',
+                'restored' => 'Bài viết được khôi phục từ lưu trữ.',
+                'reverted_to_pending' => 'Bài viết đã đăng được thu hồi về trạng thái chờ duyệt.',
+                'restored_to_pending' => 'Bài viết bị từ chối được khôi phục về trạng thái chờ duyệt.',
+                default => 'Thay đổi trạng thái bài viết.',
+            };
+
+            $this->logApprovalHistory($post, $action, $note, $nextPublishedAt?->toDateTimeString());
+
+            if ($action === 'reverted_to_pending') {
+                $this->sendPostNotificationOnce(
+                    'reverted_to_pending',
+                    $post,
+                    function () use ($post) {
+                        app(PostNotificationService::class)->notifyRevertedToPending(
+                            $post,
+                            auth()->user()?->name ?? '—',
+                            auth()->id()
+                        );
+                    }
+                );
+            }
+
+            if ($oldStatus !== Post::APPROVAL_PENDING && $nextStatus === Post::APPROVAL_PENDING) {
+                $this->dispatch('post:pending-count-changed', delta: 1);
+            }
+
+            if ($oldStatus === Post::APPROVAL_PENDING && $nextStatus !== Post::APPROVAL_PENDING) {
+                $this->dispatch('post:pending-count-changed', delta: -1);
+            }
+        }
+
         $this->currentStatus = $nextStatus;
         $this->status = $nextStatus;
         $this->published_at = $nextPublishedAt ? Carbon::parse($nextPublishedAt)->format('Y-m-d\TH:i') : null;
@@ -839,9 +1041,58 @@ new class extends Component {
         $this->success('Cập nhật bài viết thành công!');
     }
 
+    public function withdrawToDraft(): void
+    {
+        $post = Post::findOrFail($this->id);
+        $this->authorizePostAccess($post);
+
+        if (! $this->isAuthor()) {
+            $this->warning('Chỉ tác giả mới được rút bài viết.');
+            return;
+        }
+
+        if ($post->status !== Post::APPROVAL_PENDING) {
+            $this->warning('Chỉ có thể rút bài đang chờ duyệt.');
+            return;
+        }
+
+        $post->update([
+            'status' => 'draft',
+            'submitted_at' => null,
+            'reviewed_by' => null,
+            'reviewed_at' => null,
+            'rejection_reason' => null,
+            'updated_by' => auth()->id(),
+        ]);
+
+        $this->status = 'draft';
+        $this->currentStatus = 'draft';
+        $this->submitted_at = null;
+        $this->reviewed_at = null;
+        $this->rejection_reason = null;
+
+        $this->logApprovalHistory($post, 'withdrawn', 'Tác giả rút bài về nháp.');
+
+        $this->dispatch('post:pending-count-changed', delta: -1);
+
+        $this->success('Đã rút bài về trạng thái nháp.');
+    }
+
     public function getApprovalHistoriesProperty()
     {
-        return PostApprovalHistory::query()->with(['actor', 'reviewer'])->where('post_id', $this->id)->latest()->limit(10)->get();
+        return PostApprovalHistory::query()->with(['actor', 'reviewer'])->where('post_id', $this->id)->latest()->limit($this->historyLimit)->get();
+    }
+
+    public function loadMoreHistories(): void
+    {
+        $this->historyLimit += 5;
+    }
+
+    public function getHasMoreApprovalHistoriesProperty(): bool
+    {
+        return PostApprovalHistory::query()
+                ->where('post_id', $this->id)
+                ->count() > $this->historyLimit;
     }
 
     public function selectTemplate(int $id): void
@@ -854,6 +1105,32 @@ new class extends Component {
         $this->is_removing_thumbnail = true;
 
         $this->resetErrorBag('thumbnail');
+    }
+
+    private function sendNotificationSafely(callable $callback): void
+    {
+        try {
+            $callback();
+        } catch (\Throwable $e) {
+            report($e);
+
+            $this->warning('Thao tác đã được lưu nhưng gửi email thông báo thất bại.');
+        }
+    }
+
+    private function sendPostNotificationOnce(
+        string $event,
+        Post $post,
+        callable $callback,
+        int $seconds = 180
+    ): void {
+        $cacheKey = "post_notification_sent:{$event}:{$post->id}";
+
+        if (! Cache::add($cacheKey, true, now()->addSeconds($seconds))) {
+            return;
+        }
+
+        $this->sendNotificationSafely($callback);
     }
 };
 ?>
@@ -958,24 +1235,74 @@ new class extends Component {
                     </div>
                 </x-tab>
             </x-tabs>
-            <x-card title="Lịch sử duyệt bài viết" shadow class="p-3!">
+            <x-card title="Lịch sử bài viết" shadow class="p-3!">
                 @forelse($this->approvalHistories as $history)
                     @php
                         $historyTitleClass = match($history->action) {
                             'approved' => 'text-md font-bold text-green-600',
                             'rejected' => 'text-md font-bold text-red-600',
+                            'archived' => 'text-md font-bold text-orange-600',
+                            'restored' => 'text-md font-bold text-blue-600',
+                            'withdrawn' => 'text-md font-bold text-yellow-600',
+                            'reverted_to_pending','restored_to_pending' => 'text-md font-bold text-warning',
+                            'submitted', 'resubmitted', 'updated_pending' => 'text-md font-bold text-primary',
                             default => 'text-md font-bold text-gray-700',
                         };
+
+                        $historyActionLabel = match($history->action) {
+                            'submitted' => 'Gửi duyệt',
+                            'resubmitted' => 'Gửi duyệt lại',
+                            'updated_pending' => 'Cập nhật bài chờ duyệt',
+                            'approved' => 'Duyệt bài',
+                            'rejected' => 'Từ chối bài',
+                            'withdrawn' => 'Rút về nháp',
+                            'archived' => 'Lưu trữ bài viết',
+                            'restored' => 'Khôi phục bài viết',
+                            'reverted_to_pending' => 'Thu hồi về chờ duyệt',
+                            'restored_to_pending' => 'Khôi phục về chờ duyệt',
+                            default => ucfirst(str_replace('_', ' ', $history->action)),
+                        };
                     @endphp
+
                     <div class="py-2 border-b border-gray-100 last:border-b-0">
-                        <div class="{{ $historyTitleClass }}">{{ __(ucfirst(str_replace('_', ' ', $history->action))) }}</div>
-                        <div class="text-sm text-gray-500">{{ $history->created_at?->format('d/m/Y H:i') }} @if($history->actor) - {{ $history->actor->name }} @endif</div>
-                        @if($history->scheduled_publish_at) <div class="text-sm text-gray-500">Lên lịch: {{ $history->scheduled_publish_at->format('d/m/Y H:i') }}</div> @endif
-                        @if($history->note) <div class="text-sm text-gray-700 mt-1"> <span class="text-md font-semibold">Nội dung: </span>{{ $history->note }}</div> @endif
+                        <div class="{{ $historyTitleClass }}">
+                            {{ $historyActionLabel }}
+                        </div>
+
+                        <div class="text-sm text-gray-500">
+                            {{ $history->created_at?->format('d/m/Y H:i') }}
+                            @if($history->actor)
+                                - {{ $history->actor->name }}
+                            @endif
+                        </div>
+
+                        @if($history->scheduled_publish_at)
+                            <div class="text-sm text-gray-500">
+                                Lên lịch: {{ $history->scheduled_publish_at->format('d/m/Y H:i') }}
+                            </div>
+                        @endif
+
+                        @if($history->note)
+                            <div class="text-sm text-gray-700 mt-1">
+                                <span class="text-md font-semibold">Nội dung: </span>{{ $history->note }}
+                            </div>
+                        @endif
                     </div>
                 @empty
                     <div class="text-md text-gray-500">Chưa có lịch sử duyệt.</div>
                 @endforelse
+
+                @if($this->hasMoreApprovalHistories)
+                    <div class="pt-3">
+                        <x-button
+                            label="Xem thêm lịch sử"
+                            icon="o-chevron-down"
+                            class="btn-outline w-full"
+                            wire:click="loadMoreHistories"
+                            spinner="loadMoreHistories"
+                        />
+                    </div>
+                @endif
             </x-card>
         </div>
 
@@ -1006,6 +1333,12 @@ new class extends Component {
                     @elseif($currentStatus === \App\Models\Post::APPROVAL_PENDING)
                         <x-button label="Đã gửi duyệt (Đang chờ)" class="bg-gray-400 text-white w-full my-1" disabled/>
                         <x-button :label="$currentStatus === \App\Models\Post::APPROVAL_PENDING ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'" class="bg-success text-white w-full my-1" wire:click="submitForReview" spinner="submitForReview"/>
+                        <x-button
+                            label="Rút về nháp"
+                            class="bg-primary text-white w-full my-1"
+                            wire:click="withdrawToDraft"
+                            spinner="withdrawToDraft"
+                        />
                     @else
                         <x-button label="Lưu" class="bg-primary text-white w-full my-1" wire:click="save" spinner="save"/>
                         <x-button :label="$currentStatus === \App\Models\Post::APPROVAL_REJECTED ? 'Lưu & Gửi duyệt lại' : 'Gửi duyệt bài viết'" class="bg-success text-white w-full my-1" wire:click="submitForReview" spinner="submitForReview"/>
@@ -1037,7 +1370,7 @@ new class extends Component {
                     @if($approval) <x-badge :value="$approval['label']" class="{{ $approval['class'] }} text-white font-semibold"/> @endif
                     @if($submitted_at) <p class="text-sm text-gray-500 mt-2">Gửi duyệt lúc: {{ $submitted_at }}</p> @endif
                     @if($reviewed_at) <p class="text-sm text-gray-500">Xử lý lúc: {{ $reviewed_at }}</p> @endif
-                    @if($status === \App\Models\Post::APPROVAL_REJECTED && $rejection_reason)
+                    @if($currentStatus === \App\Models\Post::APPROVAL_REJECTED && $rejection_reason)
                         <div class="mt-3 text-md bg-red-50 border border-red-200 text-red-700 rounded p-2"><strong>Lý do từ chối:</strong> {{ $rejection_reason }}</div>
                     @endif
 
@@ -1054,7 +1387,7 @@ new class extends Component {
 
             <x-card title="Xuất bản" shadow class="p-3!">
                 <x-input label="Đường dẫn" wire:model.live.debounce.1000ms="slug" placeholder="thong-bao-tuyen-sinh-2025" required/>
-                @if(($this->canReviewOriginalPost() && $this->isAuthor()) || $currentStatus === 'published' || $currentStatus === 'archived')
+                @if($this->canReviewOriginalPost())
                     <x-select label="Trạng thái" wire:model.live="status" :options="$this->statusOptions" option-value="id" option-label="name" class="mt-2"/>
                 @endif
 

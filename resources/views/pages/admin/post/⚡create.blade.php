@@ -148,7 +148,7 @@
                 ],
                 'category_ids'       => 'required|array|min:1',
                 'category_ids.*'     => 'integer|exists:categories,id',
-                'status'             => 'required|in:draft,pending_review,published,archived', // Tạo mới không có rejected
+                'status'             => 'required|in:draft,pending_review,published', // Tạo mới không có rejected
                 'is_featured'        => 'boolean',
                 'published_at'       => 'nullable|date',
                 'show_author'        => 'boolean',
@@ -237,6 +237,12 @@
                 }
             }
             $this->category_ids = array_values(array_unique($finalIds));
+
+            if (! $this->canReviewForSelectedCategories()) {
+                $this->status = 'draft';
+                $this->published_at = null;
+                $this->is_featured = false;
+            }
         }
 
         public function updated($property): void
@@ -254,10 +260,19 @@
         public function getStatusOptionsProperty(): array
         {
             // Khi tạo mới, chỉ hiển thị Nháp và Đã đăng (nếu có quyền)
-            return [
-                ['id' => 'draft',     'name' => 'Nháp'],
-                ['id' => 'published', 'name' => 'Đã đăng'],
+//            return [
+//                ['id' => 'draft',     'name' => 'Nháp'],
+//                ['id' => 'published', 'name' => 'Đã đăng'],
+//            ];
+            $options = [
+                ['id' => 'draft', 'name' => 'Nháp'],
             ];
+
+            if ($this->canReviewForSelectedCategories()) {
+                $options[] = ['id' => 'published', 'name' => 'Đã đăng'];
+            }
+
+            return $options;
         }
 
         public function getCategoryOptionsProperty(): array
@@ -437,9 +452,15 @@
                 $post = $this->persistPost();
                 $this->submitPostForReview($post);
 
-                app(PostNotificationService::class)->notifySubmitted(
+                $this->sendPostNotificationOnce(
+                    'submitted',
                     $post,
-                    auth()->user()?->name ?? '—'
+                    function () use ($post) {
+                        app(PostNotificationService::class)->notifySubmitted(
+                            $post,
+                            auth()->user()?->name ?? '—'
+                        );
+                    }
                 );
 
                 // VÁ LỖI: Bắn tín hiệu Tăng số lượng Badge Bài chờ duyệt ngay lập tức
@@ -536,8 +557,13 @@
             $postStatus = $this->canReviewForSelectedCategories() ? $this->status : 'draft';
 
             // VÁ LỖI CARBON TẠI ĐÂY: Xử lý an toàn chuỗi ngày tháng
-            $safeDate = str_replace('/', '-', $this->published_at);
-            $publishedAt = $postStatus === 'published' ? ($this->published_at ? Carbon::parse($safeDate) : now()) : null;
+            $publishedAt = null;
+
+            if ($postStatus === 'published') {
+                $publishedAt = filled($this->published_at)
+                    ? Carbon::parse(str_replace('/', '-', $this->published_at))
+                    : now();
+            }
 
             $post = new Post();
             $post->setTranslation('title', 'vi', $this->title_vi);
@@ -594,6 +620,32 @@
             // 2. Hủy hoàn toàn file ảnh đã tải lên trên server
             $this->thumbnail = null;
             $this->resetErrorBag('thumbnail');
+        }
+
+        private function sendNotificationSafely(callable $callback): void
+        {
+            try {
+                $callback();
+            } catch (\Throwable $e) {
+                report($e);
+
+                $this->warning('Bài viết đã được lưu nhưng gửi email thông báo thất bại.');
+            }
+        }
+
+        private function sendPostNotificationOnce(
+            string $event,
+            Post $post,
+            callable $callback,
+            int $seconds = 60
+        ): void {
+            $cacheKey = "post_notification_sent:{$event}:{$post->id}";
+
+            if (! Cache::add($cacheKey, true, now()->addSeconds($seconds))) {
+                return;
+            }
+
+            $this->sendNotificationSafely($callback);
         }
     };
     ?>
@@ -851,7 +903,7 @@
 
                         <x-file wire:model="thumbnail"
                                 label="Tải lên ảnh đại diện"
-                                hint="jpg, jpeg, png, webp – tối đa 2MB"
+                                hint="jpg, jpeg, png, webp – tối đa 10MB"
                                 accept="image/*"
                                 x-on:change="
                                     previewUrl = $event.target.files[0] ? URL.createObjectURL($event.target.files[0]) : null;

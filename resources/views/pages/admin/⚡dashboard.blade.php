@@ -217,61 +217,69 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
                     @can('quan_ly_nguoi_dung')
                         <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <div class="h-1 bg-linear-to-r from-sky-400 to-blue-500"></div>
-                            <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                <div>
-                                    <div class="text-gray-500 text-sm font-medium">{{ __('Tổng người dùng') }}</div>
-                                    <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalUsers) }}</div>
-{{--                                    <div class="text-sm text-sky-600 mt-2">{{ __('Theo quyền quản lý người dùng') }}</div>--}}
+                            <a href="{{route('admin.user.user-list')}}" wire:navigate>
+                                <div class="h-1 bg-linear-to-r from-sky-400 to-blue-500"></div>
+                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <div class="text-gray-500 text-sm font-medium">{{ __('Tổng người dùng') }}</div>
+                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalUsers) }}</div>
+    {{--                                    <div class="text-sm text-sky-600 mt-2">{{ __('Theo quyền quản lý người dùng') }}</div>--}}
+                                    </div>
+                                    <div class="w-14 h-14 rounded-2xl bg-sky-100 flex items-center justify-center">
+                                        <x-icon name="o-users" class="w-7 h-7 text-sky-600" />
+                                    </div>
                                 </div>
-                                <div class="w-14 h-14 rounded-2xl bg-sky-100 flex items-center justify-center">
-                                    <x-icon name="o-users" class="w-7 h-7 text-sky-600" />
-                                </div>
-                            </div>
+                            </a>
                         </x-card>
                     @endcan
 
                     @if($canViewPostStats)
                         <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <div class="h-1 bg-linear-to-r from-emerald-400 to-green-500"></div>
-                            <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                <div>
-                                    <div class="text-gray-500 text-sm font-medium">{{ __('Tổng bài viết') }}</div>
-                                    <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalPosts) }}</div>
-                                    <div class="text-sm text-emerald-600 mt-2">{{ __('Bài viết đã xuất bản và chờ duyệt') }}</div>
+                            <a href="{{route('admin.post.index')}}" wire:navigate>
+                                <div class="h-1 bg-linear-to-r from-emerald-400 to-green-500"></div>
+                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <div class="text-gray-500 text-sm font-medium">{{ __('Tổng bài viết') }}</div>
+                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalPosts) }}</div>
+                                        <div class="text-sm text-emerald-600 mt-2">{{ __('Bài viết đã xuất bản và chờ duyệt') }}</div>
+                                    </div>
+                                    <div class="w-14 md:w-20 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                                        <x-icon name="o-document-text" class="w-7 h-7 text-emerald-600" />
+                                    </div>
                                 </div>
-                                <div class="w-14 md:w-20 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center">
-                                    <x-icon name="o-document-text" class="w-7 h-7 text-emerald-600" />
-                                </div>
-                            </div>
+                            </a>
                         </x-card>
 
                         <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <div class="h-1 bg-linear-to-r from-amber-400 to-orange-500"></div>
-                            <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                <div>
-                                    <div class="text-gray-500 text-sm font-medium">{{ __('Chờ duyệt') }}</div>
-                                    <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($pendingPosts) }}</div>
-                                    <div class="text-sm text-orange-600 mt-2">{{ $pendingPosts > 0 ? __('Cần xem lại') : __('Không có bài chờ duyệt') }}</div>
+                            <a href="{{route('admin.posts.pending')}}" wire:navigate>
+                                <div class="h-1 bg-linear-to-r from-amber-400 to-orange-500"></div>
+                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <div class="text-gray-500 text-sm font-medium">{{ __('Chờ duyệt') }}</div>
+                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($pendingPosts) }}</div>
+                                        <div class="text-sm text-orange-600 mt-2">{{ $pendingPosts > 0 ? __('Cần xem lại') : __('Không có bài chờ duyệt') }}</div>
+                                    </div>
+                                    <div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center">
+                                        <x-icon name="o-clock" class="w-7 h-7 text-orange-600" />
+                                    </div>
                                 </div>
-                                <div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center">
-                                    <x-icon name="o-clock" class="w-7 h-7 text-orange-600" />
-                                </div>
-                            </div>
+                            </a>
                         </x-card>
 
                         <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <div class="h-1 bg-linear-to-r from-indigo-400 to-violet-500"></div>
-                            <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                <div>
-                                    <div class="text-gray-500 text-sm font-medium">{{ __('Đã duyệt') }}</div>
-                                    <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($approvedPosts) }}</div>
-                                    <div class="text-sm text-indigo-600 mt-2">{{ round(($approvedPosts / max($totalPosts, 1)) * 100) }}% {{ __('tổng bài viết') }}</div>
+                            <a href="{{route('admin.post.index')}}" wire:navigate>
+                                <div class="h-1 bg-linear-to-r from-indigo-400 to-violet-500"></div>
+                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <div class="text-gray-500 text-sm font-medium">{{ __('Đã duyệt') }}</div>
+                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($approvedPosts) }}</div>
+                                        <div class="text-sm text-indigo-600 mt-2">{{ round(($approvedPosts / max($totalPosts, 1)) * 100) }}% {{ __('tổng bài viết') }}</div>
+                                    </div>
+                                    <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center">
+                                        <x-icon name="o-check-circle" class="w-7 h-7 text-indigo-600" />
+                                    </div>
                                 </div>
-                                <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center">
-                                    <x-icon name="o-check-circle" class="w-7 h-7 text-indigo-600" />
-                                </div>
-                            </div>
+                            </a>
                         </x-card>
                     @endif
 

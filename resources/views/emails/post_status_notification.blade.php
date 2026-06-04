@@ -138,6 +138,9 @@
                 <p style="color: #94a3b8; font-size: 14px; line-height: 1.5; margin: 0;">
                     {{ $isSubmitted ? 'Nếu bạn không phải người duyệt bài, vui lòng bỏ qua email này.' : 'Nếu nút bấm không hoạt động, hãy copy và dán đường dẫn trực tiếp vào trình duyệt.' }}
                 </p>
+                <p style="color: #94a3b8; font-size: 14px; line-height: 1.5; margin: 0;">
+                    {{ $primaryCtaUrl }}
+                </p>
             </td>
         </tr>
     </table>
