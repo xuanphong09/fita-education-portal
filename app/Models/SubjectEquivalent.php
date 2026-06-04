@@ -58,27 +58,15 @@ class SubjectEquivalent extends Pivot
             ->all();
 
         DB::transaction(function () use ($subjectId, $equivalentSubjectIds): void {
-            $existing = self::query()
-                ->forSubject($subjectId)
-                ->pluck('equivalent_subject_id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
+            // Xóa TẤT CẢ bản ghi cũ liên quan tới subject này (cả 2 chiều)
+            self::query()
+                ->where(function (Builder $q) use ($subjectId): void {
+                    $q->where('subject_id', $subjectId)
+                        ->orWhere('equivalent_subject_id', $subjectId);
+                })
+                ->delete();
 
-            $removedIds = array_values(array_diff($existing, $equivalentSubjectIds));
-
-            if (!empty($removedIds)) {
-                self::query()
-                    ->where(function (Builder $q) use ($subjectId, $removedIds): void {
-                        $q->where('subject_id', $subjectId)
-                            ->whereIn('equivalent_subject_id', $removedIds);
-                    })
-                    ->orWhere(function (Builder $q) use ($subjectId, $removedIds): void {
-                        $q->whereIn('subject_id', $removedIds)
-                            ->where('equivalent_subject_id', $subjectId);
-                    })
-                    ->delete();
-            }
-
+            // Nếu không có môn tương đương mới, dừng lại
             if (empty($equivalentSubjectIds)) {
                 return;
             }
@@ -103,11 +91,8 @@ class SubjectEquivalent extends Pivot
                 ];
             }
 
-            self::query()->upsert(
-                $rows,
-                ['subject_id', 'equivalent_subject_id'],
-                ['updated_at']
-            );
+            // Insert bản ghi mới
+            self::query()->insert($rows);
         });
     }
 

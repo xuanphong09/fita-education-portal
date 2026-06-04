@@ -167,6 +167,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/subject/trash', 'pages::admin.subject.trash')->name('admin.subject.trash');
         Route::livewire('/subject/create', 'pages::admin.subject.create')->name('admin.subject.create');
         Route::livewire('/subject/edit/{id}', 'pages::admin.subject.edit')->name('admin.subject.edit');
+        Route::livewire('/subject-equivalent/index', 'pages::admin.subject-equivalent.index')->name('admin.subject-equivalent.index');
     });
 
     // ---- Preview (chỉ cần auth, không cần permission riêng) ----
