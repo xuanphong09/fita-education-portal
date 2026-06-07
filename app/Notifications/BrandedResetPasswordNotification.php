@@ -2,10 +2,10 @@
 
 namespace App\Notifications;
 
+use App\Mail\PasswordResetMail;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Log;
 
 class BrandedResetPasswordNotification extends ResetPassword implements ShouldQueue
@@ -31,15 +31,7 @@ class BrandedResetPasswordNotification extends ResetPassword implements ShouldQu
 
     public function toMail($notifiable)
     {
-        return (new MailMessage)
-            ->subject('Đặt lại mật khẩu tài khoản FITA VNUA')
-            ->view('emails.first_time_setup', [
-                'user' => $notifiable,
-                'setupUrl' => $this->resetUrl($notifiable),
-                'expiresInHuman' => $this->expiresInHuman,
-                'systemEmail' => (string) config('mail.from.address'),
-                'isReset' => true,
-            ]);
+        return new PasswordResetMail($notifiable, $this->resetUrl($notifiable));
     }
 
     private function formatExpiry(int $minutes): string

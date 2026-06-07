@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             GroupSubjectSeeder::class,
             SubjectSeeder::class,
             TrainingProgramSeeder::class,
+            EmailTemplateSeeder::class,
 //            TrainingProgramExplorerSeeder::class,
             PageSeeder::class,
         ]);

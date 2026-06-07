@@ -147,6 +147,7 @@
             @can('cau_hinh_he_thong')
                 <x-menu-sub title="Cài đặt hệ thống" icon="o-cog-6-tooth">
                     <x-menu-item title="Email" link="{{route('admin.configuration.email')}}" :active="request()->routeIs('admin.configuration.email')"/>
+                    <x-menu-item title="Email template" link="{{route('admin.email-template.index')}}" :active="request()->routeIs('admin.email-template.*')"/>
                 </x-menu-sub>
             @endcan
 

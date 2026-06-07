@@ -2,8 +2,8 @@
 
 namespace App\Mail;
 
+use App\Models\EmailTemplate;
 use App\Models\User;
-use App\Models\EmailTemplate ;
 use App\Services\EmailTemplateService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
@@ -11,7 +11,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class FirstTimePasswordSetup extends Mailable
+class PasswordResetMail extends Mailable
 {
     use Queueable, SerializesModels;
 
@@ -21,17 +21,13 @@ class FirstTimePasswordSetup extends Mailable
     private string $renderedSubject;
     private string $renderedHtml;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct(public User $user, public string $setupUrl)
+    public function __construct(public User $user, public string $resetUrl)
     {
         $broker = (string) config('auth.defaults.passwords', 'users');
         $this->expiresInMinutes = max(1, (int) config("auth.passwords.{$broker}.expire", 60));
         $this->expiresInHuman = $this->formatExpiry($this->expiresInMinutes);
         $this->systemEmail = (string) config('mail.from.address');
 
-        // Render template từ database
         $this->renderTemplate();
     }
 
@@ -40,35 +36,26 @@ class FirstTimePasswordSetup extends Mailable
         try {
             $data = [
                 'user' => $this->user,
-                'setupUrl' => $this->setupUrl,
-                'actionUrl' => $this->setupUrl,
+                'resetUrl' => $this->resetUrl,
+                'actionUrl' => $this->resetUrl,
                 'expiresInHuman' => $this->expiresInHuman,
                 'systemEmail' => $this->systemEmail,
             ];
 
-            $rendered = EmailTemplateService::render('first_time_password_setup', $data);
+            $rendered = EmailTemplateService::render('password_reset', $data);
             $this->renderedSubject = $rendered['subject'];
             $this->renderedHtml = $rendered['body'];
         } catch (\Throwable $e) {
-            report($e);
+            $content = EmailTemplate::defaultContentBlocks('password_reset');
 
-            $content = EmailTemplate::defaultContentBlocks('first_time_password_setup');
-
-            $this->renderedSubject = EmailTemplate::defaultSubjectFor('first_time_password_setup');
+            // Fallback ke template cố định nếu render DB gặp lỗi
+            $this->renderedSubject = EmailTemplate::defaultSubjectFor('password_reset');
             $this->renderedHtml = view('emails.password_action', [
                 'user' => $this->user,
-                'setupUrl' => $this->setupUrl,
-                'actionUrl' => $this->setupUrl,
+                'resetUrl' => $this->resetUrl,
+                'actionUrl' => $this->resetUrl,
                 'expiresInHuman' => $this->expiresInHuman,
                 'systemEmail' => $this->systemEmail,
-
-                // biến tiếng Việt fallback
-                'nguoi_dung' => $this->user->name ?? 'người dùng',
-                'thoi_gian_hieu_luc' => $this->expiresInHuman,
-                'email_he_thong' => $this->systemEmail,
-                'lien_ket_hanh_dong' => $this->setupUrl,
-                'lien_ket_thiet_lap_mat_khau' => $this->setupUrl,
-
                 'content' => $content,
             ])->render();
         }
@@ -78,33 +65,27 @@ class FirstTimePasswordSetup extends Mailable
     {
         if ($minutes % 1440 === 0) {
             $days = (int) ($minutes / 1440);
-            return $days.' ngày';
+
+            return $days . ' ngày';
         }
 
         if ($minutes % 60 === 0) {
             $hours = (int) ($minutes / 60);
-            if($hours === 1){
-                return '60 phút';
-            }
-            return $hours.' giờ';
+
+            return $hours === 1 ? '60 phút' : $hours . ' giờ';
         }
 
-        return $minutes.' phút';
+        return $minutes . ' phút';
     }
 
-    /**
-     * Get the message envelope.
-     */
     public function envelope(): Envelope
     {
         return new Envelope(
+            to: [$this->user->email],
             subject: $this->renderedSubject,
         );
     }
 
-    /**
-     * Get the message content definition.
-     */
     public function content(): Content
     {
         return new Content(
@@ -115,13 +96,11 @@ class FirstTimePasswordSetup extends Mailable
         );
     }
 
-    /**
-     * Get the attachments for the message.
-     *
-     * @return array<int, \Illuminate\Mail\Mailables\Attachment>
-     */
     public function attachments(): array
     {
         return [];
     }
 }
+
+
+

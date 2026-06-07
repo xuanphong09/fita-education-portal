@@ -8,6 +8,9 @@ use Illuminate\Support\Facades\Storage;
 use App\Services\PostNotificationService;
 use Carbon\Carbon;
 use Mary\Traits\Toast;
+use App\Models\EmailTemplate;
+use App\Services\EmailTemplateService;
+use Illuminate\Support\Facades\Cache;
 
 new class extends Component {
     use Toast;
@@ -441,14 +444,40 @@ new class extends Component {
             ->get();
     }
 
-    private function sendNotificationSafely(callable $callback): void
+    private function notificationTemplateTypeForEvent(string $event, Post $post): ?string
+    {
+        $action = match (true) {
+            $event === 'approved' => 'approved',
+            $event === 'rejected' => 'rejected',
+            $event === 'reverted_to_pending' => 'reverted_to_pending',
+            $event === 'submitted',
+            str_starts_with($event, 'submitted_') => 'submitted',
+
+            default => null,
+        };
+
+        if (! $action) {
+            return null;
+        }
+
+        return EmailTemplate::postStatusTemplateTypeForAction(
+            $action,
+            $post->published_at?->toDateTimeString()
+        );
+    }
+
+    private function sendNotificationSafely(callable $callback): bool
     {
         try {
             $callback();
+
+            return true;
         } catch (\Throwable $e) {
             report($e);
 
             $this->warning('Thao tác đã được lưu nhưng gửi email thông báo thất bại.');
+
+            return false;
         }
     }
 
@@ -458,14 +487,30 @@ new class extends Component {
         callable $callback,
         int $seconds = 60
     ): void {
-        $cacheKey = "post_notification_sent:{$event}:{$post->id}";
+        $templateType = $this->notificationTemplateTypeForEvent($event, $post);
 
-        if (! \Illuminate\Support\Facades\Cache::add($cacheKey, true, now()->addSeconds($seconds))) {
+        if (! $templateType) {
+            report(new \RuntimeException("Không xác định được email template cho event [{$event}] của bài viết ID {$post->id}."));
             return;
         }
 
-        $this->sendNotificationSafely($callback);
+        if (! EmailTemplateService::shouldSend($templateType)) {
+            return;
+        }
+
+        $cacheKey = "post_notification_sent:{$event}:{$post->id}";
+
+        if (! Cache::add($cacheKey, true, now()->addSeconds($seconds))) {
+            return;
+        }
+
+        $sent = $this->sendNotificationSafely($callback);
+
+        if (! $sent) {
+            Cache::forget($cacheKey);
+        }
     }
+
 };
 ?>
 

@@ -17,6 +17,8 @@
     use Illuminate\Support\Facades\DB;
     use App\Services\PostNotificationService;
     use Livewire\Attributes\On;
+    use App\Models\EmailTemplate;
+    use App\Services\EmailTemplateService;
 
     new class extends Component {
         use Toast, WithFileUploads;
@@ -639,6 +641,12 @@
             callable $callback,
             int $seconds = 60
         ): void {
+            $templateType = $this->notificationTemplateTypeForEvent($event, $post);
+
+            if ($templateType && ! EmailTemplateService::shouldSend($templateType)) {
+                return;
+            }
+
             $cacheKey = "post_notification_sent:{$event}:{$post->id}";
 
             if (! Cache::add($cacheKey, true, now()->addSeconds($seconds))) {
@@ -646,6 +654,24 @@
             }
 
             $this->sendNotificationSafely($callback);
+        }
+
+        private function notificationTemplateTypeForEvent(string $event, Post $post): ?string
+        {
+            $action = match (true) {
+                str_starts_with($event, 'submitted') => 'submitted',
+                $event === 'approved' => 'approved',
+                default => null,
+            };
+
+            if (! $action) {
+                return null;
+            }
+
+            return EmailTemplate::postStatusTemplateTypeForAction(
+                $action,
+                $post->published_at?->toDateTimeString()
+            );
         }
     };
     ?>

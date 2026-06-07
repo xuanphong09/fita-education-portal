@@ -51,12 +51,11 @@ class extends Component {
                 <img src="{{asset('assets/images/FITA.png')}}" alt="FITA logo" class="w-16 h-16 object-contain">
             </div>
 
-            <h2 class="font-semibold text-xl whitespace-nowrap">
-                {{__('Vietnam National University of Agriculture')}}
-            </h2>
-
-            <p class="text-gray-900 font-medium text-lg">
+            <h2 class="font-extrabold text-[19px] tracking-tight uppercase">
                 {{__('Faculty of Information Technology')}}
+            </h2>
+            <p class="font-medium text-[15px] text-gray-700 uppercase tracking-wide">
+                {{__('Vietnam National University of Agriculture')}}
             </p>
             <div class="absolute -top-5 -left-4 p-2">
                 <x-button class="btn-ghost text-fita btn-xs" link="{{route('login')}}" tooltip="Trang đăng nhập" icon="o-arrow-uturn-left"></x-button>

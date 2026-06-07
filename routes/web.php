@@ -71,6 +71,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     // ---- Cấu hình email (admin UI) ----
     Route::middleware('permission:cau_hinh_he_thong')->group(function () {
         Route::livewire('/configuration/email', 'pages::admin.configuration.mail')->name('admin.configuration.email');
+        Route::livewire('/email-template/index', 'pages::admin.email-template.index')->name('admin.email-template.index');
+        Route::livewire('/email-template/edit/{id}', 'pages::admin.email-template.edit')->name('admin.email-template.edit');
     });
 
 //    anh
