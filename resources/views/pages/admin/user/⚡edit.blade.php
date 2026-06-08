@@ -25,7 +25,7 @@ new class extends Component {
     use Toast, WithFileUploads;
 
     public $userType = [
-        ['id' => 'admin', 'name' => 'Admin'],
+        ['id' => 'admin', 'name' => 'Cán bộ'],
         ['id' => 'lecturer', 'name' => 'Giảng viên'],
         ['id' => 'student', 'name' => 'Sinh viên'],
     ];
@@ -85,6 +85,8 @@ new class extends Component {
     public bool $showPasswordModal = false;
     public string $password = '';
     public string $password_confirmation = '';
+
+    public string $last_login_at = '';
 
     protected function rules()
     {
@@ -529,6 +531,7 @@ new class extends Component {
             $this->selectedRoles = $user->roles->pluck('name')->toArray();
             $this->avatarUrl = $user->avatar ? asset($user->avatar) : asset('/assets/images/default-user-image.png');
             $this->is_active = $user->is_active;
+            $this->last_login_at = $user->last_login_at?$user->last_login_at->format('d/m/Y H:i'): 'Chưa đăng nhập lần nào';
 
             if ($user->user_type === 'student' && $user->student) {
                 $this->student_code = $user->student->student_code;
@@ -702,7 +705,10 @@ new class extends Component {
 
                 {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                 <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                    <x-toggle label="{{$is_active?'Hoạt  động' : 'Đã khóa'}}" wire:model.live.debounce.500ms="is_active" class="toggle-success"/>
+                    <div class="flex gap-5 items-center">
+                        <x-toggle label="{{$is_active?'Hoạt  động' : 'Đã khóa'}}" wire:model.live.debounce.500ms="is_active" class="toggle-success"/>
+                        <span class="text-md text-slate-800 font-medium">Đăng nhập gần nhất: {{$last_login_at}}</span>
+                    </div>
                     <x-input label="Họ và tên" wire:model.blur="name"
                              placeholder="Nhập họ và tên người dùng"
                              required/>

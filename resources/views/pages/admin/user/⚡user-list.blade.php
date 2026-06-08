@@ -72,8 +72,9 @@ new class extends Component {
             ['key' => 'user_code', 'label' => 'Mã định danh', 'sortable' => false],
             ['key' => 'roles', 'label' => 'Vai trò', 'sortable' => false, 'class' => 'w-48'],
             ['key' => 'is_active', 'label' => 'Trạng thái'],
-            ['key' => 'created_at', 'label' => 'Ngày tạo', 'class' => 'w-32'],
-            ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-24'],
+            ['key' => 'last_login_at', 'label' => 'ĐN gần nhất', 'class' => 'w-32 px-2'],
+            ['key' => 'created_at', 'label' => 'Ngày tạo', 'class' => 'w-32 px-2'],
+            ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-12 p-2'],
         ];
     }
 
@@ -134,7 +135,7 @@ new class extends Component {
             placeholder="Tất cả người dùng"
             placeholder-value=""
             :options="[
-                        ['id' => 'admin', 'name' => 'Admin'],
+                        ['id' => 'admin', 'name' => 'Cán bộ'],
                         ['id' => 'lecturer', 'name' => 'Giảng viên'],
                         ['id' => 'student', 'name' => 'Sinh viên'],
                     ]"
@@ -236,6 +237,12 @@ new class extends Component {
             @scope('cell_created_at', $user)
             <span class="text-gray-700 whitespace-nowrap">
                     {{ $user->created_at->format('d/m/Y H:i') }}
+                </span>
+            @endscope
+
+            @scope('cell_last_login_at', $user)
+            <span class="text-gray-700 whitespace-nowrap">
+                    {{ $user->last_login_at?$user->last_login_at->format('d/m/Y H:i'): '-' }}
                 </span>
             @endscope
 

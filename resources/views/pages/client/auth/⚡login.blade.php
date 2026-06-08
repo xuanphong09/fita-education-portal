@@ -78,7 +78,7 @@ class extends Component {
                 return;
             }
         }
-
+        Auth::user()->update(['last_login_at' => now()]);
         // 4. Regenerate session ngay sau khi đăng nhập thành công
         request()->session()->regenerate();
         if(Auth::user()->can('trang_quan_tri')) {

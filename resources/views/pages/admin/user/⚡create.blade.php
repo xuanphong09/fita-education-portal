@@ -22,7 +22,7 @@ new class extends Component {
     use Toast, WithFileUploads;
 
     public $userType = [
-        ['id' => 'admin', 'name' => 'Admin'],
+        ['id' => 'admin', 'name' => 'Cán bộ'],
         ['id' => 'lecturer', 'name' => 'Giảng viên'],
         ['id' => 'student', 'name' => 'Sinh viên'],
     ];
@@ -143,10 +143,10 @@ new class extends Component {
             'program_major_id.exists' => 'Chuyên ngành không tồn tại.',
 
             // LECTURER
-            'staff_code.required' => 'Mã giảng viên/cán bộ không được để trống.',
-            'staff_code.string' => 'Mã giảng viên/cán bộ phải là một chuỗi.',
-            'staff_code.max' => 'Mã giảng viên/cán bộ không được vượt quá 100 ký tự.',
-            'staff_code.unique' => 'Mã giảng viên/cán bộ đã tồn tại trong hệ thống.',
+            'staff_code.required' => 'Mã giảng viên không được để trống.',
+            'staff_code.string' => 'Mã giảng viên phải là một chuỗi.',
+            'staff_code.max' => 'Mã giảng viên không được vượt quá 100 ký tự.',
+            'staff_code.unique' => 'Mã giảng viên đã tồn tại trong hệ thống.',
 
             'department_id.exists' => 'Bộ môn không tồn tại.',
 
@@ -588,8 +588,8 @@ new class extends Component {
 
                         {{-- NỘI DUNG FORM NHẬP LIỆU THEO TYPE --}}
                         <div x-show="open" x-collapse class="p-4 bg-white border-t border-gray-100">
-                            <x-input label="Mã giảng viên/cán bộ" wire:model.live.debounce.500ms="staff_code"
-                                     placeholder="Nhập mã giảng viên/cán bộ"/>
+                            <x-input label="Mã giảng viên" wire:model.live.debounce.500ms="staff_code"
+                                     placeholder="Nhập Mã giảng viên"/>
                             <x-select
                                 label="Bộ môn"
                                 wire:model.live.debounce.500ms="department_id"

@@ -130,7 +130,7 @@ class AuthenticateController extends Controller
         }
 
         $email = $userData['email'];
-        $code = trim((string) ($userData['code'] ?? ''));
+//        $code = trim((string) ($userData['code'] ?? ''));
 
         // --- THÊM BƯỚC KIỂM TRA ĐUÔI EMAIL ---
         $isLecturerEmail = Str::endsWith($email, '@vnua.edu.vn');
@@ -142,7 +142,7 @@ class AuthenticateController extends Controller
 //        if ($code === '') {
 //            throw new Exception('Đăng nhập bị từ chối: Tài khoản của bạn bị thiếu thông tin Mã sinh viên / Mã giảng viên từ hệ thống.');
 //        }
-        $userType = $this->determineUserType((string) ($userData['role'] ?? ''), $email);
+        $userType = $this->determineUserType($email);
 
         $user = User::where('sso_id', $userData['id'])->first();
 
@@ -152,10 +152,10 @@ class AuthenticateController extends Controller
                 'name' => $userData['full_name'],
                 'email' => $userData['email'],
                 'last_login_at'=> now(),
-                'user_type' => $user->user_type ?: $userType,
+//                'user_type' => $user->user_type ?: $userType,
             ]);
 
-            $this->syncProfileByType($user, $userData);
+//            $this->syncProfileByType($user, $userData);
 
             return $user;
         }
@@ -247,19 +247,37 @@ class AuthenticateController extends Controller
         }
     }
 
+//    private function assignDefaultRole(User $user): void
+//    {
+//        $roleName = match ($user->user_type) {
+//            'student' => 'sinh_vien',
+//            'lecturer' => 'giang_vien',
+//            default => null,
+//        };
+//
+//        if (!$roleName) {
+//            return;
+//        }
+//
+//        // Spatie roles cần guard_name, nếu thiếu sẽ lỗi NOT NULL (hay gặp ở user SSO mới).
+//        $role = Role::firstOrCreate([
+//            'name' => $roleName,
+//            'guard_name' => 'web',
+//        ]);
+//
+//        if (!$user->hasRole($roleName)) {
+//            $user->assignRole($role->name);
+//        }
+//    }
+
     private function assignDefaultRole(User $user): void
     {
-        $roleName = match ($user->user_type) {
-            'student' => 'sinh_vien',
-            'lecturer' => 'giang_vien',
-            default => null,
-        };
-
-        if (!$roleName) {
+        if ($user->user_type !== 'student') {
             return;
         }
 
-        // Spatie roles cần guard_name, nếu thiếu sẽ lỗi NOT NULL (hay gặp ở user SSO mới).
+        $roleName = 'sinh_vien';
+
         $role = Role::firstOrCreate([
             'name' => $roleName,
             'guard_name' => 'web',
@@ -269,20 +287,23 @@ class AuthenticateController extends Controller
             $user->assignRole($role->name);
         }
     }
-    private function determineUserType(string $role, string $email): string
+
+    private function determineUserType(string $email): string
     {
-        if (Str::endsWith($email, '@vnua.edu.vn')) {
-            return 'lecturer';
-        }
+        $email = Str::lower(trim($email));
 
         if (Str::endsWith($email, '@sv.vnua.edu.vn')) {
             return 'student';
         }
 
-        return match ($role) {
-            'superAdmin', 'officer', 'teacher',  => 'lecturer',
-            default => 'student',
-        };
+        if (Str::endsWith($email, '@vnua.edu.vn')) {
+            return 'admin';
+        }
+        throw new Exception('Truy cập bị từ chối. Vui lòng sử dụng email do nhà trường cấp (@vnua.edu.vn hoặc @sv.vnua.edu.vn).');
+//        return match ($role) {
+//            'superAdmin', 'officer', 'teacher',  => 'lecturer',
+//            default => 'student',
+//        };
     }
 
     private function sendPasswordSetupLinkIfNeeded(User $user): void
