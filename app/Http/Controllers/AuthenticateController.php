@@ -139,9 +139,9 @@ class AuthenticateController extends Controller
         if (!$isLecturerEmail && !$isStudentEmail) {
             throw new Exception('Truy cập bị từ chối. Vui lòng sử dụng email do nhà trường cấp (@vnua.edu.vn hoặc @sv.vnua.edu.vn).');
         }
-        if ($code === '') {
-            throw new Exception('Đăng nhập bị từ chối: Tài khoản của bạn bị thiếu thông tin Mã sinh viên / Mã giảng viên từ hệ thống.');
-        }
+//        if ($code === '') {
+//            throw new Exception('Đăng nhập bị từ chối: Tài khoản của bạn bị thiếu thông tin Mã sinh viên / Mã giảng viên từ hệ thống.');
+//        }
         $userType = $this->determineUserType((string) ($userData['role'] ?? ''), $email);
 
         $user = User::where('sso_id', $userData['id'])->first();
