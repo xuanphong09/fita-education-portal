@@ -84,7 +84,7 @@ class AppServiceProvider extends ServiceProvider
                         ], 401);
                     }
 
-                    $maxFileSizeKb = 16384; // 16MB
+                    $maxFileSizeKb = 20480; // 16MB
                     $maxFileSizeMb = (int) ($maxFileSizeKb / 1024);
 
                     $validator = Validator::make($request->all(), [
