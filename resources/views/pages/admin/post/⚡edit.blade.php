@@ -1629,97 +1629,97 @@
                     </div>
                 </x-card>
             </div>
-            @once
-                <script>
-                    document.addEventListener('DOMContentLoaded', function () {
-                        let lastMessage = null;
-                        let lastToastTime = 0;
+{{--            @once--}}
+{{--                <script>--}}
+{{--                    document.addEventListener('DOMContentLoaded', function () {--}}
+{{--                        let lastMessage = null;--}}
+{{--                        let lastToastTime = 0;--}}
 
-                        function getUploadErrorMessage(data) {
-                            return data?.errors?.file?.[0]
-                                || data?.message
-                                || data?.error
-                                || 'Đã có lỗi xảy ra khi tải ảnh lên.';
-                        }
+{{--                        function getUploadErrorMessage(data) {--}}
+{{--                            return data?.errors?.file?.[0]--}}
+{{--                                || data?.message--}}
+{{--                                || data?.error--}}
+{{--                                || 'Đã có lỗi xảy ra khi tải ảnh lên.';--}}
+{{--                        }--}}
 
-                        function showUploadError(message) {
-                            const now = Date.now();
+{{--                        function showUploadError(message) {--}}
+{{--                            const now = Date.now();--}}
 
-                            // Tránh hiện lặp toast liên tục cùng một lỗi
-                            if (lastMessage === message && now - lastToastTime < 1500) {
-                                return;
-                            }
+{{--                            // Tránh hiện lặp toast liên tục cùng một lỗi--}}
+{{--                            if (lastMessage === message && now - lastToastTime < 1500) {--}}
+{{--                                return;--}}
+{{--                            }--}}
 
-                            lastMessage = message;
-                            lastToastTime = now;
+{{--                            lastMessage = message;--}}
+{{--                            lastToastTime = now;--}}
 
-                            if (window.Livewire) {
-                                Livewire.dispatch('editor-upload-error', {
-                                    message: message
-                                });
-                                return;
-                            }
+{{--                            if (window.Livewire) {--}}
+{{--                                Livewire.dispatch('editor-upload-error', {--}}
+{{--                                    message: message--}}
+{{--                                });--}}
+{{--                                return;--}}
+{{--                            }--}}
 
-                            alert(message);
-                        }
+{{--                            alert(message);--}}
+{{--                        }--}}
 
-                        // Bắt request dùng fetch
-                        const originalFetch = window.fetch;
+{{--                        // Bắt request dùng fetch--}}
+{{--                        const originalFetch = window.fetch;--}}
 
-                        window.fetch = async function (...args) {
-                            const response = await originalFetch.apply(this, args);
+{{--                        window.fetch = async function (...args) {--}}
+{{--                            const response = await originalFetch.apply(this, args);--}}
 
-                            const url = typeof args[0] === 'string'
-                                ? args[0]
-                                : (args[0]?.url || '');
+{{--                            const url = typeof args[0] === 'string'--}}
+{{--                                ? args[0]--}}
+{{--                                : (args[0]?.url || '');--}}
 
-                            if (!response.ok && response.status >= 400 && url.includes('/mary/upload')) {
-                                response.clone().json()
-                                    .then(data => {
-                                        showUploadError(getUploadErrorMessage(data));
-                                    })
-                                    .catch(() => {
-                                        showUploadError('Tải ảnh thất bại. Vui lòng thử lại.');
-                                    });
-                            }
+{{--                            if (!response.ok && response.status >= 400 && url.includes('/mary/upload')) {--}}
+{{--                                response.clone().json()--}}
+{{--                                    .then(data => {--}}
+{{--                                        showUploadError(getUploadErrorMessage(data));--}}
+{{--                                    })--}}
+{{--                                    .catch(() => {--}}
+{{--                                        showUploadError('Tải ảnh thất bại. Vui lòng thử lại.');--}}
+{{--                                    });--}}
+{{--                            }--}}
 
-                            return response;
-                        };
+{{--                            return response;--}}
+{{--                        };--}}
 
-                        // Bắt request dùng XMLHttpRequest
-                        const originalOpen = XMLHttpRequest.prototype.open;
-                        const originalSend = XMLHttpRequest.prototype.send;
+{{--                        // Bắt request dùng XMLHttpRequest--}}
+{{--                        const originalOpen = XMLHttpRequest.prototype.open;--}}
+{{--                        const originalSend = XMLHttpRequest.prototype.send;--}}
 
-                        XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-                            this._maryUploadUrl = typeof url === 'string' && url.includes('/mary/upload');
-                            return originalOpen.call(this, method, url, ...rest);
-                        };
+{{--                        XMLHttpRequest.prototype.open = function (method, url, ...rest) {--}}
+{{--                            this._maryUploadUrl = typeof url === 'string' && url.includes('/mary/upload');--}}
+{{--                            return originalOpen.call(this, method, url, ...rest);--}}
+{{--                        };--}}
 
-                        XMLHttpRequest.prototype.send = function (...args) {
-                            if (this._maryUploadUrl) {
-                                this.addEventListener('load', function () {
-                                    if (this.status >= 400) {
-                                        let data = {};
+{{--                        XMLHttpRequest.prototype.send = function (...args) {--}}
+{{--                            if (this._maryUploadUrl) {--}}
+{{--                                this.addEventListener('load', function () {--}}
+{{--                                    if (this.status >= 400) {--}}
+{{--                                        let data = {};--}}
 
-                                        try {
-                                            data = JSON.parse(this.responseText || '{}');
-                                        } catch (e) {
-                                            data = {};
-                                        }
+{{--                                        try {--}}
+{{--                                            data = JSON.parse(this.responseText || '{}');--}}
+{{--                                        } catch (e) {--}}
+{{--                                            data = {};--}}
+{{--                                        }--}}
 
-                                        showUploadError(getUploadErrorMessage(data));
-                                    }
-                                });
+{{--                                        showUploadError(getUploadErrorMessage(data));--}}
+{{--                                    }--}}
+{{--                                });--}}
 
-                                this.addEventListener('error', function () {
-                                    showUploadError('Không thể tải ảnh lên. Vui lòng kiểm tra kết nối mạng.');
-                                });
-                            }
+{{--                                this.addEventListener('error', function () {--}}
+{{--                                    showUploadError('Không thể tải ảnh lên. Vui lòng kiểm tra kết nối mạng.');--}}
+{{--                                });--}}
+{{--                            }--}}
 
-                            return originalSend.apply(this, args);
-                        };
-                    });
-                </script>
-            @endonce
+{{--                            return originalSend.apply(this, args);--}}
+{{--                        };--}}
+{{--                    });--}}
+{{--                </script>--}}
+{{--            @endonce--}}
         </div>
     </div>
