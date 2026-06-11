@@ -72,7 +72,7 @@ new class extends Component {
             ['key' => 'user_code', 'label' => 'Mã định danh', 'sortable' => false],
             ['key' => 'roles', 'label' => 'Vai trò', 'sortable' => false, 'class' => 'w-48'],
             ['key' => 'is_active', 'label' => 'Trạng thái'],
-            ['key' => 'last_login_at', 'label' => 'ĐN gần nhất', 'class' => 'w-32 px-2'],
+            ['key' => 'last_login_at', 'label' => 'Đăng nhập cuối', 'class' => 'w-32 px-2'],
             ['key' => 'created_at', 'label' => 'Ngày tạo', 'class' => 'w-32 px-2'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-12 p-2'],
         ];
@@ -173,9 +173,19 @@ new class extends Component {
                 [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
             "
         >
+            @scope('header_last_login_at', $header)
+            <div
+                class="inline-flex items-center gap-1 tooltip tooltip-bottom cursor-help"
+                data-tip="Thời điểm người dùng đăng nhập gần nhất vào hệ thống"
+            >
+                <span>{{ $header['label'] }}</span>
+                <x-icon name="o-information-circle" class="w-4 h-4 text-gray-400" />
+            </div>
+            @endscope
+
             {{-- Cột 1: STT --}}
             @scope('cell_id', $user)
-            {{ ($this->users->currentPage() - 1) * $this->users->perPage() + $loop->iteration }}
+                {{ ($this->users->currentPage() - 1) * $this->users->perPage() + $loop->iteration }}
             @endscope
 
             {{-- Cột 2: Gom Avatar, Tên và Email --}}

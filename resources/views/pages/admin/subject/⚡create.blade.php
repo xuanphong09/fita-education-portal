@@ -68,14 +68,14 @@ new class extends Component {
                         $fail('Định dạng nội dung file không hợp lệ. Chỉ chấp nhận PDF.');
                     }
                 },
-                'max:10240',
+                'max:30720',
             ],
             'import_file' => [
                 'nullable',
                 'file',
                 'mimes:xlsx',
                 'mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream',
-                'max:10240',
+                'max:16384',
             ],
         ];
     }
@@ -93,9 +93,9 @@ new class extends Component {
         'credits_practice.regex' => 'Tín chỉ thực hành chỉ nhận số nguyên hoặc thập phân 1 chữ số (vd: 1.5 hoặc 1,5).',
         'syllabus_file.mimes' => 'Đề cương môn học chỉ hỗ trợ định dạng PDF.',
         'syllabus_file.mimetypes' => 'Nội dung file không đúng định dạng PDF hợp lệ.',
-        'syllabus_file.max' => 'Đề cương môn học không được vượt quá 10MB.',
+        'syllabus_file.max' => 'Đề cương môn học không được vượt quá 30MB.',
         'import_file.mimes' => 'File import phải là định dạng .xlsx.',
-        'import_file.max' => 'File import không được vượt quá 10MB.',
+        'import_file.max' => 'File import không được vượt quá 16MB.',
     ];
 
     protected function allowedSyllabusMimeTypes(): array
@@ -550,7 +550,7 @@ new class extends Component {
                 'file',
                 'mimes:xlsx',
                 'mimetypes:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream',
-                'max:10240',
+                'max:16384',
             ],
         ];
     }
@@ -819,6 +819,20 @@ new class extends Component {
 
         $this->success('Đã import thành công ' . $count . ' môn học.', redirectTo: route('admin.subject.index'));
     }
+
+    public function downloadImportTemplate()
+    {
+        $path = public_path('assets/templates/mau_import_mon_hoc.xlsx');
+
+        if (!is_file($path)) {
+            $this->error('Không tìm thấy file mẫu import môn học.');
+            return null;
+        }
+
+        return response()->download($path, 'mau_import_mon_hoc.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
 };
 ?>
 
@@ -987,11 +1001,18 @@ new class extends Component {
             </x-card>
             <x-card title="Import môn học" shadow class="p-3!">
                 <div class="grid grid-cols-1 gap-4 items-end">
+                    <x-button
+                        label="Tải file mẫu"
+                        class="btn-outline w-full"
+                        icon="o-arrow-down-tray"
+                        wire:click="downloadImportTemplate"
+                        spinner="downloadImportTemplate"
+                    />
                     <x-file
                         label="File Excel (.xlsx)"
                         wire:model.live="import_file"
                         accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        hint="Dùng file Excel để import hàng loạt môn học. Tối đa 10MB."
+                        hint="Dùng file Excel để import hàng loạt môn học. Tối đa 16MB."
                     />
 
                     <x-button
