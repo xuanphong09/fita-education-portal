@@ -93,6 +93,20 @@ new class extends Component {
 
     public function delete(int $id): void
     {
+        $subject = Subject::query()
+            ->withCount(['programSemesters', 'requiredBy'])
+            ->findOrFail($id);
+
+        if ($subject->program_semesters_count > 0) {
+            $this->error('Môn học đang được dùng trong học kỳ của CTDT, chưa thể xóa.');
+            return;
+        }
+
+        if ($subject->required_by_count > 0) {
+            $this->error('Môn học đang là tiên quyết của môn khác, chưa thể xóa.');
+            return;
+        }
+
         $this->dispatch('modal:confirm', [
             'title' => 'Bạn có chắc muốn xóa môn học này?',
             'icon' => 'question',

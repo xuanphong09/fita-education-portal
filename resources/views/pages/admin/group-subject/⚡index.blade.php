@@ -51,6 +51,13 @@ new class extends Component {
 
     public function delete(int $id): void
     {
+        $group = GroupSubject::withCount('subjects')->findOrFail($id);
+
+        if ($group->subjects_count > 0) {
+            $this->error('Nhóm môn học đang chứa môn học, không thể xóa.');
+            return;
+        }
+
         $this->dispatch('modal:confirm', [
             'title' => 'Bạn có chắc chắn muốn xóa nhóm môn học này?',
             'icon' => 'question',

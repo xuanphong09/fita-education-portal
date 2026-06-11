@@ -190,9 +190,19 @@ new class extends Component {
 
     public function delete($id)
     {
-        $programMajor = ProgramMajor::query()->withCount('majors')->findOrFail($id);
+        $programMajor = ProgramMajor::query()->withCount('majors', 'trainingPrograms', 'students')->findOrFail($id);
         if ($programMajor->majors_count > 0) {
             $this->error('Ngành này đang có chuyên ngành phụ thuộc, không thể xóa.');
+            return;
+        }
+
+        if ($programMajor->training_programs_count > 0) {
+            $this->error('Ngành đang có chương trình đào tạo, không thể xóa.');
+            return;
+        }
+
+        if ($programMajor->students_count > 0) {
+            $this->error('Ngành đang có sinh viên, không thể xóa.');
             return;
         }
 
@@ -209,9 +219,19 @@ new class extends Component {
     #[On('confirmDelete')]
     public function confirmDelete($id)
     {
-        $programMajor = ProgramMajor::query()->withCount('majors')->findOrFail($id);
+        $programMajor = ProgramMajor::query()->withCount('majors', 'trainingPrograms', 'students')->findOrFail($id);
         if ($programMajor->majors_count > 0) {
             $this->error('Ngành này đang có chuyên ngành phụ thuộc, không thể xóa.');
+            return;
+        }
+
+        if ($programMajor->training_programs_count > 0) {
+            $this->error('Ngành đang có chương trình đào tạo, không thể xóa.');
+            return;
+        }
+
+        if ($programMajor->students_count > 0) {
+            $this->error('Ngành đang có sinh viên, không thể xóa.');
             return;
         }
 

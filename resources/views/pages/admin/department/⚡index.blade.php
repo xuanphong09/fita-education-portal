@@ -172,6 +172,12 @@ new class extends Component {
 
     public function delete(int $id): void
     {
+        $department = Department::query()->withCount('lecturer')->findOrFail($id);
+        if ($department->lecturer_count > 0) {
+            $this->error('Bộ môn đang có giảng viên, không thể xóa.');
+            return;
+        }
+
         $this->dispatch('modal:confirm', [
             'title' => 'Bạn có chắc chắn muốn xóa bộ môn này không?',
             'icon' => 'question',
@@ -185,7 +191,7 @@ new class extends Component {
     #[On('confirmDelete')]
     public function confirmDelete(int $id): void
     {
-        $department = Department::withCount('lecturer')->findOrFail($id);
+        $department = Department::query()->withCount('lecturer')->findOrFail($id);
         if ($department->lecturer_count > 0) {
             $this->error('Bộ môn đang có giảng viên, không thể xóa.');
             return;
