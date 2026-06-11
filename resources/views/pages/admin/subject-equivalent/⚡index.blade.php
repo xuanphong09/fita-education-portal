@@ -39,23 +39,28 @@ new class extends Component {
 
     public function getEquivalentsProperty()
     {
+        $search = trim($this->search);
+
         return SubjectEquivalent::query()
             ->with(['subject', 'equivalentSubject'])
-            ->whereRaw('subject_id < equivalent_subject_id')
-            ->when(trim($this->search) !== '', function ($query) {
-                $keyword = '%' . trim($this->search) . '%';
-                $query->whereHas('subject', function ($q) use ($keyword) {
-                    $q->where('code', 'like', $keyword)
-                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')) LIKE ?", [$keyword])
-                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) LIKE ?", [$keyword]);
-                })
-                ->orWhereHas('equivalentSubject', function ($q) use ($keyword) {
-                    $q->where('code', 'like', $keyword)
-                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')) LIKE ?", [$keyword])
-                        ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) LIKE ?", [$keyword]);
+            ->whereColumn('subject_id', '<', 'equivalent_subject_id')
+            ->when($search !== '', function ($query) use ($search) {
+                $keyword = '%' . $search . '%';
+
+                $query->where(function ($query) use ($keyword) {
+                    $query->whereHas('subject', function ($q) use ($keyword) {
+                        $q->where('code', 'like', $keyword)
+                            ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')) LIKE ?", [$keyword])
+                            ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) LIKE ?", [$keyword]);
+                    })
+                        ->orWhereHas('equivalentSubject', function ($q) use ($keyword) {
+                            $q->where('code', 'like', $keyword)
+                                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')) LIKE ?", [$keyword])
+                                ->orWhereRaw("JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')) LIKE ?", [$keyword]);
+                        });
                 });
             })
-            ->orderBy(...array_values($this->sortBy))
+            ->orderBy($this->sortBy['column'], $this->sortBy['direction'])
             ->paginate($this->perPage);
     }
 
@@ -163,19 +168,21 @@ new class extends Component {
             @endscope
 
             @scope('cell_subject', $equivalent)
-            <div class="font-mono font-semibold text-primary">{{ $equivalent->subject->code }}</div>
-            <div class="font-semibold">{{ $equivalent->subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
-            <div class="text-sm text-gray-400">{{ $equivalent->subject->credits_display }} tín chỉ</div>
+            <a href="{{route('admin.subject.edit', $equivalent->subject->id)}}" wire:navigate>
+                <div class="font-mono font-semibold text-primary">{{ $equivalent->subject->code }}</div>
+                <div class="font-semibold">{{ $equivalent->subject->getTranslation('name', 'vi', false) ?: '—' }}</div>
+                <div class="text-sm text-gray-400">{{ $equivalent->subject->credits_display }} tín chỉ</div>
+            </a>
             @endscope
 
             @scope('cell_equivalent', $equivalent)
-            <div class="flex items-center gap-2">
+            <a class="flex items-center gap-2">
 {{--                <x-icon name="o-arrow-right" class="w-4 h-4 text-gray-400" />--}}
-                <div>
+                <a href="{{route('admin.subject.edit', $equivalent->equivalentSubject->id)}}" wire:navigate>
                     <div class="font-mono font-semibold text-primary">{{ $equivalent->equivalentSubject->code }}</div>
                     <div class="font-semibold">{{ $equivalent->equivalentSubject->getTranslation('name', 'vi', false) ?: '—' }}</div>
                     <div class="text-sm text-gray-400">{{ $equivalent->equivalentSubject->credits_display }} tín chỉ</div>
-                </div>
+                </a>
             </div>
             @endscope
 
