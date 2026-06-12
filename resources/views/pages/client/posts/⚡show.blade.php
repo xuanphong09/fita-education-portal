@@ -319,7 +319,7 @@ class extends Component {
 
                     {{-- Excerpt --}}
                     @if($post->getTranslation('excerpt', app()->getLocale(), false))
-                        <div class="bg-gray-50 border-l-4 border-fita p-4 mb-6 italic text-gray-700">
+                        <div class="bg-gray-50 border-l-4 border-fita p-4 mb-6 italic text-gray-700 text-[16px]">
                             {{ $post->getTranslation('excerpt', app()->getLocale()) }}
                         </div>
                     @endif
