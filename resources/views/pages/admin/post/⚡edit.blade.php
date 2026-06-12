@@ -1303,6 +1303,7 @@
                                 'restored' => 'Khôi phục bài viết',
                                 'reverted_to_pending' => 'Thu hồi về chờ duyệt',
                                 'restored_to_pending' => 'Khôi phục về chờ duyệt',
+                                'Status changed' => 'Thay đổi trạng thái',
                                 default => ucfirst(str_replace('_', ' ', $history->action)),
                             };
                         @endphp
