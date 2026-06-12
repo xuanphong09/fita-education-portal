@@ -105,17 +105,15 @@ class extends Component {
         </div>
         <div class="col-span-3 lg:col-span-2">
             <div class="mb-4">
-                <h1 class="text-4xl font-bold text-fita font-barlow font-bold uppercase">
-                    @if($this->academicTitleLabel)
-                        {{ $this->academicTitleLabel }}
-                        @if(app()->getLocale() === 'vi')
-                            ,
-                        @endif
+                <h1 class="text-4xl font-bold text-fita font-barlow">
+                    @if($academicTitleLabel)
+                        {{ $academicTitleLabel }}@if(app()->getLocale() === 'vi'),@endif
                     @endif
-                    @if($this->degreeLabel)
-                        {{ $this->degreeLabel }}
+                    @if($degreeLabel)
+                        {{ $degreeLabel }}@if(app()->getLocale() === 'vi').@endif
                     @endif
-                    {{ $this->lecturer->user?->name }}</h1>
+                    <span class="uppercase">{{ $lecturer->user?->name }}</span>
+                </h1>
                 {{--                <div class="text-[18px] mt-2">TS - Phó Trưởng khoa phụ trách</div>--}}
             </div>
             <div>

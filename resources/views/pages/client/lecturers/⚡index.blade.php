@@ -273,17 +273,15 @@ class extends Component {
 
                 <div class="py-4 px-2">
                     <a href="{{ $profileUrl }}" wire:navigate class="block text-center">
-                        <h2 class="text-md uppercase font-semibold text-gray-900 hover:text-fita transition line-clamp-2">
+                        <h2 class="text-md font-semibold text-gray-900 hover:text-fita transition line-clamp-2">
                             @if($academicTitleLabel)
-                                {{ $academicTitleLabel }}
-                                @if(app()->getLocale() === 'vi')
-                                    ,
-                                @endif
+                                {{ $academicTitleLabel }}@if(app()->getLocale() === 'vi'),@endif
                             @endif
                             @if($degreeLabel)
-                                {{ $degreeLabel }}
+                                {{ $degreeLabel }}@if(app()->getLocale() === 'vi').@endif
                             @endif
-                            {{ $lecturer->user?->name }}
+                            <span class="uppercase">{{ $lecturer->user?->name }}</span>
+
                         </h2>
                         @if($positionLabel)
                             <p class="font-medium text-gray-800">{{ $positionLabel }}</p>
