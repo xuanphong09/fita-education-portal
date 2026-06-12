@@ -150,23 +150,20 @@ class extends Component {
 
             <div class="col-span-3 lg:col-span-2">
                 <div class="mb-4">
-                    <h1 class="text-4xl font-bold text-fita font-barlow uppercase">
+                    <h1 class="text-4xl font-bold text-fita font-barlow">
                         @if($academicTitleLabel)
-                            {{ $academicTitleLabel }}
-                            @if(app()->getLocale() === 'vi')
-                                ,
-                            @endif
+                            {{ $academicTitleLabel }}@if(app()->getLocale() === 'vi'),@endif
                         @endif
                         @if($degreeLabel)
-                            {{ $degreeLabel }}
+                            {{ $degreeLabel }}@if(app()->getLocale() === 'vi').@endif
                         @endif
-                        {{ $name }}
+                        <span class="uppercase">{{ $name }}</span>
                     </h1>
                 </div>
 
                 <div>
                     <h2 class="text-fita font-barlow font-semibold text-[20px]/[24px] lg:text-[24px]/[26px] uppercase">{{ __('Introduction') }}</h2>
-                    <div class="my-4 text-[16px]/[24px] max-w-none! prose">
+                    <div class="my-4 text-[16px]/[24px] tinymce-content max-w-none">
                         @if($introduction)
                             {!! $introduction !!}
                         @else
@@ -190,7 +187,7 @@ class extends Component {
                         <h2 class="text-fita font-barlow font-semibold text-[20px]/[24px] lg:text-[24px]/[26px] uppercase">
                             {{ $block['title'] ?? '' }}
                         </h2>
-                        <div class="my-4 text-[16px]/[24px] max-w-none! prose">
+                        <div class="my-4 text-[16px]/[24px] tinymce-content max-w-none">
                             {!! $block['content'] ?? '' !!}
                         </div>
                     </div>

@@ -120,7 +120,7 @@ class extends Component {
                 <div>
                     <h2 class="text-fita font-barlow font-semibold text-[20px]/[24px] lg:text-[24px]/[26px] uppercase">
                         {{__('Introduction')}}</h2>
-                    <div class="my-4 text-[16px]/[24px] max-w-none! prose">
+                    <div class="my-4 text-[16px]/[24px] tinymce-content max-w-none">
                         @if($this->page_data['introduction'] ?? null)
                             {!! $this->page_data['introduction'] !!}
                         @else
@@ -145,7 +145,7 @@ class extends Component {
                 <div data-id="{{ $block['id'] }}" wire:key="vi-dyn-{{ $block['id'] }}">
                     <h2 class="text-fita font-barlow font-semibold text-[20px]/[24px] lg:text-[24px]/[26px] uppercase">
                         {{$block['title'] }}</h2>
-                    <ul class="my-4 text-[16px]/[24px] max-w-none! prose">
+                    <ul class="my-4 text-[16px]/[24px] tinymce-content max-w-none">
                         {!! $block['content'] !!}
                     </ul>
                 </div>
