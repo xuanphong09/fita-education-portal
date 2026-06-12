@@ -219,36 +219,36 @@ class extends Component {
                 <div class="lg:col-span-2">
                     <article class="bg-white rounded-lg shadow-lg overflow-hidden">
 
-                        <div class="aspect-auto bg-gray-200 overflow-hidden relative min-h-40">
-                            @if(!empty($post->preview_thumbnail_url))
-                                <img src="{{ $post->preview_thumbnail_url }}" class="w-full h-full object-cover object-top" alt="Thumbnail">
-                            @elseif($post->thumbnail)
-                                <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top" alt="Thumbnail">
-                            @elseif($post->post_default_image_id && $post->relationLoaded('defaultImage') && $post->defaultImage)
-                                <img src="{{ Storage::url($post->defaultImage->image_path) }}" class="w-full h-full object-cover object-top" alt="Template">
-                                @if($post->defaultImage->show_title)
-                                    <div class="absolute inset-0 flex items-center justify-center p-20 lg:p-30" style="container-type: inline-size; transform: translateY(calc( {{$post->defaultImage->text_y_offset}} / 1200 * 100cqw))">
-                                        <p class="line-clamp-4 font-bold select-none"
-                                           :style="{
-                                                color: '{{ $post->defaultImage->text_color ?? '#ffffff' }}',
-                                                fontSize: 'clamp(8px, calc({{ $post->defaultImage->text_size ?? 18 }} / 450 * 100cqw), 60px)',
-                                                lineHeight: 1.1,
-                                                textAlign: '{{$post->defaultImage->text_alignment ?? 'center'}}',
-                                                padding: '5px'
-                                            }"
-                                        >{{ $post->getTranslation('title', $locale) }}</p>
-                                    </div>
-                                @endif
-                            @else
-                                <div class="absolute inset-0 flex items-center justify-center text-gray-500 font-medium">Chưa có ảnh đại diện</div>
-                            @endif
+{{--                        <div class="aspect-auto bg-gray-200 overflow-hidden relative min-h-40">--}}
+{{--                            @if(!empty($post->preview_thumbnail_url))--}}
+{{--                                <img src="{{ $post->preview_thumbnail_url }}" class="w-full h-full object-cover object-top" alt="Thumbnail">--}}
+{{--                            @elseif($post->thumbnail)--}}
+{{--                                <img src="{{ Storage::url($post->thumbnail) }}" class="w-full h-full object-cover object-top" alt="Thumbnail">--}}
+{{--                            @elseif($post->post_default_image_id && $post->relationLoaded('defaultImage') && $post->defaultImage)--}}
+{{--                                <img src="{{ Storage::url($post->defaultImage->image_path) }}" class="w-full h-full object-cover object-top" alt="Template">--}}
+{{--                                @if($post->defaultImage->show_title)--}}
+{{--                                    <div class="absolute inset-0 flex items-center justify-center p-20 lg:p-30" style="container-type: inline-size; transform: translateY(calc( {{$post->defaultImage->text_y_offset}} / 1200 * 100cqw))">--}}
+{{--                                        <p class="line-clamp-4 font-bold select-none"--}}
+{{--                                           :style="{--}}
+{{--                                                color: '{{ $post->defaultImage->text_color ?? '#ffffff' }}',--}}
+{{--                                                fontSize: 'clamp(8px, calc({{ $post->defaultImage->text_size ?? 18 }} / 450 * 100cqw), 60px)',--}}
+{{--                                                lineHeight: 1.1,--}}
+{{--                                                textAlign: '{{$post->defaultImage->text_alignment ?? 'center'}}',--}}
+{{--                                                padding: '5px'--}}
+{{--                                            }"--}}
+{{--                                        >{{ $post->getTranslation('title', $locale) }}</p>--}}
+{{--                                    </div>--}}
+{{--                                @endif--}}
+{{--                            @else--}}
+{{--                                <div class="absolute inset-0 flex items-center justify-center text-gray-500 font-medium">Chưa có ảnh đại diện</div>--}}
+{{--                            @endif--}}
 
-                            @if($post->is_featured)
-                                <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">
-                                    {{ __('Featured News') }}
-                                </div>
-                            @endif
-                        </div>
+{{--                            @if($post->is_featured)--}}
+{{--                                <div class="absolute top-0 left-0 z-10 flex items-center gap-1 bg-red-500 pe-2 ps-1 py-0.5 text-[16px] font-bold text-white shadow-md rounded-br-xl">--}}
+{{--                                    {{ __('Featured News') }}--}}
+{{--                                </div>--}}
+{{--                            @endif--}}
+{{--                        </div>--}}
 
                         <div class="p-4 lg:p-6">
                             {{-- Category Badge --}}
