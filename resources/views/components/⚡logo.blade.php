@@ -9,7 +9,7 @@ new class extends Component
 ?>
 
 <a href=" @if($this->layout == "admin"){{route('admin.dashboard')}} @else {{route('client.home')}} @endif" class="flex items-center ms-5 gap-3 @if($this->layout == "footer") m-0! @endif ms-0!" wire:navigate>
-    <img src="{{asset('assets/images/FITA.png')}}" class="transition-all duration-300 size-12 @if($this->layout == "footer") size-16! @endif @if($this->layout == "admin") size-14! ms-5 @endif rounded-[50%] object-cover shadow-md" alt="Logo"
+    <img src="{{asset('assets/images/FITA.png')}}" class="transition-all duration-300 size-12 @if($this->layout == "footer") size-16! @endif @if($this->layout == "admin") size-14! ms-5 @endif rounded-[50%] object-cover shadow-md" alt="Khoa Công nghệ thông tin - VNUA / FITA VNUA"
          x-data="{
             isScrolled: false,
             handleScroll() {

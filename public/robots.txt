@@ -1,2 +1,11 @@
 User-agent: *
-Disallow:
+Allow: /
+
+Disallow: /admin
+Disallow: /login
+Disallow: /logout
+Disallow: /auth
+Disallow: /livewire
+Disallow: /tim-kiem
+
+Sitemap: https://st-dse.vnua.edu.vn/sitemap.xml

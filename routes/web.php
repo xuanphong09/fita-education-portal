@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthenticateController;
 use App\Http\Controllers\SubjectSyllabusController;
 use App\Http\Middleware\SetAdminLocale;
+use App\Models\Post;
 use App\Models\Subject;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -179,8 +180,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::livewire('/preview/post-new', 'pages::admin.preview.post-new')->name('admin.preview.post.new');
     Route::livewire('/preview/lecturer/{slug}', 'pages::admin.preview.lecturer')->name('admin.preview.lecturer');
 });
-use App\Models\User;
-use App\Mail\FirstTimePasswordSetup;
+//use App\Models\User;
+//use App\Mail\FirstTimePasswordSetup;
 
 //Route::get('/test-email', function () {
 //    // Tạo một User giả lập hoặc lấy User đầu tiên trong DB
@@ -207,6 +208,56 @@ use App\Mail\FirstTimePasswordSetup;
 //    return 'Đã sửa xong!';
 //});
 
-Route::get('/phpinfo-test', function () {
-    phpinfo();
-});
+//Route::get('/phpinfo-test', function () {
+//    phpinfo();
+//});
+
+Route::get('/sitemap.xml', function () {
+    $urls = collect();
+
+    // Trang tĩnh quan trọng
+    $staticUrls = [
+        route('client.home'),
+        route('client.contact'),
+        route('client.lecturers.index'),
+        route('client.posts.index'),
+    ];
+
+    foreach ($staticUrls as $url) {
+        $urls->push([
+            'loc' => $url,
+            'lastmod' => now()->toDateString(),
+            'changefreq' => 'daily',
+            'priority' => '0.8',
+        ]);
+    }
+
+    // Bài viết đã xuất bản
+    Post::query()
+        ->with(['categories', 'category'])
+        ->where('status', 'published')
+        ->whereNotNull('published_at')
+        ->where('published_at', '<=', now())
+        ->latest('updated_at')
+        ->chunk(200, function ($posts) use ($urls) {
+            foreach ($posts as $post) {
+                $categorySlug = $post->getPrimaryCategorySlug() ?: 'bai-viet';
+
+                $urls->push([
+                    'loc' => route('client.posts.show', [
+                        'categorySlug' => $categorySlug,
+                        'slug' => $post->slug,
+                    ]),
+                    'lastmod' => optional($post->updated_at)->toDateString() ?: now()->toDateString(),
+                    'changefreq' => 'weekly',
+                    'priority' => '0.7',
+                ]);
+            }
+        });
+
+    return response()
+        ->view('sitemap', [
+            'urls' => $urls->unique('loc')->values(),
+        ])
+        ->header('Content-Type', 'application/xml; charset=UTF-8');
+})->name('sitemap');
