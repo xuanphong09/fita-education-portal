@@ -27,7 +27,9 @@
     --color-fita2: #0c83d8;
 }
 
-
+[x-cloak] {
+    display: none !important;
+}
 
 /**
     The lines above are intact.

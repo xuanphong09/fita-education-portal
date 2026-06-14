@@ -342,22 +342,44 @@
     {{-- start end nav bar--}}
     {{-- start bottom nav bar--}}
 
-    <x-nav full-width class="bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none transition-all duration-300"
-           x-data="{
-            isScrolled: false,
-            handleScroll() {
-                // Nếu chưa cuộn và vượt qua 60px -> Bật
-                if (!this.isScrolled && window.scrollY > 60) {
-                    this.isScrolled = true;
-                }
-                // Nếu đang cuộn và lùi về dưới 40px -> Tắt
-                else if (this.isScrolled && window.scrollY < 40) {
-                    this.isScrolled = false;
-                }
+    <x-nav
+        full-width
+        class="bg-white text-white content-center shadow [&>div]:py-0! [&>div]:h-full! hidden lg:block flex-none transition-all duration-300"
+        x-data="{
+        isScrolled: false,
+        visibleLimit: 999,
+
+        rules: [
+            { min: 1350, count: 10 },
+            { min: 1260, count: 7 },
+            { min: 0,    count: 10 },
+        ],
+
+        init() {
+            this.handleScroll();
+            this.updateMenuLimit();
+        },
+
+        handleScroll() {
+            if (!this.isScrolled && window.scrollY > 60) {
+                this.isScrolled = true;
+            } else if (this.isScrolled && window.scrollY < 40) {
+                this.isScrolled = false;
             }
-        }"
-           x-on:scroll.window.throttle.50ms="handleScroll()"
-           x-bind:class="isScrolled ? 'h-15' : 'md:h-20 h-15'"
+        },
+
+        updateMenuLimit() {
+            const width = window.innerWidth;
+
+            const rule = this.rules.find(item => width >= item.min);
+
+            this.visibleLimit = rule ? rule.count : 4;
+        }
+    }"
+        x-init="init()"
+        x-on:scroll.window.throttle.50ms="handleScroll()"
+        x-on:resize.window.debounce.150ms="updateMenuLimit()"
+        x-bind:class="isScrolled ? 'h-15' : 'md:h-20 h-15'"
     >
 
         {{--  start navbar right  --}}
@@ -369,19 +391,22 @@
         {{--  start navbar left  --}}
         <x-slot:actions class="gap-0! flex flex-nowrap justify-end content-start overflow-visible h-full client-main-menu">
             @if($useDynamicHeader)
-                @foreach($headerMenuItems as $item)
+                @foreach($headerMenuItems as $index => $item)
+                    <div
+                        class="h-full shrink-0"
+                        x-show="{{ $index }} < visibleLimit"
+                        x-cloak
+                    >
                     @if(!empty($item['children']))
-                        <div class="shrink-0 dropdown dropdown-hover h-full group auto-flip-bottom">
+                        <div class="dropdown dropdown-hover h-full group auto-flip-bottom">
                             <x-button
                                 tabindex="0"
                                 :link="!str_starts_with($item['url'], '#') ? $item['url'] : ''"
                                 :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                                 :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
-                                class="relative transition-all duration-300 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow group-hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 group-hover:before:w-full after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
+                                class="relative transition-all duration-300 btn-ghost text-black border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow group-hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 group-hover:before:w-full after:content-[''] after:inline-block after:align-[0.255em] after:border-t-[0.3em] after:border-r-[0.3em] after:border-r-transparent after:border-b-0 after:border-l-[0.3em] after:border-l-transparent"
                                 responsive
-                                x-data="{ isScrolled: false }"
-                                @scroll.window="isScrolled = (window.pageYOffset > 50)"
-                                x-bind:class="isScrolled ? 'text-[17px]/[60px] px-3' : 'text-[17px]/[78px]  px-2'"
+                                x-bind:class="isScrolled ? 'text-[17px]/[60px] px-2' : 'text-[17px]/[78px] px-1.5'"
                             >
                                 {{ $item['name'] }}
                             </x-button>
@@ -431,15 +456,14 @@
                             link="{{ $item['url'] }}"
                             :no-wire-navigate="$isAbsoluteExternalUrl($item['url'])"
                             :target="$isAbsoluteExternalUrl($item['url']) ? '_blank' : null"
-                            class="shrink-0 relative transition-all duration-300 btn-ghost text-black text-[16px]/[24px] border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 hover:before:w-full"
+                            class="relative transition-all duration-300 btn-ghost text-black border-transparent font-medium rounded-none h-full hover:bg-transparent uppercase font-barlow hover:text-fita2 hover:font-semibold before:content-[''] before:absolute before:bottom-0 before:left-0 before:w-0 before:h-0.75 before:bg-fita2 before:transition-all before:duration-300 hover:before:w-full"
                             responsive
-                            x-data="{ isScrolled: false }"
-                            @scroll.window="isScrolled = (window.pageYOffset > 50)"
-                            x-bind:class="isScrolled ? 'text-[17px]/[60px] px-3' : 'text-[17px]/[78px] px-2'"
+                            x-bind:class="isScrolled ? 'text-[17px]/[60px] px-2' : 'text-[17px]/[78px] px-1.5'"
                         >
                             {{ $item['name'] }}
                         </x-button>
                     @endif
+                    </div>
                 @endforeach
             @endif
         </x-slot:actions>
