@@ -251,31 +251,35 @@ class Post extends Model
      */
     public function incrementView(): void
     {
+        $ttlMinutes = 1440;
+        $ttlSeconds = $ttlMinutes * 60;
+
         $cookieName = 'post_viewed_' . $this->id;
 
-        // Tạo fingerprint từ IP + User-Agent + Post ID
-        // Chống spam ngay cả khi dùng ẩn danh/xóa cookie
-        $fingerprint = md5(
-            $this->id .
-            request()->ip() .
-            request()->userAgent()
-        );
-        $cacheKey = "post_view_{$fingerprint}";
+        $fingerprint = hash('sha256', implode('|', [
+            $this->id,
+            request()->ip(),
+            request()->userAgent() ?? '',
+        ]));
 
-        // Kiểm tra đa lớp
+        $cacheKey = "post_view_{$fingerprint}";
+        $sessionKey = "viewed_post_{$this->id}";
+
         $hasViewedByCookie = request()->cookie($cookieName);
         $hasViewedByCache = cache()->has($cacheKey);
-        $hasViewedBySession = session()->has("viewed_post_{$this->id}");
 
-        // Nếu CHƯA viewed qua bất kỳ phương thức nào
+        $sessionViewedAt = session()->get($sessionKey);
+
+        $hasViewedBySession = is_numeric($sessionViewedAt)
+            && (now()->timestamp - (int) $sessionViewedAt) < $ttlSeconds;
+
         if (!$hasViewedByCookie && !$hasViewedByCache && !$hasViewedBySession) {
-            // Increment atomic để tránh race condition
             $this->increment('views');
 
-            // Lưu tracking vào cả 3 lớp (24h = 1440 phút)
-            cookie()->queue($cookieName, true, 1440);                    // Cookie
-            cache()->put($cacheKey, true, now()->addMinutes(1440));     // Cache (IP-based)
-            session()->put("viewed_post_{$this->id}", true);            // Session
+            cookie()->queue($cookieName, true, $ttlMinutes);
+            cache()->put($cacheKey, true, now()->addMinutes($ttlMinutes));
+
+            session()->put($sessionKey, now()->timestamp);
         }
     }
 
