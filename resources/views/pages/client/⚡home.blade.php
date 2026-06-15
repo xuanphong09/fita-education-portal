@@ -347,9 +347,9 @@ class extends Component {
         />
     </x-slot:seo>
 
-    <h1 class="sr-only">
-        Khoa Công nghệ thông tin - Học viện Nông nghiệp Việt Nam
-    </h1>
+{{--    <h1 class="sr-only">--}}
+{{--        Khoa Công nghệ thông tin - Học viện Nông nghiệp Việt Nam--}}
+{{--    </h1>--}}
 
     @if(!empty($slides))
         <div
