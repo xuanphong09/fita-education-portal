@@ -10,7 +10,13 @@
     use Illuminate\Support\Str;
 
     $locale   = app()->getLocale();
-    $siteName = __('Faculty of Information Technology') . ' - VNUA';
+    $siteName = 'Khoa Công nghệ thông tin - VNUA';
+
+    $siteAlternateNames = [
+        'FITA VNUA',
+        'Khoa CNTT VNUA',
+        'Faculty of Information Technology - VNUA',
+    ];
     $sectionName = null;
     $fallbackDescription = __('Khoa Công nghệ thông tin thuộc Học viện Nông nghiệp Việt Nam, thành lập ngày 10/10/2005, đào tạo và nghiên cứu trong lĩnh vực công nghệ thông tin.');
 
@@ -177,14 +183,50 @@
 @endif
 
 @php
-    $schema = null;
+    $organizationId = url('/') . '#organization';
+    $websiteId = url('/') . '#website';
+
+    $organizationSchema = [
+        '@type' => 'EducationalOrganization',
+        '@id' => $organizationId,
+        'name' => $siteName,
+        'alternateName' => $siteAlternateNames,
+        'url' => url('/'),
+        'logo' => [
+            '@type' => 'ImageObject',
+            'url' => asset('assets/images/FITA.png'),
+        ],
+        'parentOrganization' => [
+            '@type' => 'CollegeOrUniversity',
+            'name' => 'Học viện Nông nghiệp Việt Nam',
+            'alternateName' => 'Vietnam National University of Agriculture',
+            'url' => 'https://vnua.edu.vn',
+        ],
+    ];
+
+    $websiteSchema = [
+        '@type' => 'WebSite',
+        '@id' => $websiteId,
+        'url' => url('/'),
+        'name' => $siteName,
+        'alternateName' => $siteAlternateNames,
+        'inLanguage' => $locale === 'vi' ? 'vi-VN' : 'en-US',
+        'publisher' => [
+            '@id' => $organizationId,
+        ],
+    ];
+
+    $graph = [
+        $organizationSchema,
+        $websiteSchema,
+    ];
 
     if ($post) {
         $authorName = data_get($post, 'user.name') ?: $siteName;
 
-        $schema = [
-            '@context' => 'https://schema.org',
+        $articleSchema = [
             '@type' => 'Article',
+            '@id' => $canonical . '#article',
             'mainEntityOfPage' => [
                 '@type' => 'WebPage',
                 '@id' => $canonical,
@@ -201,49 +243,31 @@
                 'name' => $authorName,
             ],
             'publisher' => [
-                '@type' => 'Organization',
-                'name' => $siteName,
-                'logo' => [
-                    '@type' => 'ImageObject',
-                    'url' => asset('assets/images/FITA.png'),
-                ],
+                '@id' => $organizationId,
             ],
         ];
 
         if ($sectionName) {
-            $schema['articleSection'] = $sectionName;
+            $articleSchema['articleSection'] = $sectionName;
         }
 
-        $schema = array_filter($schema, fn ($value) => ! is_null($value));
-    } else {
-        $schema = [
-            '@context' => 'https://schema.org',
-            '@type' => 'WebSite',
-            'name' => $siteName,
-            'url' => url('/'),
-            'description' => $seoDescription,
-            'publisher' => [
-                '@type' => 'Organization',
-                'name' => $siteName,
-                'logo' => [
-                    '@type' => 'ImageObject',
-                    'url' => asset('assets/images/FITA.png'),
-                ],
-            ],
-        ];
+        $graph[] = array_filter($articleSchema, fn ($value) => ! is_null($value));
     }
+
+    $schema = [
+        '@context' => 'https://schema.org',
+        '@graph' => $graph,
+    ];
 @endphp
 
-@if($schema)
-    <script type="application/ld+json">
-        {!! json_encode(
-            $schema,
-            JSON_UNESCAPED_UNICODE
-            | JSON_UNESCAPED_SLASHES
-            | JSON_HEX_TAG
-            | JSON_HEX_APOS
-            | JSON_HEX_AMP
-            | JSON_HEX_QUOT
-        ) !!}
-    </script>
-@endif
+<script type="application/ld+json">
+    {!! json_encode(
+        $schema,
+        JSON_UNESCAPED_UNICODE
+        | JSON_UNESCAPED_SLASHES
+        | JSON_HEX_TAG
+        | JSON_HEX_APOS
+        | JSON_HEX_AMP
+        | JSON_HEX_QUOT
+    ) !!}
+</script>

@@ -339,13 +339,17 @@ class extends Component {
 {{--    </x-slot:title>--}}
     <x-slot:seo>
         <x-seo
-            :title=" __('Home page')"
+            title="Khoa Công nghệ thông tin - VNUA"
             :description=" __('Khoa Công nghệ thông tin thuộc Học viện Nông nghiệp Việt Nam, thành lập ngày 10/10/2005, đào tạo và nghiên cứu trong lĩnh vực công nghệ thông tin.')"
             :image="asset('assets/images/LogoKhoaCNTT.png')"
             :type="'website'"
             :keywords="' Khoa Công nghệ thông tin, VNUA, FITA, Học viện Nông nghiệp Việt Nam, công nghệ thông tin, đào tạo, tuyển sinh, sinh viên, giảng viên'"
         />
     </x-slot:seo>
+
+    <h1 class="sr-only">
+        Khoa Công nghệ thông tin - Học viện Nông nghiệp Việt Nam
+    </h1>
 
     @if(!empty($slides))
         <div
