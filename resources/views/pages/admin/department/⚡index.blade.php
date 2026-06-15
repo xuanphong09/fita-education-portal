@@ -29,7 +29,7 @@ new class extends Component {
 
     public function getDepartmentsProperty()
     {
-        $q = Department::query();
+        $q = Department::query()->withCount('lecturer');
 
         if (!empty($this->search)) {
             $term = '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $this->search) . '%';
@@ -166,6 +166,7 @@ new class extends Component {
             ['key' => 'order', 'label' => 'STT', 'class' => 'w-5'],
             ['key' => 'name', 'label' => 'Tên bộ môn', 'class' => 'w-94'],
 //            ['key' => 'is_active', 'label' => 'Kích hoạt', 'class' => 'w-20'],
+            ['key' => 'lecturer_count', 'label' => 'Số giảng viên', 'class' => 'w-20'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-28'],
         ];
     }
@@ -250,6 +251,9 @@ new class extends Component {
             {{--                <x-badge value="Tắt" class="badge-error"/>--}}
             {{--            @endif--}}
             {{--            @endscope--}}
+            @scope('cell_lecturer_count', $department)
+                {{ $department->lecturer_count }}
+            @endscope
 
             @scope('cell_actions', $department)
             <div class="flex space-x-2">

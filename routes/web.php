@@ -165,6 +165,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/program-major/index', 'pages::admin.program-major.index')->name('admin.program-major.index');
         // Department - Bộ môn
         Route::livewire('/department/index', 'pages::admin.department.index')->name('admin.department.index');
+        // Intake - Khoa
+        Route::livewire('/intake/index', 'pages::admin.intake.index')->name('admin.intake.index');
 
         Route::livewire('/subject/index', 'pages::admin.subject.index')->name('admin.subject.index');
         Route::livewire('/subject/trash', 'pages::admin.subject.trash')->name('admin.subject.trash');

@@ -12,13 +12,17 @@ class Intake extends Model
         'year_number',
     ];
 
+    protected $casts = [
+        'year_number' => 'integer',
+    ];
+
     public function students():HasMany
     {
-        return $this->hasMany(Student::class, 'major_id');
+        return $this->hasMany(Student::class, 'intake_id');
     }
 
     public function trainingPrograms(): HasMany
     {
-        return $this->hasMany(TrainingProgram::class);
+        return $this->hasMany(TrainingProgram::class, 'intake_id');
     }
 }

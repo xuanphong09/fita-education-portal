@@ -108,6 +108,7 @@
                     <x-menu-item title="Bộ môn" link="{{route('admin.department.index')}}" :active="request()->routeIs('admin.department.*')"/>
                     <x-menu-item title="Ngành" link="{{route('admin.program-major.index')}}" :active="request()->routeIs('admin.program-major.*')"/>
                     <x-menu-item title="Chuyên ngành" link="{{route('admin.major.index')}}" :active="request()->routeIs('admin.major.*')"/>
+                    <x-menu-item title="Khóa" link="{{route('admin.intake.index')}}" :active="request()->routeIs('admin.intake.*')"/>
                 </x-menu-sub>
             @endcan
 
