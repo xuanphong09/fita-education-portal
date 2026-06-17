@@ -443,7 +443,7 @@ class extends Component {
                 $equivalentCredits = (float) ($equivalent->credits ?? 0);
 
                 return $equivalentCredits > 0
-                    && $equivalentCredits <= $subjectCredits;
+                    && $equivalentCredits >= $subjectCredits;
             })
             ->map(fn ($equivalent) => [
                 'id' => (int) $equivalent->id,
