@@ -430,6 +430,32 @@ class extends Component {
         return null;
     }
 
+    protected function buildEquivalentItemsForSubject(mixed $subject): \Illuminate\Support\Collection
+    {
+        $subjectCredits = (float) ($subject->credits ?? 0);
+
+        if ($subjectCredits <= 0) {
+            return collect();
+        }
+
+        return collect($subject->equivalents ?? [])
+            ->filter(function ($equivalent) use ($subjectCredits) {
+                $equivalentCredits = (float) ($equivalent->credits ?? 0);
+
+                return $equivalentCredits > 0
+                    && $equivalentCredits <= $subjectCredits;
+            })
+            ->map(fn ($equivalent) => [
+                'id' => (int) $equivalent->id,
+                'code' => (string) $equivalent->code,
+                'name' => $this->localizedName($equivalent),
+                'credits' => (float) ($equivalent->credits ?? 0),
+                'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
+                'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
+            ])
+            ->values();
+    }
+
     public function semesterHeaders(): array
     {
         return [
@@ -678,18 +704,20 @@ class extends Component {
                                 })
                                 ->implode(' ');
 
-                            $equivalents = $subject->equivalents->values();
+//                            $equivalents = $subject->equivalents->values();
+//
+//                            $equivalentItems = $equivalents
+//                                ->map(fn ($equivalent) => [
+//                                    'id' => (int) $equivalent->id,
+//                                    'code' => (string) $equivalent->code,
+//                                    'name' => $this->localizedName($equivalent),
+//                                    'credits' => (float) ($equivalent->credits ?? 0),
+//                                    'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
+//                                    'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
+//                                ])
+//                                ->values();
 
-                            $equivalentItems = $equivalents
-                                ->map(fn ($equivalent) => [
-                                    'id' => (int) $equivalent->id,
-                                    'code' => (string) $equivalent->code,
-                                    'name' => $this->localizedName($equivalent),
-                                    'credits' => (float) ($equivalent->credits ?? 0),
-                                    'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
-                                    'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
-                                ])
-                                ->values();
+                            $equivalentItems = $this->buildEquivalentItemsForSubject($subject);
 
                             $subjectNameVi = trim((string) $subject->getTranslation('name', 'vi', false));
                             $subjectNameEn = trim((string) $subject->getTranslation('name', 'en', false));
@@ -1090,18 +1118,19 @@ class extends Component {
                                             ->map(fn ($prerequisite) => (string) $prerequisite->code)
                                             ->filter(fn ($code) => trim($code) !== '')
                                             ->implode(', ');
-                                        $equivalents = collect($subject->equivalents ?? [])->values();
-
-                                        $equivalentItems = $equivalents
-                                            ->map(fn ($equivalent) => [
-                                                'id' => (int) $equivalent->id,
-                                                'code' => (string) $equivalent->code,
-                                                'name' => $this->localizedName($equivalent),
-                                                'credits' => (float) ($equivalent->credits ?? 0),
-                                                'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
-                                                'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
-                                            ])
-                                            ->values();
+//                                        $equivalents = collect($subject->equivalents ?? [])->values();
+//
+//                                        $equivalentItems = $equivalents
+//                                            ->map(fn ($equivalent) => [
+//                                                'id' => (int) $equivalent->id,
+//                                                'code' => (string) $equivalent->code,
+//                                                'name' => $this->localizedName($equivalent),
+//                                                'credits' => (float) ($equivalent->credits ?? 0),
+//                                                'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
+//                                                'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
+//                                            ])
+//                                            ->values();
+                                        $equivalentItems = $this->buildEquivalentItemsForSubject($subject);
 
                                         return [
                                             'id' => (int) $subject->id,
