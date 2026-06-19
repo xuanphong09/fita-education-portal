@@ -832,7 +832,7 @@
                             class="input-md w-full"
                         />
                     </div>
-                    <select wire:model.live.debounce.300ms="category_ids" multiple size="8" class="select select-bordered w-full max-h-80 overflow-auto @error('category_ids') select-error @enderror [&_option:checked]:bg-blue-50 [&_option:checked]:text-blue-700 focus:outline-none">
+                    <select wire:model.live.debounce.300ms="category_ids" multiple class="select select-bordered w-full max-h-80 overflow-auto @error('category_ids') select-error @enderror [&_option:checked]:bg-blue-50 [&_option:checked]:text-blue-700 focus:outline-none">
                         @forelse($this->categoryOptions as $category)
                             <option wire:key="cat-opt-{{ $category['id'] }}" value="{{ $category['id'] }}" @if($category['disabled']) disabled @endif>{{ $category['name'] }}</option>
                         @empty

@@ -1457,7 +1457,7 @@
                             class="input-md w-full"
                         />
                     </div>
-                    <select wire:model.live.debounce.300ms="category_ids" multiple size="8" class="select select-bordered w-full max-h-80 overflow-auto @error('category_ids') select-error @enderror [&_option:checked]:bg-blue-50 [&_option:checked]:text-blue-700 focus:outline-none">
+                    <select wire:model.live.debounce.300ms="category_ids" multiple class="select select-bordered w-full max-h-80 overflow-auto @error('category_ids') select-error @enderror [&_option:checked]:bg-blue-50 [&_option:checked]:text-blue-700 focus:outline-none">
                         @forelse($this->categoryOptions as $category)
                             <option wire:key="cat-edit-{{ $category['id'] }}" value="{{ $category['id'] }}" @if($category['disabled'] ?? false) disabled class="text-gray-400 bg-gray-50 italic pointer-events-none @error('category_ids') border-red-500 @enderror" title="Danh mục này được thiết lập bởi cấp trên" @endif>
                                 {{ $category['name'] }}
