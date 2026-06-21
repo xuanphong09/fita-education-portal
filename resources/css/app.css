@@ -31,6 +31,27 @@
     display: none !important;
 }
 
+/* Sửa DaisyUI select khi dùng multiple */
+select.select[multiple] {
+    display: block !important;
+    align-items: initial !important;
+    gap: 0 !important;
+
+    width: 100% !important;
+    height: 20rem !important;
+    min-height: 0 !important;
+
+    padding: 0.5rem !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    white-space: normal !important;
+    text-overflow: clip !important;
+
+    line-height: normal !important;
+    background-image: none !important;
+}
 /**
     The lines above are intact.
     The lines below were added by maryUI installer.
