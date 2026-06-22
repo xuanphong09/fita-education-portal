@@ -311,7 +311,9 @@ new class extends Component {
 
         $role->syncPermissions(array_unique($finalPermissions));
 
-        $this->success('Cập nhật vai trò thành công!', redirectTo: route('admin.role.index'));
+        $this->success('Cập nhật vai trò thành công!',
+//            redirectTo: route('admin.role.index')
+        );
     }
 };
 ?>

@@ -60,11 +60,23 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     });
 
     // ---- Cấu hình giao diện ----
-    Route::middleware('permission:cai_dat_giao_dien')->group(function () {
+    Route::middleware('permission:cau_hinh_trang_gioi_thieu')->group(function () {
         Route::livewire('/configuration/introduction-page', 'pages::admin.configuration.introduction')->name('admin.configuration.introduction');
+    });
+
+    Route::middleware('permission:cau_hinh_trang_chu')->group(function () {
         Route::livewire('/configuration/home3', 'pages::admin.configuration.home3')->name('admin.configuration.home3');
+    });
+
+    Route::middleware('permission:cau_hinh_menu_tieu_de')->group(function () {
         Route::livewire('/configuration/header', 'pages::admin.configuration.header')->name('admin.configuration.header');
+    });
+
+    Route::middleware('permission:cau_hinh_chan_trang')->group(function () {
         Route::livewire('/configuration/footer', 'pages::admin.configuration.footer')->name('admin.configuration.footer');
+    });
+
+    Route::middleware('permission:quan_ly_banner')->group(function () {
         Route::livewire('/banner/index', 'pages::admin.banner.index')->name('admin.banner.index');
         Route::livewire('/banner/trash', 'pages::admin.banner.trash')->name('admin.banner.trash');
     });
@@ -85,7 +97,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     });
 
 
-    Route::middleware('permission:Quan_ly_doi_tac')->group(function () {
+    Route::middleware('permission:quan_ly_doi_tac')->group(function () {
         Route::livewire('/partner/index', 'pages::admin.partner.index')->name('admin.partner.index');
         Route::livewire('/partner/trash', 'pages::admin.partner.trash')->name('admin.partner.trash');
     });

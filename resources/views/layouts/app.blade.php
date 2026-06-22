@@ -112,24 +112,38 @@
                 </x-menu-sub>
             @endcan
 
-            @can('cai_dat_giao_dien')
+            @canany(['cau_hinh_trang_chu', 'cau_hinh_trang_gioi_thieu'])
                 <x-menu-sub title="{{__('Page configuration')}}" icon="o-document">
-                    <x-menu-item title="{{__('Home page')}}" link="{{route('admin.configuration.home3')}}" :active="request()->routeIs('admin.configuration.home3')" />
-                    <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
+                    @can('cau_hinh_trang_chu')
+                        <x-menu-item title="{{__('Home page')}}" link="{{route('admin.configuration.home3')}}" :active="request()->routeIs('admin.configuration.home3')" />
+                    @endcan
+                    @can('cau_hinh_trang_gioi_thieu')
+                        <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
+                    @endcan
                 </x-menu-sub>
+            @endcanany
+
+            @canany(['cau_hinh_menu_tieu_de', 'cau_hinh_chan_trang', 'quan_ly_banner'])
                 <x-menu-sub title="{{__('Interface configuration')}}" icon="o-window">
-                    <x-menu-item title="Menu tiêu đề" link="{{route('admin.configuration.header')}}" :active="request()->routeIs('admin.configuration.header')"/>
-                    <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
-                    <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
+                    @can('cau_hinh_menu_tieu_de')
+                        <x-menu-item title="Menu tiêu đề" link="{{route('admin.configuration.header')}}" :active="request()->routeIs('admin.configuration.header')"/>
+                    @endcan
+                    @can('cau_hinh_chan_trang')
+                        <x-menu-item title="{{__('Footer')}}" link="{{route('admin.configuration.footer')}}" :active="request()->routeIs('admin.configuration.footer')"/>
+                    @endcan
+                    @can('quan_ly_banner')
+                        <x-menu-item title="Quản lý banner" link="{{route('admin.banner.index')}}" :active="request()->routeIs('admin.banner.*')"/>
+                    @endcan
                 </x-menu-sub>
-            @endcan
+            @endcanany
+
             @can('quan_ly_anh')
                 <x-menu-sub title="Quản lý ảnh" icon="o-photo">
                     <x-menu-item title="Album" link="{{route('admin.album.index')}}" :active="request()->routeIs('admin.album.*')"/>
                     <x-menu-item title="Thư viện ảnh" link="{{route('admin.gallery')}}" :active="request()->routeIs('admin.gallery')"/>
                 </x-menu-sub>
             @endcan
-            @can('Quan_ly_doi_tac')
+            @can('quan_ly_doi_tac')
             <x-menu-item title="Danh sách đối tác" icon="o-briefcase" link="{{route('admin.partner.index')}}" :active="request()->routeIs('admin.partner.*')"/>
             @endcan
             @can('quan_ly_nguoi_dung')
