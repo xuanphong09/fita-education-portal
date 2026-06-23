@@ -488,7 +488,7 @@ new class extends Component {
             ['key' => 'id', 'label' => '#', 'class' => 'w-10 p-2! text-center'],
             ['key' => 'thumbnail', 'label' => 'Ảnh', 'sortable' => false, 'class' => 'w-16 p-0!'],
             ['key' => 'title', 'label' => 'Tiêu đề', 'sortable' => false, 'class' => 'min-w-44'],
-            ['key' => 'category', 'label' => 'Danh mục', 'sortable' => false, 'class' => 'w-36'],
+//            ['key' => 'category', 'label' => 'Danh mục', 'sortable' => false, 'class' => 'w-36'],
             ['key' => 'status', 'label' => 'Trạng thái', 'sortable' => false, 'class' => 'w-28'],
             ['key' => 'featured', 'label' => 'Nổi bật', 'sortable' => false, 'class' => 'w-24'],
             ['key' => 'created_at', 'label' => 'Ngày tạo', 'class' => 'w-32'],
@@ -583,20 +583,20 @@ new class extends Component {
             <div class="text-sm text-gray-400 line-clamp-1">{{ $post->slug }}</div>
             @endscope
 
-            @scope('cell_category', $post)
-            @if($post->categories->isNotEmpty())
-                <div class="flex flex-wrap gap-1">
-                    @foreach($post->categories->take(2) as $category)
-                        <x-badge :value="$category->getTranslatedName()" class="badge-ghost badge-md line-clamp-1"/>
-                    @endforeach
-                    @if($post->categories->count() > 2)
-                        <x-badge value="+{{ $post->categories->count() - 2 }}" class="badge-ghost"/>
-                    @endif
-                </div>
-            @else
-                <span class="text-sm text-gray-400">—</span>
-            @endif
-            @endscope
+{{--            @scope('cell_category', $post)--}}
+{{--            @if($post->categories->isNotEmpty())--}}
+{{--                <div class="flex flex-wrap gap-1">--}}
+{{--                    @foreach($post->categories->take(2) as $category)--}}
+{{--                        <x-badge :value="$category->getTranslatedName()" class="badge-ghost badge-md line-clamp-1"/>--}}
+{{--                    @endforeach--}}
+{{--                    @if($post->categories->count() > 2)--}}
+{{--                        <x-badge value="+{{ $post->categories->count() - 2 }}" class="badge-ghost"/>--}}
+{{--                    @endif--}}
+{{--                </div>--}}
+{{--            @else--}}
+{{--                <span class="text-sm text-gray-400">—</span>--}}
+{{--            @endif--}}
+{{--            @endscope--}}
 
             @scope('cell_status', $post)
             <x-badge
