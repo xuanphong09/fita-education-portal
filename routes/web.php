@@ -141,6 +141,7 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/category/edit/{id}', 'pages::admin.category.edit')->name('admin.category.edit');
     });
 
+    Route::livewire('/documents/{categorySlug}', 'pages::admin.documents.index')->name('admin.documents.index');
 
     /*
     |--------------------------------------------------------------------------

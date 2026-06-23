@@ -111,8 +111,28 @@
                     <x-menu-item title="Khóa" link="{{route('admin.intake.index')}}" :active="request()->routeIs('admin.intake.*')"/>
                 </x-menu-sub>
             @endcan
+            @php
+                $user = auth()->user();
 
-            @canany(['cau_hinh_trang_chu', 'cau_hinh_trang_gioi_thieu'])
+                $documentsCategory = \App\Models\Category::query()
+                    ->where('slug', 'tai-lieu-van-ban')
+                    ->first();
+
+                $canAccessDocuments = $documentsCategory
+                    && (
+                        $user?->canReviewPosts([$documentsCategory->id])
+                        || $user?->canWritePosts([$documentsCategory->id])
+                    );
+
+                $canAccessPageConfiguration =
+                    $user?->canAny([
+                        'cau_hinh_trang_chu',
+                        'cau_hinh_trang_gioi_thieu',
+                    ])
+                    || $canAccessDocuments;
+            @endphp
+
+            @if($canAccessPageConfiguration)
                 <x-menu-sub title="{{__('Page configuration')}}" icon="o-document">
                     @can('cau_hinh_trang_chu')
                         <x-menu-item title="{{__('Home page')}}" link="{{route('admin.configuration.home3')}}" :active="request()->routeIs('admin.configuration.home3')" />
@@ -120,8 +140,15 @@
                     @can('cau_hinh_trang_gioi_thieu')
                         <x-menu-item title="{{__('Introduction page')}}" link="{{route('admin.configuration.introduction')}}" :active="request()->routeIs('admin.configuration.introduction')" />
                     @endcan
+                        @if($canAccessDocuments)
+                            <x-menu-item title="Trang tài liệu - văn bản"
+                                         link="{{ route('admin.documents.index', [
+                                            'categorySlug' => $documentsCategory->slug
+                                        ]) }}"
+                                        :active="request()->routeIs('admin.documents.*')"/>
+                        @endif
                 </x-menu-sub>
-            @endcanany
+            @endif
 
             @canany(['cau_hinh_menu_tieu_de', 'cau_hinh_chan_trang', 'quan_ly_banner'])
                 <x-menu-sub title="{{__('Interface configuration')}}" icon="o-window">
