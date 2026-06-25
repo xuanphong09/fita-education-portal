@@ -14,6 +14,7 @@ use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 new class extends Component {
     use Toast, WithFileUploads;
@@ -34,6 +35,7 @@ new class extends Component {
     public ?string $current_syllabus_name = null;
     public bool $remove_syllabus = false;
     public string $equivalentSearch = '';
+    public bool $equivalentsResetByCredits = false;
 
     public function mount(int $id): void
     {
@@ -58,11 +60,19 @@ new class extends Component {
             ? $subject->prerequisitesForProgram((int)$programId)->pluck('subjects.id')->map(fn($value) => (int)$value)->all()
             : [];
 
-        // Load global equivalents
+        $subjectCredits = (float) ($subject->credits ?? 0);
+
         $this->equivalent_subject_ids = SubjectEquivalent::query()
             ->forSubject($this->id)
+            ->whereIn('equivalent_subject_id', function ($query) use ($subjectCredits) {
+                $query->select('id')
+                    ->from('subjects')
+                    ->where('is_active', true)
+                    ->where('credits', '>=', $subjectCredits)
+                    ->whereNull('deleted_at');
+            })
             ->pluck('equivalent_subject_id')
-            ->map(fn($v) => (int)$v)
+            ->map(fn ($v) => (int) $v)
             ->unique()
             ->values()
             ->all();
@@ -216,7 +226,6 @@ new class extends Component {
 
     public function updated(string $property): void
     {
-        // Some UI interactions may emit "$field"; normalize before validateOnly.
         $property = ltrim($property, '$');
 
         if (!property_exists($this, $property)) {
@@ -225,6 +234,10 @@ new class extends Component {
 
         if ($property === 'group_subject_id' && $this->group_subject_id === '') {
             $this->group_subject_id = null;
+        }
+
+        if ($property === 'credits') {
+            $this->resetEquivalentSelection();
         }
 
         if (in_array($property, ['credits', 'credits_theory', 'credits_practice'], true)) {
@@ -258,13 +271,18 @@ new class extends Component {
 
     public function getEquivalentSubjectOptionsProperty(): array
     {
+        $subjectCredits = $this->toDecimal($this->credits) ?? 0;
+
         return Subject::query()
             ->where('is_active', true)
-            ->when($this->id, fn ($q) => $q->where('id', '!=', $this->id))
+            ->where('id', '!=', $this->id)
+            ->when($subjectCredits > 0, function ($query) use ($subjectCredits) {
+                $query->where('credits', '>=', $subjectCredits);
+            })
             ->orderBy('code')
             ->get()
             ->map(fn ($subject) => [
-                'id' => $subject->id,
+                'id' => (int) $subject->id,
                 'name' => $subject->code
                     . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A')
                     . ' (' . Subject::formatCredit($subject->credits) . ' TC)'
@@ -274,10 +292,17 @@ new class extends Component {
 
     public function getSelectedEquivalentsProperty()
     {
-        if (empty($this->equivalent_subject_ids)) {
+        $ids = $this->normalizeEquivalentIds();
+
+        if (empty($ids)) {
             return collect();
         }
-        return Subject::query()->whereIn('id', $this->equivalent_subject_ids)->get();
+
+        return Subject::query()
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(fn ($subject) => array_search((int) $subject->id, $ids, true))
+            ->values();
     }
 
     public function getEquivalentOptionsProperty(): array
@@ -337,6 +362,32 @@ new class extends Component {
             ->map(fn($id) => (int)$id)
             ->filter()
             ->reject(fn(int $id) => $id === $this->id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    protected function resetEquivalentSelection(): void
+    {
+        $this->equivalent_subject_ids = [];
+        $this->equivalentsResetByCredits = true;
+    }
+
+    protected function normalizeEquivalentIds(): array
+    {
+        $subjectCredits = $this->toDecimal($this->credits) ?? 0;
+
+        if ($subjectCredits <= 0) {
+            return [];
+        }
+
+        return Subject::query()
+            ->whereIn('id', $this->equivalent_subject_ids ?? [])
+            ->where('id', '!=', $this->id)
+            ->where('is_active', true)
+            ->where('credits', '>=', $subjectCredits)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()
             ->all();
@@ -454,11 +505,20 @@ new class extends Component {
             }
         }
 
-        // Sync global equivalents
         try {
-            SubjectEquivalent::syncForSubject($this->id, $this->equivalent_subject_ids ?? []);
+            $equivalentIds = $this->normalizeEquivalentIds();
+
+            SubjectEquivalent::syncForSubject(
+                subjectId: $this->id,
+                equivalentSubjectIds: $equivalentIds,
+                deleteAllRelated: $this->equivalentsResetByCredits
+            );
+
+            $this->equivalent_subject_ids = $equivalentIds;
+            $this->equivalentsResetByCredits = false;
         } catch (\InvalidArgumentException $e) {
             $this->error($e->getMessage());
+            return;
         }
 
         $this->success('Cập nhật môn học thành công!');
@@ -466,13 +526,12 @@ new class extends Component {
 
     public function removeEquivalent(int $equivalentId): void
     {
-        // Lọc bỏ ID cần xóa khỏi mảng tạm trên giao diện (Không đụng gì tới DB)
-        if (in_array($equivalentId, $this->equivalent_subject_ids)) {
-            $this->equivalent_subject_ids = array_values(array_filter(
-                $this->equivalent_subject_ids,
-                fn($id) => $id !== $equivalentId
-            ));
-        }
+        $this->equivalent_subject_ids = collect($this->equivalent_subject_ids)
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn (int $id) => $id === $equivalentId)
+            ->unique()
+            ->values()
+            ->all();
     }
 };
 ?>
@@ -602,11 +661,15 @@ new class extends Component {
                 </div>
                 <div class="mt-4">
                     <label class="font-semibold text-black mb-2 block">Các môn tương đương hiện tại</label>
-                    @if(empty($equivalent_subject_ids))
-                        <div class="text-sm text-gray-500">Chưa có môn tương đương.</div>
+                    @php
+                        $selectedEquivalents = $this->selectedEquivalents;
+                    @endphp
+
+                    @if($selectedEquivalents->isEmpty())
+                        <div class="text-sm text-gray-500">Chưa có môn có thể học thay.</div>
                     @else
                         <div class="grid grid-cols-1 gap-2">
-                            @foreach($this->selectedEquivalents as $equiv)
+                            @foreach($selectedEquivalents as $equiv)
                                 @if($equiv)
                                     <div class="flex items-center justify-between rounded border p-2">
                                         <div class="text-sm font-medium">{{ $equiv->code }} - {{ $equiv->getTranslation('name','vi',false) ?: '—' }} - {{ $equiv->credits_display. ' TC' }}</div>

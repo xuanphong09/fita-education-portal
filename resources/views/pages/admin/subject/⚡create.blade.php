@@ -157,6 +157,10 @@ new class extends Component {
             $this->group_subject_id = null;
         }
 
+        if ($property === 'credits') {
+            $this->resetEquivalentSelection();
+        }
+
         if (in_array($property, ['credits', 'credits_theory', 'credits_practice'], true)) {
             $this->validateCreditsDistribution();
         }
@@ -167,6 +171,30 @@ new class extends Component {
         }
 
         $this->validateOnly($property);
+    }
+
+    protected function resetEquivalentSelection(): void
+    {
+        $this->equivalent_subject_ids = [];
+    }
+
+    protected function normalizeEquivalentIds(): array
+    {
+        $subjectCredits = $this->toDecimal($this->credits) ?? 0;
+
+        if ($subjectCredits <= 0) {
+            return [];
+        }
+
+        return Subject::query()
+            ->whereIn('id', $this->equivalent_subject_ids ?? [])
+            ->where('is_active', true)
+            ->where('credits', '>=', $subjectCredits)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function getGroupOptionsProperty(): array
@@ -185,13 +213,18 @@ new class extends Component {
     // --- CÁC HÀM XỬ LÝ MÔN TƯƠNG ĐƯƠNG ---
     public function getEquivalentSubjectOptionsProperty(): array
     {
-        // Khi tạo mới, lấy tất cả môn học đang active
+        $subjectCredits = $this->toDecimal($this->credits) ?? 0;
+
         return Subject::query()
             ->where('is_active', true)
+            ->when($subjectCredits > 0, function ($query) use ($subjectCredits) {
+                // Chỉ cho chọn môn có số tín chỉ >= môn đang tạo
+                $query->where('credits', '>=', $subjectCredits);
+            })
             ->orderBy('code')
             ->get()
             ->map(fn ($subject) => [
-                'id' => $subject->id,
+                'id' => (int) $subject->id,
                 'name' => $subject->code
                     . ' - ' . ($subject->getTranslation('name', 'vi', false) ?: 'N/A')
                     . ' (' . Subject::formatCredit($subject->credits) . ' TC)'

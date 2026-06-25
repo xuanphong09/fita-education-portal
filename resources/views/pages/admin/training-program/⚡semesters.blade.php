@@ -269,13 +269,21 @@ new class extends Component {
     public function getEquivalentSubjectOptionsProperty(): array
     {
         $usedSubjectIds = $this->usedSubjectIds->all();
-
+        $subject = Subject::query()->find($this->attach_subject_id);
+        if($subject) {
+            $subjectCredits = $subject->credits;
+        } else {
+            $subjectCredits = 0;
+        }
         return Subject::query()
             ->where(function ($q) use ($usedSubjectIds) {
                 $q->where('is_active', true)
                     ->when(!empty($usedSubjectIds), fn ($inner) => $inner->whereNotIn('id', $usedSubjectIds));
             })
             ->when($this->attach_subject_id, fn ($q) => $q->where('id', '!=', $this->attach_subject_id))
+            ->when($subjectCredits > 0, function ($query) use ($subjectCredits) {
+                $query->where('credits', '>=', $subjectCredits);
+            })
             ->orderBy('code')
             ->get()
             ->map(fn ($subject) => [

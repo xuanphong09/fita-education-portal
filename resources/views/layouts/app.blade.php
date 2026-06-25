@@ -104,7 +104,7 @@
                     <x-menu-item title="Chương trình đào tạo" link="{{route('admin.training-program.index')}}" :active="request()->routeIs('admin.training-program.*')"/>
                     <x-menu-item title="Nhóm môn học" link="{{route('admin.group-subject.index')}}" :active="request()->routeIs('admin.group-subject.*')"/>
                     <x-menu-item title="Môn học" link="{{route('admin.subject.index')}}" :active="request()->routeIs('admin.subject.*')"/>
-                    <x-menu-item title="DS môn tương đương" link="{{route('admin.subject-equivalent.index')}}" :active="request()->routeIs('admin.subject-equivalent.*')"/>
+{{--                    <x-menu-item title="DS môn tương đương" link="{{route('admin.subject-equivalent.index')}}" :active="request()->routeIs('admin.subject-equivalent.*')"/>--}}
                     <x-menu-item title="Bộ môn" link="{{route('admin.department.index')}}" :active="request()->routeIs('admin.department.*')"/>
                     <x-menu-item title="Ngành" link="{{route('admin.program-major.index')}}" :active="request()->routeIs('admin.program-major.*')"/>
                     <x-menu-item title="Chuyên ngành" link="{{route('admin.major.index')}}" :active="request()->routeIs('admin.major.*')"/>

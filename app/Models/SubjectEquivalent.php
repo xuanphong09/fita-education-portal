@@ -48,7 +48,11 @@ class SubjectEquivalent extends Pivot
         return $query->where('subject_id', $subjectId);
     }
 
-    public static function syncForSubject(int $subjectId, array $equivalentSubjectIds): void
+    public static function syncForSubject(
+        int $subjectId,
+        array $equivalentSubjectIds,
+        bool $deleteAllRelated = false
+    ): void
     {
         $equivalentSubjectIds = collect($equivalentSubjectIds)
             ->map(fn ($id) => (int) $id)
@@ -57,42 +61,82 @@ class SubjectEquivalent extends Pivot
             ->values()
             ->all();
 
-        DB::transaction(function () use ($subjectId, $equivalentSubjectIds): void {
-            // Xóa TẤT CẢ bản ghi cũ liên quan tới subject này (cả 2 chiều)
-            self::query()
-                ->where(function (Builder $q) use ($subjectId): void {
-                    $q->where('subject_id', $subjectId)
-                        ->orWhere('equivalent_subject_id', $subjectId);
-                })
-                ->delete();
+        DB::transaction(function () use ($subjectId, $equivalentSubjectIds, $deleteAllRelated): void {
+            $subject = Subject::query()->findOrFail($subjectId);
+            $subjectCredits = (float) ($subject->credits ?? 0);
 
-            // Nếu không có môn tương đương mới, dừng lại
+            if ($deleteAllRelated) {
+                // Khi đổi tổng tín chỉ: xóa sạch mọi liên kết liên quan tới môn này.
+                self::query()
+                    ->where(function (Builder $q) use ($subjectId): void {
+                        $q->where('subject_id', $subjectId)
+                            ->orWhere('equivalent_subject_id', $subjectId);
+                    })
+                    ->delete();
+            } else {
+                // Khi không đổi tổng tín chỉ: chỉ đồng bộ quan hệ do môn hiện tại quản lý.
+                self::query()
+                    ->where('subject_id', $subjectId)
+                    ->orWhere(function (Builder $q) use ($subjectId, $subjectCredits): void {
+                        $q->where('equivalent_subject_id', $subjectId)
+                            ->whereIn('subject_id', function ($query) use ($subjectCredits) {
+                                $query->select('id')
+                                    ->from('subjects')
+                                    ->where('credits', '>=', $subjectCredits)
+                                    ->whereNull('deleted_at');
+                            });
+                    })
+                    ->delete();
+            }
+
             if (empty($equivalentSubjectIds)) {
                 return;
             }
 
+            $equivalentSubjects = Subject::query()
+                ->whereIn('id', $equivalentSubjectIds)
+                ->where('is_active', true)
+                ->whereNull('deleted_at')
+                ->get(['id', 'credits']);
+
             $now = now();
             $rows = [];
 
-            foreach ($equivalentSubjectIds as $equivalentId) {
+            foreach ($equivalentSubjects as $equivalentSubject) {
+                $equivalentCredits = (float) ($equivalentSubject->credits ?? 0);
+
+                // Môn ít tín hơn không được thay môn nhiều tín hơn.
+                if ($equivalentCredits < $subjectCredits) {
+                    continue;
+                }
+
+                // Luôn lưu chiều: môn hiện tại -> môn có thể học thay.
                 $rows[] = [
                     'subject_id' => $subjectId,
-                    'equivalent_subject_id' => $equivalentId,
+                    'equivalent_subject_id' => (int) $equivalentSubject->id,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
 
-                // Keep equivalence symmetric: A <-> B.
-                $rows[] = [
-                    'subject_id' => $equivalentId,
-                    'equivalent_subject_id' => $subjectId,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ];
+                // Nếu bằng tín chỉ thì lưu thêm chiều ngược lại.
+                if (abs($equivalentCredits - $subjectCredits) < 0.0001) {
+                    $rows[] = [
+                        'subject_id' => (int) $equivalentSubject->id,
+                        'equivalent_subject_id' => $subjectId,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
             }
 
-            // Insert bản ghi mới
-            self::query()->insert($rows);
+            $rows = collect($rows)
+                ->unique(fn ($row) => $row['subject_id'] . '-' . $row['equivalent_subject_id'])
+                ->values()
+                ->all();
+
+            if (!empty($rows)) {
+                self::query()->insert($rows);
+            }
         });
     }
 
