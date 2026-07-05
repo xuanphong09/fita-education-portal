@@ -475,8 +475,8 @@ class extends Component {
             ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16 ps-5! pe-1!'],
             ['key' => 'prerequisite_subjects_codes', 'label' => __('PS codes'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
+            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'w-24 px-2 text-center!'. ($this->isLockedProfile ? '' : 'hidden')],
             ['key' => 'learning_status', 'label' => __('Trạng thái'), 'sortable' => false, 'class' => 'w-24 text-center ' . ($this->isLockedProfile ? '' : 'hidden')],
-            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'w-24 px-2 text-center '. ($this->isLockedProfile ? '' : 'hidden')],
             ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
         ];
     }
@@ -494,8 +494,8 @@ class extends Component {
             ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16'],
             ['key' => 'prerequisite_subjects_codes', 'label' => __('PS codes'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
+            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'px-1 text-center! w-24! '. ($this->isLockedProfile ? '' : 'hidden')],
             ['key' => 'learning_status', 'label' => __('Trạng thái'), 'sortable' => false, 'class' => 'text-center! ' . ($this->isLockedProfile ? '' : 'hidden')],
-            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'px-1 text-center w-24! '. ($this->isLockedProfile ? '' : 'hidden')],
             ['key' => 'note', 'label' => __('Note'), 'class'=>'px-1', 'sortable' => false],
         ];
     }
@@ -1783,8 +1783,8 @@ class extends Component {
                                                                 <th>{{ __('Subject code') }}</th>
                                                                 <th>{{ __('Subject name') }}</th>
                                                                 <th class="w-16">{{ __('Credits') }}</th>
-                                                                <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                                 <th class="w-16 text-center">{{ __('Điểm') }}</th>
+                                                                <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                             </tr>
                                                             </thead>
                                                             <tbody>
@@ -1794,6 +1794,9 @@ class extends Component {
                                                                     <td class="font-semibold">{{ $equivalent['code'] }}</td>
                                                                     <td>{{ $equivalent['name'] }}</td>
                                                                     <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                    <td class="text-center font-bold text-slate-700">
+                                                                        {{ $equivalent['final_score'] ?? '-' }}
+                                                                    </td>
                                                                     <td class="text-center">
                                                                         @if($equivalent['learning_status'] === 'passed')
                                                                             <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
@@ -1806,9 +1809,6 @@ class extends Component {
                                                                         @else
                                                                             <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
                                                                         @endif
-                                                                    </td>
-                                                                    <td class="text-center font-bold text-slate-700">
-                                                                        {{ $equivalent['final_score'] ?? '-' }}
                                                                     </td>
                                                                 </tr>
                                                             @endforeach
@@ -1970,8 +1970,8 @@ class extends Component {
                                                                     <th>{{ __('Subject code') }}</th>
                                                                     <th>{{ __('Subject name') }}</th>
                                                                     <th class="w-16">{{ __('Credits') }}</th>
-                                                                    <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                                     <th class="w-16 text-center">{{ __('Điểm') }}</th>
+                                                                    <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                                 </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -1981,6 +1981,9 @@ class extends Component {
                                                                         <td class="font-semibold">{{ $equivalent['code'] }}</td>
                                                                         <td>{{ $equivalent['name'] }}</td>
                                                                         <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                        <td class="text-center font-bold text-slate-700">
+                                                                            {{ $equivalent['final_score'] ?? '-' }}
+                                                                        </td>
                                                                         <td class="text-center">
                                                                             @if($equivalent['learning_status'] === 'passed')
                                                                                 <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
@@ -1993,9 +1996,6 @@ class extends Component {
                                                                             @else
                                                                                 <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
                                                                             @endif
-                                                                        </td>
-                                                                        <td class="text-center font-bold text-slate-700">
-                                                                            {{ $equivalent['final_score'] ?? '-' }}
                                                                         </td>
                                                                     </tr>
                                                                 @endforeach
@@ -2187,8 +2187,8 @@ class extends Component {
                                                                             <th>{{ __('Subject code') }}</th>
                                                                             <th>{{ __('Subject name') }}</th>
                                                                             <th class="w-16">{{ __('Credits') }}</th>
-                                                                            <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                                             <th class="w-16 text-center">{{ __('Điểm') }}</th>
+                                                                            <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                                         </tr>
                                                                         </thead>
                                                                         <tbody>
@@ -2198,6 +2198,9 @@ class extends Component {
                                                                                 <td class="font-semibold">{{ $equivalent['code'] }}</td>
                                                                                 <td>{{ $equivalent['name'] }}</td>
                                                                                 <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                                <td class="text-center font-bold text-slate-700">
+                                                                                    {{ $equivalent['final_score'] ?? '-' }}
+                                                                                </td>
                                                                                 <td class="text-center">
                                                                                     @if($equivalent['learning_status'] === 'passed')
                                                                                         <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
@@ -2210,9 +2213,6 @@ class extends Component {
                                                                                     @else
                                                                                         <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
                                                                                     @endif
-                                                                                </td>
-                                                                                <td class="text-center font-bold text-slate-700">
-                                                                                    {{ $equivalent['final_score'] ?? '-' }}
                                                                                 </td>
                                                                             </tr>
                                                                         @endforeach
@@ -2384,8 +2384,8 @@ class extends Component {
                                                                         <th>{{ __('Subject code') }}</th>
                                                                         <th>{{ __('Subject name') }}</th>
                                                                         <th class="w-16">{{ __('Credits') }}</th>
-                                                                        <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                                         <th class="w-16 text-center">{{ __('Điểm') }}</th>
+                                                                        <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
                                                                     </tr>
                                                                     </thead>
                                                                     <tbody>
@@ -2395,6 +2395,9 @@ class extends Component {
                                                                             <td class="font-semibold">{{ $equivalent['code'] }}</td>
                                                                             <td>{{ $equivalent['name'] }}</td>
                                                                             <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                            <td class="text-center font-bold text-slate-700">
+                                                                                {{ $equivalent['final_score'] ?? '-' }}
+                                                                            </td>
                                                                             <td class="text-center">
                                                                                 @if($equivalent['learning_status'] === 'passed')
                                                                                     <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
@@ -2407,9 +2410,6 @@ class extends Component {
                                                                                 @else
                                                                                     <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
                                                                                 @endif
-                                                                            </td>
-                                                                            <td class="text-center font-bold text-slate-700">
-                                                                                {{ $equivalent['final_score'] ?? '-' }}
                                                                             </td>
                                                                         </tr>
                                                                     @endforeach
