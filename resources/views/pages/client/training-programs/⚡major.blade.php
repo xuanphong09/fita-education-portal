@@ -475,7 +475,7 @@ class extends Component {
             ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16 ps-5! pe-1!'],
             ['key' => 'prerequisite_subjects_codes', 'label' => __('PS codes'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
-            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'w-24 px-2 text-center!'. ($this->isLockedProfile ? '' : 'hidden')],
+            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'w-24 px-2 text-center! '. ($this->isLockedProfile ? '' : 'hidden')],
             ['key' => 'learning_status', 'label' => __('Trạng thái'), 'sortable' => false, 'class' => 'w-24 text-center ' . ($this->isLockedProfile ? '' : 'hidden')],
             ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
         ];
