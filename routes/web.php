@@ -4,7 +4,9 @@ use App\Http\Controllers\AuthenticateController;
 use App\Http\Controllers\SubjectSyllabusController;
 use App\Http\Middleware\SetAdminLocale;
 use App\Models\Post;
+use App\Models\Student;
 use App\Models\Subject;
+use App\Services\VnuaTrainingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -195,8 +197,8 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::livewire('/preview/post-new', 'pages::admin.preview.post-new')->name('admin.preview.post.new');
     Route::livewire('/preview/lecturer/{slug}', 'pages::admin.preview.lecturer')->name('admin.preview.lecturer');
 });
-//use App\Models\User;
-//use App\Mail\FirstTimePasswordSetup;
+use App\Models\User;
+use App\Mail\FirstTimePasswordSetup;
 
 //Route::get('/test-email', function () {
 //    // Tạo một User giả lập hoặc lấy User đầu tiên trong DB
@@ -276,3 +278,119 @@ Route::get('/sitemap.xml', function () {
         ])
         ->header('Content-Type', 'application/xml; charset=UTF-8');
 })->name('sitemap');
+
+
+Route::get('/test', function () {
+    abort_unless(app()->isLocal(), 404);
+
+    $token = 'eyJhbGciOiJBMTI4S1ciLCJlbmMiOiJBMTI4Q0JDLUhTMjU2IiwidHlwIjoiSldUIiwiY3R5IjoiSldUIn0.Ctzox3urdXpOpA9wDp-xHuc7pVLgwavNT7KzmIvG9kLMjYQCMQ_51A.o465kelNL3k8xLug_6pOiw.FwxGy_NL282cV45KffwWHuUY2ND8F29xwignas6kKqsAIjf-TIIpX1U9ZLiNgAPlUXAXZw9jum32HAAWMgB7tBM9QDrBlmZRKWTE9TIlBu1hC9bzjEhSImhCgPkcnvCUJcUSfQyTVUQr6e9Soj3erGTKp0F7rtMjNHF9OW6F4MrDJvWCXsG0it2TEFo0aPhaDPbtk6TjkVCsSq4km8qsZTTpAunNroueQEvHKjrafVFGpnurt0keZqSBY9D0GY13UKHllkpGkYliXAj4FfgvQabXxgjRmZ-pWKKdKdv56TRI-WzjBrzzzCjTKJeH1IrJLwyRzboHyikmhTHlOEp6-ZkB3BDpZMOeXZdZ3j3ZASjwfp02m9YV6GoWzBapzP_WqoJjY0c-agSzjFq5RykFJSmbaDc4FdBDvAAyj7D3Arscx5YuBBg735VuTVLfmPf75jFWdAjuLA83v1isEohM1J3_a3fybcfFZ3490U7absKCOUqzQ3vstCkmd_qSzcNqNILOiyRVc2DYrK_OsffFitnO9-sfOqAb3n2Xp7QcVxnXVnz4PRmta9k6aauFduUK3-ZRaGLkJn-i2foa3T0RBHSUme6sd_62q5DmDkwbU6N9k_M3kcKytA5p2UIBpqeCfiQtPAtGHzA0vjDgqnQqFIj2beQMQL8LyvTYmOax9Gktj7R1R03ex4u412KsCKfnj1s0t0zChFjOLTKx9JchdTiPiRhy2FqsP1_JjSgjae9rtLOu29wkcXGnBwchBK0xG5d1zH3N50g9yB3BQlCXApsHI0QTrGUACwXHJ0P9AvHwVb33RgO0-gn_KR_iKntcRyQc851nJj3bG9r2yA8bAW_ND6BsKLYqF_qb-3ZiXZocvB9lasrhXGHnTpeJlTzV9Vs6eWb6Vq9uOhEaayzPGDuF4gQw4QOOBUTBhysa6cubE2Kxf1e5ty0mvefiqWqyCQbny1ItlK006lSkdjEykV8S9usX1UYiJGE272RU2YsYh0TkTHm1kQV01Y5tNuPVuyr5cVEq9Yk0M3n17UU7YlTsK24enzA__W0Oc5nexUSJdODFSTmeuee21f7ubxdm7GxDq6zfxyOmdCKR448fFg.533b2ELyeAITVygvOF2rvw';
+    $ua = 'OMKRPcO6CcO+dcOFf1Vfwpwww7gMw7J9w4AZPiXCilPDpnLCiQfCpA84PMOsSsKMZsKDCcKzAyk=';
+
+    $response = Http::withoutVerifying()
+        ->timeout(20)
+        ->withHeaders([
+            'Accept' => 'application/json, text/plain, */*',
+            'Authorization' => 'Bearer ' . $token,
+            'Origin' => 'https://daotao.vnua.edu.vn',
+            'Referer' => 'https://daotao.vnua.edu.vn/manage/',
+            'idpc' => '0',
+            'ua' => $ua,
+        ])
+        ->withBody('', 'text/plain')
+        ->post('https://daotao.vnua.edu.vn/manage/api/srm/w-locdsdiemsinhvien?hien_thi_mon_theo_hkdk=false');
+
+    $json = $response->json();
+
+    $semesters = data_get($json, 'data.ds_diem_hocky', []);
+
+    $rows = [];
+
+    foreach ($semesters as $semester) {
+        foreach (($semester['ds_diem_mon_hoc'] ?? []) as $subject) {
+            $rows[] = [
+                'hoc_ky' => $semester['ten_hoc_ky'] ?? null,
+                'ma_mon' => $subject['ma_mon'] ?? null,
+                'ten_mon' => $subject['ten_mon'] ?? null,
+                'so_tin_chi' => $subject['so_tin_chi'] ?? null,
+                'diem_thi' => $subject['diem_thi'] ?? null,
+                'diem_tk_10' => $subject['diem_tk'] ?? null,
+                'diem_tk_4' => $subject['diem_tk_so'] ?? null,
+                'diem_chu' => $subject['diem_tk_chu'] ?? null,
+                'ket_qua' => ($subject['ket_qua'] ?? 0) == 1 ? 'Đạt' : 'Chưa đạt',
+            ];
+        }
+    }
+
+    dd($rows);
+});
+
+Route::get('/vnua-sync-test', function () {
+    abort_unless(app()->isLocal(), 404);
+
+    return '
+        <form method="POST" action="/vnua-sync-test" style="max-width:420px;margin:40px auto;font-family:Arial">
+            ' . csrf_field() . '
+
+            <h2>Test đồng bộ điểm VNUA</h2>
+
+            <div style="margin-bottom:12px">
+                <label>Mã sinh viên</label><br>
+                <input name="student_code" style="width:100%;padding:8px" required>
+            </div>
+
+            <div style="margin-bottom:12px">
+                <label>Mật khẩu</label><br>
+                <input name="password" type="password" style="width:100%;padding:8px" required>
+            </div>
+
+            <button type="submit" style="padding:8px 14px">Đồng bộ thử</button>
+        </form>
+    ';
+});
+
+Route::post('/vnua-sync-test', function (Request $request, VnuaTrainingService $service) {
+    abort_unless(app()->isLocal(), 404);
+
+    $validated = $request->validate([
+        'student_code' => ['required', 'string'],
+        'password' => ['required', 'string'],
+    ]);
+
+    try {
+        $result = $service->syncGrades(
+            studentCode: $validated['student_code'],
+            password: $validated['password']
+        );
+
+        $rows = $result['rows'] ?? [];
+
+        $studentModel = Student::where('student_code', $validated['student_code'])->first();
+
+        if ($studentModel && !empty($rows)) {
+            $service->saveGradesToDatabase($studentModel->id, $rows);
+
+            $service->updateStudentStats($studentModel->id, $result['semesters']);
+        }
+
+        $student = [
+            'userName' => data_get($result, 'current_user.userName'),
+            'FullName' => data_get($result, 'current_user.FullName'),
+            'principal' => data_get($result, 'current_user.principal'),
+            'roles' => data_get($result, 'current_user.roles'),
+        ];
+
+        $semesters = collect($result['semesters'] ?? []);
+
+        return view('vnua-sync-result', [
+            'student' => $student,
+            'semesters' => $semesters,
+            'rows' => collect($rows),
+            'is_saved_to_db' => $studentModel ? true : false,
+        ]);
+
+    } catch (\Throwable $e) {
+        return back()->withErrors([
+            'sync' => $e->getMessage(),
+        ])->withInput($request->except('password'));
+    }
+});

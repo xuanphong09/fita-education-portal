@@ -138,6 +138,10 @@ class Subject extends Model
         return $this->hasMany(SubjectEquivalent::class, 'equivalent_subject_id');
     }
 
+    public function grades(): HasMany
+    {
+        return $this->hasMany(StudentGrade::class, 'subject_id');
+    }
 
     public function scopeOrdered(Builder $query): Builder
     {

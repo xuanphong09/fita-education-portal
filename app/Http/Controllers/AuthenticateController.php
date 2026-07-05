@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Jobs\SendFirstSsoPasswordSetupEmail;
+use App\Jobs\SyncStudentGradesJob;
 use App\Models\Lecturer;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\VnuaTrainingService;
 use Exception;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Database\QueryException;
@@ -76,6 +78,15 @@ class AuthenticateController extends Controller
             $this->sendPasswordSetupLinkIfNeeded($user);
 
             Auth::login($user, true);
+            if ($user->user_type === 'student') {
+                $user->loadMissing('student');
+
+                $student = $user->student;
+
+                if ($student && filled($student->vnua_password)) {
+                    SyncStudentGradesJob::dispatch($student->id, false);
+                }
+            }
             $request->session()->regenerate();
 
             return redirect()->route('client.home');

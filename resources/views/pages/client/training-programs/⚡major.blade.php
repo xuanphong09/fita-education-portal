@@ -38,6 +38,9 @@ class extends Component {
     #[Url(as: 'loai')]
     public string $typeFilter = '';
 
+    #[Url(as: 'trang-thai')]
+    public string $statusFilter = '';
+
     public bool $isLockedProfile = false;
 
     public array $expanded = [];
@@ -135,6 +138,7 @@ class extends Component {
                     'kieu' => $this->viewMode !== 'semester' ? $this->viewMode : null,
                     'tim' => trim($this->search) !== '' ? $this->search : null,
                     'loai' => $this->typeFilter !== '' ? $this->typeFilter : null,
+                    'trang-thai' => $this->statusFilter !== '' ? $this->statusFilter : null,
                 ], fn ($value) => $value !== null);
 
                 $this->canonicalRedirectUrl = route('client.training-programs.major', $params);
@@ -193,6 +197,7 @@ class extends Component {
             'kieu' => $this->viewMode !== 'semester' ? $this->viewMode : null,
             'tim' => trim($this->search) !== '' ? $this->search : null,
             'loai' => $this->typeFilter !== '' ? $this->typeFilter : null,
+            'trang-thai' => $this->statusFilter !== '' ? $this->statusFilter : null,
         ];
 
         $this->redirectRoute('client.training-programs.major', array_filter($params, fn ($value) => $value !== null), navigate: true);
@@ -241,6 +246,11 @@ class extends Component {
         $this->expanded = [];
     }
 
+    public function updatedStatusFilter(): void
+    {
+        $this->expanded = [];
+    }
+
     public function setViewMode(string $mode): void
     {
         if (!in_array($mode, ['semester', 'group'], true)) {
@@ -261,8 +271,8 @@ class extends Component {
 
             return trim((string) ($model->getTranslation($field, $locale, false)
                 ?: $model->getTranslation($field, 'vi', false)
-                ?: $model->getTranslation($field, 'en', false)
-                ?: ''));
+                    ?: $model->getTranslation($field, 'en', false)
+                        ?: ''));
         }
 
         return trim((string) data_get($model, $field, '')) ?: '';
@@ -377,9 +387,6 @@ class extends Component {
         return $result;
     }
 
-
-
-
     protected function renderSubjectName(array $subject): string
     {
         $nameHtml = $this->highlightMatch((string) ($subject['name'] ?? ''));
@@ -459,15 +466,17 @@ class extends Component {
     public function semesterHeaders(): array
     {
         return [
-            ['key' => 'no', 'label' => __('No.'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'no', 'label' => __('No.'), 'sortable' => false, 'class' => 'w-16 px-1 text-center!'],
             ['key' => 'code', 'label' => __('Subject code'), 'sortable' => false, 'class' => 'w-16'],
             ['key' => 'name', 'label' => __('Subject name'), 'sortable' => false, 'class' => 'w-70'],
-            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-6'],
-            ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6'],
-            ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6'],
-            ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16'],
+            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-6 w-1 px-1 text-center!'],
+            ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6 w-1 px-2 text-center!'],
+            ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6 w-1 px-1 text-center!'],
+            ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16 ps-5! pe-1!'],
             ['key' => 'prerequisite_subjects_codes', 'label' => __('PS codes'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
+            ['key' => 'learning_status', 'label' => __('Trạng thái'), 'sortable' => false, 'class' => 'w-24 text-center ' . ($this->isLockedProfile ? '' : 'hidden')],
+            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'w-24 px-2 text-center '. ($this->isLockedProfile ? '' : 'hidden')],
             ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
         ];
     }
@@ -475,22 +484,35 @@ class extends Component {
     public function groupHeaders(): array
     {
         return [
-            ['key' => 'no', 'label' => __('No.'), 'sortable' => false, 'class' => 'w-16'],
-            ['key' => 'semester_no', 'label' => __('Semester'), 'sortable' => false],
-            ['key' => 'code', 'label' => __('Subject code'), 'sortable' => false, 'class' => 'w-16'],
-            ['key' => 'name', 'label' => __('Subject name'), 'sortable' => false, 'class' => 'w-70'],
-            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-1'],
-            ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6'],
-            ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6'],
+            ['key' => 'no', 'label' => __('No.'), 'sortable' => false, 'class' => 'w-16 px-1 text-center!'],
+            ['key' => 'semester_no', 'label' => __('Semester'),'class'=>'px-2', 'sortable' => false],
+            ['key' => 'code', 'label' => __('Subject code'), 'sortable' => false, 'class' => 'w-16 px-2'],
+            ['key' => 'name', 'label' => __('Subject name'), 'sortable' => false, 'class' => 'w-70 px-2'],
+            ['key' => 'credits', 'label' => __('Credits'), 'sortable' => false, 'class' => 'w-1 px-1 text-center!'],
+            ['key' => 'theory', 'label' => __('Theory'), 'sortable' => false, 'class' => 'w-6 px-2 text-center!'],
+            ['key' => 'practice', 'label' => __('Practice'), 'sortable' => false, 'class' => 'w-6 px-1 text-center!'],
             ['key' => 'prerequisite_subjects', 'label' => __('Prerequisite subjects'), 'sortable' => false, 'class' => 'w-16'],
             ['key' => 'prerequisite_subjects_codes', 'label' => __('PS codes'), 'sortable' => false, 'class' => 'w-6'],
             ['key' => 'type', 'label' => __('Type'), 'sortable' => false,],
-            ['key' => 'note', 'label' => __('Note'), 'sortable' => false],
+            ['key' => 'learning_status', 'label' => __('Trạng thái'), 'sortable' => false, 'class' => 'text-center! ' . ($this->isLockedProfile ? '' : 'hidden')],
+            ['key' => 'final_score', 'label' => __('Điểm'), 'sortable' => false, 'class' => 'px-1 text-center w-24! '. ($this->isLockedProfile ? '' : 'hidden')],
+            ['key' => 'note', 'label' => __('Note'), 'class'=>'px-1', 'sortable' => false],
         ];
     }
 
     public function with(): array
     {
+        $studentGrades = collect();
+        $user = Auth::user();
+
+        if ($user?->student) {
+            $studentGrades = $user->student
+                ->grades()
+                ->get()
+                ->groupBy('subject_id')
+                ->map(fn ($grades) => $this->pickBestGrade($grades));
+        }
+
         $publishedProgramQuery = fn ($query) => $query
             ->where('status', 'published')
             ->whereNotNull('published_at')
@@ -508,14 +530,12 @@ class extends Component {
         $programMajorOptions = ProgramMajor::query()
             ->where('is_active', true)
             ->where(function ($q) use ($publishedProgramQuery) {
-                // Trường hợp 1: Ngành có CTĐT gắn TRỰC TIẾP vào ngành (Không chia chuyên ngành)
                 $q->whereHas('trainingPrograms', function ($query) use ($publishedProgramQuery) {
                     $publishedProgramQuery($query);
                     if ($this->intakeId) {
                         $query->where('intake_id', $this->intakeId);
                     }
                 })
-                    // Trường hợp 2: HOẶC Ngành có CTĐT gắn vào các Chuyên ngành con của nó
                     ->orWhereHas('majors.trainingPrograms', function ($query) use ($publishedProgramQuery) {
                         $publishedProgramQuery($query);
                         if ($this->intakeId) {
@@ -587,6 +607,7 @@ class extends Component {
                 'nextSemesterTimeline' => null,
                 'programMajorOptions' => $programMajorOptions,
                 'majorOptions' => $majorOptions,
+                'studentGrades' => $studentGrades,
             ];
         }
 
@@ -625,7 +646,6 @@ class extends Component {
                 ->first();
         }
 
-        // Nếu chưa chọn chuyên ngành (hoặc chuyên ngành không có bản riêng), fallback về CTĐT chung của ngành.
         if (!$activeProgram && $programMajorId) {
             $activeProgram = (clone $activeProgramBaseQuery)
                 ->where('program_major_id', $programMajorId)
@@ -675,87 +695,154 @@ class extends Component {
                 $semesterCollection = $semesterCollection->where('semester_no', $this->semesterNo)->values();
             }
 
+            // --- ĐÂY LÀ HÀM HELPER CHUNG ĐỂ RENDER CHUẨN MỌI CHỖ TRANG CHÍNH ---
+            $buildSubjectData = function ($subject, $semester, $activeProgram, $studentGrades) {
+                $prerequisites = $subject->prerequisites
+                    ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                    ->values();
+
+                $prerequisiteNames = $prerequisites
+                    ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
+                    ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
+                    ->implode(', ');
+
+                $prerequisiteCodes = $prerequisites
+                    ->map(fn ($prerequisite) => (string) $prerequisite->code)
+                    ->filter(fn ($code) => trim($code) !== '')
+                    ->implode(', ');
+
+                $prerequisiteSearchText = $prerequisites
+                    ->flatMap(function ($prerequisite) {
+                        return [
+                            (string) $prerequisite->code,
+                            $this->localizedName($prerequisite),
+                            trim((string) $prerequisite->getTranslation('name', 'vi', false)),
+                            trim((string) $prerequisite->getTranslation('name', 'en', false)),
+                        ];
+                    })
+                    ->implode(' ');
+
+                // 1. Map các môn tương đương và tính điểm cho từng môn
+                $equivalentItems = $this->buildEquivalentItemsForSubject($subject)->map(function ($equivalent) use ($studentGrades) {
+                    $gradeInfo = $studentGrades->get($equivalent['id']);
+                    $learningStatus = 'pending';
+                    $finalScore = null;
+
+                    if ($gradeInfo) {
+                        $statusValue = (int) $gradeInfo->is_passed;
+                        $finalScore = $gradeInfo->score_10;
+
+                        $learningStatus = match($statusValue) {
+                            1  => 'passed',
+                            0  => ($finalScore !== null) ? 'failed' : 'no_grade',
+                            -1 => 'studying',
+                            default => 'pending'
+                        };
+                    }
+
+                    $equivalent['learning_status'] = $learningStatus;
+                    $equivalent['final_score'] = $finalScore;
+                    return $equivalent;
+                });
+
+                $subjectNameVi = trim((string) $subject->getTranslation('name', 'vi', false));
+                $subjectNameEn = trim((string) $subject->getTranslation('name', 'en', false));
+
+                // 2. Điểm của MÔN CHÍNH (Chỉ xét đúng id của nó)
+                $subjectIdsToCheck = array_merge([$subject->id], $equivalentItems->pluck('id')->toArray());
+
+                $gradeInfo = $this->pickBestGrade(
+                    collect($subjectIdsToCheck)
+                        ->map(fn ($id) => $studentGrades->get($id))
+                        ->filter()
+                );
+
+                $learningStatus = 'pending';
+                $finalScore = null;
+                $passedByEquivalentCode = null;
+
+                if ($gradeInfo) {
+                    $statusValue = (int) $gradeInfo->is_passed;
+                    $finalScore = $gradeInfo->score_10;
+
+                    $learningStatus = match($statusValue) {
+                        1  => 'passed',
+                        0  => ($finalScore !== null) ? 'failed' : 'no_grade',
+                        -1 => 'studying',
+                        default => 'pending'
+                    };
+
+                    if ($gradeInfo->subject_id !== $subject->id) {
+                        $equivalentMatch = $equivalentItems->firstWhere('id', $gradeInfo->subject_id);
+                        if ($equivalentMatch) {
+                            $passedByEquivalentCode = $equivalentMatch['code'];
+                        }
+                    }
+                }
+
+                return [
+                    'id' => (int) $subject->id,
+                    'code' => (string) $subject->code,
+                    'name' => $this->localizedName($subject),
+                    'syllabus_url' => $subject->syllabus_url,
+                    'syllabus_preview_url' => $subject->syllabus_preview_url,
+                    'credits' => (float) ($subject->credits ?? 0),
+                    'theory' => (float) ($subject->credits_theory ?? 0),
+                    'practice' => (float) ($subject->credits_practice ?? 0),
+                    'credits_theory' => (float) ($subject->credits_theory ?? 0),
+                    'credits_practice' => (float) ($subject->credits_practice ?? 0),
+                    'prerequisite_subjects' => $prerequisiteNames,
+                    'prerequisite_subjects_codes' => $prerequisiteCodes,
+                    'type' => (string) ($subject->pivot->type ?? 'required'),
+                    'note' => (string) ($subject->pivot->notes ?? ''),
+                    'order' => (int) ($subject->pivot->order ?? 0),
+                    'semester_no' => (int) $semester->semester_no,
+                    'group_name' => $subject->groupSubject
+                        ? $this->localizedName($subject->groupSubject)
+                        : __('Uncategorized Group'),
+                    'group_sort_order' => (int) ($subject->groupSubject->sort_order ?? 9999),
+                    'can_expand' => (int) $equivalentItems->count() > 0,
+                    'equivalents_count' => (int) $equivalentItems->count(),
+                    'equivalents' => $equivalentItems,
+                    'search_index' => $this->normalizeSearchText(implode(' ', [
+                        (string) $subject->code,
+                        $this->localizedName($subject),
+                        $subjectNameVi,
+                        $subjectNameEn,
+                        $prerequisiteSearchText,
+                        $equivalentItems->pluck('code')->implode(' '),
+                        $equivalentItems->pluck('name')->implode(' '),
+                    ])),
+                    'learning_status' => $learningStatus,
+                    'final_score' => $finalScore,
+                    'passed_by_equivalent_code' => $passedByEquivalentCode,
+                ];
+            };
+            // --- KẾT THÚC HÀM HELPER ---
+
             $semesterBlocks = $semesterCollection
-                ->map(function ($semester) use ($activeProgram, $normalizedKeyword) {
+                ->map(function ($semester) use ($activeProgram, $normalizedKeyword, $studentGrades, $buildSubjectData) {
                     $subjects = $semester->subjects
-                        ->map(function ($subject) use ($semester, $activeProgram) {
-                            $prerequisites = $subject->prerequisites
-                                ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
-                                ->values();
+                        ->map(function ($subject) use ($semester, $activeProgram, $studentGrades, $buildSubjectData) {
+                            return $buildSubjectData($subject, $semester, $activeProgram, $studentGrades);
+                        })
+                        ->when($this->statusFilter !== '', function ($collection) {
+                            return $collection->filter(function ($subject) {
+                                if ($this->statusFilter === 'pending') {
+                                    return $subject['learning_status'] === 'pending';
+                                }
 
-                            $prerequisiteNames = $prerequisites
-                                ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
-                                ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
-                                ->implode(', ');
+                                if ((string) $subject['learning_status'] === $this->statusFilter) {
+                                    return true;
+                                }
 
-                            $prerequisiteCodes = $prerequisites
-                                ->map(fn ($prerequisite) => (string) $prerequisite->code)
-                                ->filter(fn ($code) => trim($code) !== '')
-                                ->implode(', ');
-
-                            $prerequisiteSearchText = $prerequisites
-                                ->flatMap(function ($prerequisite) {
-                                    return [
-                                        (string) $prerequisite->code,
-                                        $this->localizedName($prerequisite),
-                                        trim((string) $prerequisite->getTranslation('name', 'vi', false)),
-                                        trim((string) $prerequisite->getTranslation('name', 'en', false)),
-                                    ];
-                                })
-                                ->implode(' ');
-
-//                            $equivalents = $subject->equivalents->values();
-//
-//                            $equivalentItems = $equivalents
-//                                ->map(fn ($equivalent) => [
-//                                    'id' => (int) $equivalent->id,
-//                                    'code' => (string) $equivalent->code,
-//                                    'name' => $this->localizedName($equivalent),
-//                                    'credits' => (float) ($equivalent->credits ?? 0),
-//                                    'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
-//                                    'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
-//                                ])
-//                                ->values();
-
-                            $equivalentItems = $this->buildEquivalentItemsForSubject($subject);
-
-                            $subjectNameVi = trim((string) $subject->getTranslation('name', 'vi', false));
-                            $subjectNameEn = trim((string) $subject->getTranslation('name', 'en', false));
-
-                            return [
-                                'id' => (int) $subject->id,
-                                'code' => (string) $subject->code,
-                                'name' => $this->localizedName($subject),
-                                'syllabus_url' => $subject->syllabus_url,
-                                'syllabus_preview_url' => $subject->syllabus_preview_url,
-                                'credits' => (float) ($subject->credits ?? 0),
-                                'theory' => (float) ($subject->credits_theory ?? 0),
-                                'practice' => (float) ($subject->credits_practice ?? 0),
-                                'credits_theory' => (float) ($subject->credits_theory ?? 0),
-                                'credits_practice' => (float) ($subject->credits_practice ?? 0),
-                                'prerequisite_subjects' => $prerequisiteNames,
-                                'prerequisite_subjects_codes' => $prerequisiteCodes,
-                                'type' => (string) ($subject->pivot->type ?? 'required'),
-                                'note' => (string) ($subject->pivot->notes ?? ''),
-                                'order' => (int) ($subject->pivot->order ?? 0),
-                                'semester_no' => (int) $semester->semester_no,
-                                'group_name' => $subject->groupSubject
-                                    ? $this->localizedName($subject->groupSubject)
-                                    : __('Uncategorized Group'),
-                                'group_sort_order' => (int) ($subject->groupSubject->sort_order ?? 9999),
-                                'can_expand' => (int) $equivalentItems->count() > 0,
-                                'equivalents_count' => (int) $equivalentItems->count(),
-                                'equivalents' => $equivalentItems,
-                                'search_index' => $this->normalizeSearchText(implode(' ', [
-                                    (string) $subject->code,
-                                    $this->localizedName($subject),
-                                    $subjectNameVi,
-                                    $subjectNameEn,
-                                    $prerequisiteSearchText,
-                                    $equivalentItems->pluck('code')->implode(' '),
-                                    $equivalentItems->pluck('name')->implode(' '),
-                                ])),
-                            ];
+                                foreach ($subject['equivalents'] as $eq) {
+                                    if ((string) $eq['learning_status'] === $this->statusFilter) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
                         })
                         ->when($normalizedKeyword !== '', function ($collection) use ($normalizedKeyword) {
                             return $collection->filter(function ($subject) use ($normalizedKeyword) {
@@ -783,7 +870,7 @@ class extends Component {
                 })
                 ->values();
 
-            if ($normalizedKeyword !== '') {
+            if ($normalizedKeyword !== '' || $this->statusFilter !== '') {
                 $semesterBlocks = $semesterBlocks->filter(fn ($block) => $block['subjects']->isNotEmpty())->values();
             }
 
@@ -824,7 +911,70 @@ class extends Component {
             'nextSemesterTimeline' => $nextSemesterTimeline,
             'programMajorOptions' => $programMajorOptions,
             'majorOptions' => $majorOptions,
+            'studentGrades' => $studentGrades,
         ];
+    }
+
+    public function getDegreeClassification(?float $gpa4): string
+    {
+        if ($gpa4 === null) return __('Chưa có');
+        if ($gpa4 >= 3.6) return __('Xuất sắc');
+        if ($gpa4 >= 3.2) return __('Giỏi');
+        if ($gpa4 >= 2.5) return __('Khá');
+        if ($gpa4 >= 2.0) return __('Trung bình');
+        return __('Chưa đạt');
+    }
+
+    protected function gradeNumericScore($grade): float
+    {
+        if (!$grade) {
+            return -1;
+        }
+
+        if (is_numeric($grade->score_10)) {
+            return (float) $grade->score_10;
+        }
+
+        if (is_numeric($grade->final_score)) {
+            return (float) $grade->final_score;
+        }
+
+        return -1;
+    }
+
+    protected function pickBestGrade($grades)
+    {
+        $grades = collect($grades)->filter();
+
+        if ($grades->isEmpty()) {
+            return null;
+        }
+
+        // 1. Ưu tiên các lần đã đạt, lấy điểm cao nhất.
+        $passed = $grades
+            ->filter(fn ($grade) => (int) $grade->is_passed === 1)
+            ->sortByDesc(fn ($grade) => $this->gradeNumericScore($grade))
+            ->values();
+
+        if ($passed->isNotEmpty()) {
+            return $passed->first();
+        }
+
+        // 2. Nếu chưa có lần đạt, nhưng đang học lại thì ưu tiên hiển thị "Đang học".
+        $studying = $grades
+            ->filter(fn ($grade) => (int) $grade->is_passed === -1)
+            ->sortByDesc('academic_semester')
+            ->values();
+
+        if ($studying->isNotEmpty()) {
+            return $studying->first();
+        }
+
+        // 3. Nếu toàn trượt, lấy lần có điểm cao nhất.
+        return $grades
+            ->sortByDesc(fn ($grade) => $this->gradeNumericScore($grade))
+            ->values()
+            ->first();
     }
 };
 ?>
@@ -861,19 +1011,29 @@ class extends Component {
             this.ensureState(id);
             this.openStates[id] = !this.openStates[id];
             this.saveToLocal();
+        },
+
+        getDegreeClassificationText(gpa4) {
+             if (gpa4 === null) return 'Chưa có';
+             if (gpa4 >= 3.6) return 'Xuất sắc';
+             if (gpa4 >= 3.2) return 'Giỏi';
+             if (gpa4 >= 2.5) return 'Khá';
+             if (gpa4 >= 2.0) return 'Trung bình';
+             return 'Chưa đạt';
+        },
+
+        getDegreeClassificationClass(classification) {
+             switch(classification) {
+                 case 'Xuất sắc': return 'badge-secondary';
+                 case 'Giỏi': return 'badge-info';
+                 case 'Khá': return 'badge-success';
+                 case 'Trung bình': return 'badge-warning';
+                 default: return 'badge-error';
+             }
         }
     }">
     <x-slot:title>{{ __('Training Programs') }} - {{!$this->selectedMajorSlug?__('Major'): ($activeProgram->intake->year_number>68?__('Area of specialization'):__('Specialized')) }} {{ $this->specializationLabel }}</x-slot:title>
 
-{{--    <x-slot:breadcrumb>--}}
-{{--        <a href="{{ route('client.training-programs.index') }}" class="hover:text-fita whitespace-nowrap">{{ __('Training Programs') }}</a>--}}
-{{--        <span><x-icon name="s-chevron-right" class="w-4 h-4" /></span>--}}
-{{--        <span class="whitespace-nowrap line-clamp-1">{{ $this->majorLabel }}</span>--}}
-{{--    </x-slot:breadcrumb>--}}
-
-{{--    <x-slot:titleBreadcrumb>--}}
-{{--        <span class="text-[35px]/[44px]">CTĐT chuyên ngành {{ $this->majorLabel }}</span>--}}
-{{--    </x-slot:titleBreadcrumb>--}}
     <div class="w-full">
         <div class="bg-white px-6 py-6 relative overflow-hidden min-h-20">
             <div class="absolute inset-0 z-0">
@@ -887,7 +1047,6 @@ class extends Component {
             <div class="relative z-20">
                 <h2 class="text-center text-[35px]/[44px] font-semibold uppercase line-clamp-2">
                     {{ $this->specializationLabel ? !$this->selectedMajorSlug?__('Major training program'). ' ' . $this->specializationLabel : ($activeProgram->intake->year_number>68?__('Area of specialization training program'):__('Specialized training program ')) . ' ' . $this->specializationLabel : __('Training Programs') }}
-{{--                    {{$activeProgram->intake->year_number}}--}}
                 </h2>
                 <div class="flex items-center gap-1 text-gray-500 justify-center w-full">
                     <a href="{{route('client.home')}}" wire:navigate class="whitespace-nowrap hover:text-fita font-semibold text-slate-700">{{__('Home page')}}</a>
@@ -1005,6 +1164,24 @@ class extends Component {
                         />
                     </div>
 
+                    <div class="w-full sm:w-50">
+                        <x-select
+                            label="{{__('Filter by status')}}"
+                            wire:model.live="statusFilter"
+                            :options="[
+                                ['value' => '', 'label' => __('All statuses')],
+                                ['value' => 'passed', 'label' => __('Pass')],
+                                ['value' => 'failed', 'label' => __('Fail')],
+                                ['value' => 'no_grade', 'label' => __('Not yet graded')],
+                                ['value' => 'studying', 'label' => __('Currently studying')],
+                                ['value' => 'pending', 'label' => __('Not yet studied')],
+                            ]"
+                            option-value="value"
+                            option-label="label"
+                            :disabled="!$activeProgram || !$this->isLockedProfile"
+                        />
+                    </div>
+
                     <div class="w-full sm:flex-1 sm:min-w-60">
                         <x-input
                             label="{{ __('Search by subject name/code') }}"
@@ -1043,124 +1220,432 @@ class extends Component {
                     $majorCode = $activeProgram->major?->programMajor?->code
                         ?: $activeProgram->programMajor?->code
                         ?: 'N/A';
+
+                    $student = Auth::user()?->student;
+                    $gpa_4 = $student?->gpa_4;
+                    $gpa_10 = $student?->gpa_10;
+                    $total_credits_earned = $student?->total_credits_earned ?? 0;
+                    $last_academic_stats_updated_at = $student?->last_academic_stats_updated_at?->format('H:i d/m/Y');
+                    $total_program_credits = $activeProgram->total_credits > 0 ? $activeProgram->total_credits : 1;
+
+                    $classification = $this->getDegreeClassification($gpa_4);
+                    $badgeClass = match($classification) {
+                        'Xuất sắc', 'Excellent' => 'badge-secondary',
+                        'Giỏi', 'Good' => 'badge-info',
+                        'Khá', 'Fair' => 'badge-success',
+                        'Trung bình', 'Average' => 'badge-warning',
+                        default => 'badge-error'
+                    };
+                    $progressPercent = min(100, round(($total_credits_earned / $total_program_credits) * 100, 1));
                 @endphp
 
-                <x-card shadow>
-                    <div class="flex flex-wrap items-start justify-between gap-3">
-                        <div>
+                <div x-data="{
+                    showTargetCalc: false,
+
+                    totalCr: @js((float) $total_program_credits),
+                    earnedCr: @js((float) $total_credits_earned),
+                    currentGpa4: @js((float) ($gpa_4 ?? 0)),
+
+                    targetRows: [
+                        { label: 'Trung bình', target: 2.0 },
+                        { label: 'Khá', target: 2.5 },
+                        { label: 'Giỏi', target: 3.2 },
+                        { label: 'Xuất sắc', target: 3.6 },
+                    ],
+
+                    get remainingCr() {
+                        return Math.max(0, this.totalCr - this.earnedCr);
+                    },
+
+                    ceil2(value) {
+                        return Math.ceil(Number(value) * 100) / 100;
+                    },
+
+                    requiredScaleFromGpa4(gpa) {
+                        gpa = Number(gpa);
+
+                        if (!Number.isFinite(gpa)) {
+                            return {
+                                letter: '—',
+                                score10: '—',
+                                note: 'Không xác định'
+                            };
+                        }
+
+                        if (gpa <= 1.0) {
+                            return {
+                                letter: 'D',
+                                score10: '4.0 - 4.9',
+                                note: 'Tối thiểu mức D'
+                            };
+                        }
+
+                        if (gpa <= 1.5) {
+                            return {
+                                letter: 'D+',
+                                score10: '5.0 - 5.4',
+                                note: 'Tối thiểu mức D+'
+                            };
+                        }
+
+                        if (gpa <= 2.0) {
+                            return {
+                                letter: 'C',
+                                score10: '5.5 - 6.4',
+                                note: 'Tối thiểu mức C'
+                            };
+                        }
+
+                        if (gpa <= 2.5) {
+                            return {
+                                letter: 'C+',
+                                score10: '6.5 - 6.9',
+                                note: 'Tối thiểu mức C+'
+                            };
+                        }
+
+                        if (gpa <= 3.0) {
+                            return {
+                                letter: 'B',
+                                score10: '7.0 - 7.9',
+                                note: 'Tối thiểu mức B'
+                            };
+                        }
+
+                        if (gpa <= 3.5) {
+                            return {
+                                letter: 'B+',
+                                score10: '8.0 - 8.4',
+                                note: 'Tối thiểu mức B+'
+                            };
+                        }
+
+                        return {
+                            letter: 'A',
+                            score10: '8.5 - 10',
+                            note: 'Tối thiểu mức A'
+                        };
+                    },
+
+                    calcTarget(targetGpa) {
+                        if (this.remainingCr === 0) {
+                            return this.currentGpa4 >= targetGpa
+                                ? {
+                                    gpa4: '—',
+                                    letter: '—',
+                                    score10: '—',
+                                    note: 'Đã đạt'
+                                }
+                                : {
+                                    gpa4: '—',
+                                    letter: '—',
+                                    score10: '—',
+                                    note: 'Không đạt'
+                                };
+                        }
+
+                        let needed = (
+                            (targetGpa * this.totalCr) -
+                            (this.currentGpa4 * this.earnedCr)
+                        ) / this.remainingCr;
+
+                        if (needed > 4.0) {
+                            return {
+                                gpa4: 'Bất khả thi',
+                                letter: '—',
+                                score10: '—',
+                                note: 'Cần vượt quá 4.00'
+                            };
+                        }
+
+                        if (needed <= 0) {
+                            return {
+                                gpa4: 'Đã đủ GPA',
+                                letter: '—',
+                                score10: 'Chỉ cần qua môn',
+                                note: 'Không cần tăng thêm GPA'
+                            };
+                        }
+
+                        let neededRounded = this.ceil2(needed);
+                        let scale = this.requiredScaleFromGpa4(neededRounded);
+
+                        return {
+                            gpa4: neededRounded.toFixed(2),
+                            letter: scale.letter,
+                            score10: scale.score10,
+                            note: scale.note
+                        };
+                    }
+                }">
+
+                    <x-card shadow>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
                             <h2 class="text-2xl font-bold">{{ $programTitle }}</h2>
-                            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 md:text-[16px] text-gray-800">
-                                <div><span class="font-medium">{{__('Level of Education')}}:</span> {{ $programLevel }}</div>
-                                <div><span class="font-medium">{{__('Code')}}:</span> {{ $majorCode }}</div>
-                                <div><span class="font-medium">{{__('Type of Education')}}:</span> {{ $programType }}</div>
-                                <div><span class="font-medium">{{__('Duration time')}}:</span> {{ $programDuration }}</div>
-                                <div class="sm:col-span-2"><span class="font-medium">{{__('Language')}}:</span> {{ $programLanguage }}</div>
+                            <div class="flex flex-wrap gap-2 md:text-[16px] lg:justify-end justify-start mb-4">
+                                <x-badge value="Phiên bản: {{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
+                                <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits')}}" class="badge-outline badge-md" />
+                                @if($currentSemesterTimeline)
+                                    <x-button
+                                        label="{{ __('Current semester') }}"
+                                        icon="o-calendar-days"
+                                        class="btn-outline btn-xs"
+                                        wire:click="openSemesterTimelineModal"
+                                        spinner="openSemesterTimelineModal"
+                                    />
+                                @endif
                             </div>
                         </div>
+                        <div class="grid lg:grid-cols-2 grid-cols-1 gap-3">
+                            <div>
+                                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-15 md:text-[16px] text-gray-800 font-medium">
+                                    <div><span class="font-normal">{{__('Level of Education')}}:</span> {{ $programLevel }}</div>
+                                    <div><span class="font-normal">{{__('Code')}}:</span> {{ $majorCode }}</div>
+                                    <div><span class="font-normal">{{__('Type of Education')}}:</span> {{ $programType }}</div>
+                                    <div><span class="font-normal">{{__('Duration time')}}:</span> {{ $programDuration }}</div>
+                                    <div class="sm:col-span-2"><span class="font-normal">{{__('Language')}}:</span> {{ $programLanguage }}</div>
+                                </div>
+                            </div>
+                            <div class="w-full lg:w-auto mt-4 lg:mt-0">
+                                @if($gpa_4 !== null)
+                                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 shadow-sm w-full lg:min-w-[350px]">
+                                        <div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
+                                            <h3 class="font-bold text-gray-700">{{ __('Kết quả học tập tích lũy') }}</h3>
+                                            <x-button @click="showTargetCalc = !showTargetCalc" class="btn btn-xs btn-outline btn-primary" icon="o-calculator">
+                                                {{ __('Tính điểm') }}
+                                            </x-button>
+                                        </div>
 
-                        <div class="flex flex-wrap gap-2 md:text-[16px]">
-                            <x-badge value="{{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
-                            <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits ')}}" class="badge-outline badge-md" />
-                            @if($currentSemesterTimeline)
-                                <x-button
-                                    label="{{ __('Current semester') }}"
-                                    icon="o-calendar-days"
-                                    class="btn-outline btn-xs"
-                                    wire:click="openSemesterTimelineModal"
-                                    spinner="openSemesterTimelineModal"
-                                />
-                            @endif
+                                        <div class="grid grid-cols-3 gap-x-2 gap-y-3 text-sm md:text-base">
+                                            <div>
+                                                <div class="text-gray-500 text-sm font-normal">{{ __('GPA Hệ 4') }}</div>
+                                                <div class="font-bold text-xl text-fita2">{{ $gpa_4 }}</div>
+                                            </div>
+                                            <div>
+                                                <div class="text-gray-500 text-sm font-normal">{{ __('GPA Hệ 10') }}</div>
+                                                <div class="font-bold text-xl text-fita2">{{ $gpa_10 }}</div>
+                                            </div>
+                                            <div>
+                                                <div class="text-gray-500 text-sm font-normal">{{ __('Xếp loại') }}</div>
+                                                <x-badge value="{{ $classification }}" class="{{ $badgeClass }} text-white font-bold" />
+                                            </div>
+                                            <div class="col-span-3">
+                                                <div class="flex justify-between text-gray-600 text-sm font-medium">
+                                                    <span>{{ __('Tiến độ tín chỉ') }} ({{ $total_credits_earned }} / {{ Subject::formatCredit($activeProgram->total_credits) }})</span>
+                                                    <span class="font-bold text-fita2">{{ $progressPercent }}%</span>
+                                                </div>
+                                                <progress class="progress progress-success w-full h-2.5" value="{{ $progressPercent }}" max="100"></progress>
+                                            </div>
+                                        </div>
+
+                                        <div x-show="showTargetCalc" x-collapse>
+                                            <div class="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-100 text-sm">
+                                                <div class="font-semibold text-blue-800 mb-3">
+                                                    Mục tiêu tốt nghiệp cho
+                                                    <span class="font-bold underline" x-text="remainingCr"></span>
+                                                    tín chỉ còn lại:
+                                                </div>
+
+                                                <div class="overflow-x-auto rounded-md border border-blue-100 bg-white">
+                                                    <table class="table table-md">
+                                                        <thead>
+                                                        <tr class="bg-blue-50 text-gray-700">
+                                                            <th>Mục tiêu</th>
+                                                            <th class="text-center">TB hệ 4 cần đạt</th>
+                                                            <th class="text-center">Điểm chữ</th>
+                                                            <th class="text-center">Dải điểm hệ 10</th>
+{{--                                                            <th>Ghi chú</th>--}}
+                                                        </tr>
+                                                        </thead>
+
+                                                        <tbody>
+                                                        <template x-for="row in targetRows" :key="row.target">
+                                                            <tr>
+                                                                <td class="font-semibold">
+                                                                    <span x-text="row.label"></span>
+                                                                    <span class="text-gray-500">
+                                                                        (<span x-text="row.target.toFixed(2)"></span>)
+                                                                    </span>
+                                                                </td>
+
+                                                                <td class="text-center font-bold text-fita2">
+                                                                    <span x-text="calcTarget(row.target).gpa4"></span>
+                                                                </td>
+
+                                                                <td class="text-center font-bold">
+                                                                    <span x-text="calcTarget(row.target).letter"></span>
+                                                                </td>
+
+                                                                <td class="text-center">
+                                                                    <span x-text="calcTarget(row.target).score10"></span>
+                                                                </td>
+
+{{--                                                                <td class="text-gray-500 text-sm">--}}
+{{--                                                                    <span x-text="calcTarget(row.target).note"></span>--}}
+{{--                                                                </td>--}}
+                                                            </tr>
+                                                        </template>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+
+                                                <div class="mt-2 text-[16px] text-gray-500 italic leading-tight">
+                                                    * Đây là điểm trung bình tối thiểu của phần tín chỉ còn lại.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        @if($last_academic_stats_updated_at)
+                                            <div class="text-right text-[14px] text-gray-400 italic mt-1">
+                                                {{__('Cập nhật lần cuối: ')}} {{ $last_academic_stats_updated_at }}
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endif
+                            </div>
                         </div>
-                    </div>
-                </x-card>
+                    </x-card>
 
-                @if($currentSemesterTimeline)
-                    @php
-                        $title = __('Semester timeline') .' - ' . $activeProgram->intake->name;
+                    @if($currentSemesterTimeline)
+                        @php
+                            $title = __('Semester timeline') .' - ' . $activeProgram->intake->name;
 
-                        if ($this->majorLabel && $this->specializationLabel) {
-                            if ($this->majorLabel === $this->specializationLabel) {
-                                $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
-                            } else {
-                                $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
-                                if($activeProgram->intake->year_number>68){
-                                    $title .= ' - ' . __('Area of specialization') . ' ' . $this->specializationLabel;
-                                }
-                                else{
-                                    $title .= ' - ' . __('Specialization') . ' ' . $this->specializationLabel;
+                            if ($this->majorLabel && $this->specializationLabel) {
+                                if ($this->majorLabel === $this->specializationLabel) {
+                                    $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
+                                } else {
+                                    $title .= ' - ' . __('Major') . ' ' . $this->majorLabel;
+                                    if($activeProgram->intake->year_number>68){
+                                        $title .= ' - ' . __('Area of specialization') . ' ' . $this->specializationLabel;
+                                    }
+                                    else{
+                                        $title .= ' - ' . __('Specialization') . ' ' . $this->specializationLabel;
+                                    }
                                 }
                             }
-                        }
-                    @endphp
-                    <x-modal wire:model="showSemesterTimelineModal" :title="$title"
-                         separator class="modalDisplaySemesterTimeline"
-                    >
-                        @php
-                            $buildSemesterRows = function ($semester) use ($activeProgram) {
-                                if (!$semester) {
-                                    return collect();
-                                }
-
-                                return collect($semester->subjects ?? [])
-                                    ->sortBy(fn ($subject) => (int) ($subject->pivot->order ?? 0))
-                                    ->values()
-                                    ->map(function ($subject, $index) use ($activeProgram) {
-                                        $prerequisites = collect($subject->prerequisites ?? [])
-                                            ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
-                                            ->values();
-
-                                        $prerequisiteNames = $prerequisites
-                                            ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
-                                            ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
-                                            ->implode(', ');
-
-                                        $prerequisiteCodes = $prerequisites
-                                            ->map(fn ($prerequisite) => (string) $prerequisite->code)
-                                            ->filter(fn ($code) => trim($code) !== '')
-                                            ->implode(', ');
-//                                        $equivalents = collect($subject->equivalents ?? [])->values();
-//
-//                                        $equivalentItems = $equivalents
-//                                            ->map(fn ($equivalent) => [
-//                                                'id' => (int) $equivalent->id,
-//                                                'code' => (string) $equivalent->code,
-//                                                'name' => $this->localizedName($equivalent),
-//                                                'credits' => (float) ($equivalent->credits ?? 0),
-//                                                'credits_theory' => (float) ($equivalent->credits_theory ?? 0),
-//                                                'credits_practice' => (float) ($equivalent->credits_practice ?? 0),
-//                                            ])
-//                                            ->values();
-                                        $equivalentItems = $this->buildEquivalentItemsForSubject($subject);
-
-                                        return [
-                                            'id' => (int) $subject->id,
-                                            'row_index' => $index + 1,
-                                            'code' => (string) $subject->code,
-                                            'name' => $this->localizedName($subject),
-                                            'syllabus_url' => $subject->syllabus_url,
-                                            'syllabus_preview_url' => $subject->syllabus_preview_url,
-                                            'credits' => (float) ($subject->credits ?? 0),
-                                            'theory' => (float) ($subject->credits_theory ?? 0),
-                                            'practice' => (float) ($subject->credits_practice ?? 0),
-                                            'prerequisite_subjects' => $prerequisiteNames,
-                                            'prerequisite_subjects_codes' => $prerequisiteCodes,
-                                            'type' => (string) ($subject->pivot->type ?? 'required'),
-                                            'note' => (string) ($subject->pivot->notes ?? ''),
-                                            'can_expand' => (int) $equivalentItems->count() > 0,
-                                            'equivalents_count' => (int) $equivalentItems->count(),
-                                            'equivalents' => $equivalentItems,
-                                        ];
-                                    });
-                            };
-
-                            $currentRows = $buildSemesterRows($currentSemesterTimeline);
-                            $nextRows = $buildSemesterRows($nextSemesterTimeline);
                         @endphp
+                        <x-modal wire:model="showSemesterTimelineModal" :title="$title"
+                                 separator class="modalDisplaySemesterTimeline"
+                        >
+                            @php
+                                $buildSemesterRows = function ($semester) use ($activeProgram, $studentGrades) {
+                                    if (!$semester) {
+                                        return collect();
+                                    }
 
-                        <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[65vh] overflow-y-auto pr-1">
-                            <div class="rounded-md border border-gray-200">
-                                <div class="flex flex-wrap items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-modal-current')">
-                                    <div class="flex items-center gap-2">
+                                    return collect($semester->subjects ?? [])
+                                        ->sortBy(fn ($subject) => (int) ($subject->pivot->order ?? 0))
+                                        ->values()
+                                        ->map(function ($subject, $index) use ($activeProgram, $studentGrades) {
+                                            $prerequisites = collect($subject->prerequisites ?? [])
+                                                ->filter(fn ($prerequisite) => (int) ($prerequisite->pivot->training_program_id ?? 0) === (int) $activeProgram->id)
+                                                ->values();
+
+                                            $prerequisiteNames = $prerequisites
+                                                ->map(fn ($prerequisite) => $this->localizedName($prerequisite))
+                                                ->filter(fn ($name) => trim((string) $name) !== '' && $name !== 'N/A')
+                                                ->implode(', ');
+
+                                            $prerequisiteCodes = $prerequisites
+                                                ->map(fn ($prerequisite) => (string) $prerequisite->code)
+                                                ->filter(fn ($code) => trim($code) !== '')
+                                                ->implode(', ');
+
+                                            $equivalentItems = $this->buildEquivalentItemsForSubject($subject)->map(function ($equivalent) use ($studentGrades) {
+                                                $gradeInfo = $studentGrades->get($equivalent['id']);
+                                                $learningStatus = 'pending';
+                                                $finalScore = null;
+
+                                                if ($gradeInfo) {
+                                                    $statusValue = (int) $gradeInfo->is_passed;
+                                                    $finalScore = $gradeInfo->score_10;
+
+                                                    $learningStatus = match($statusValue) {
+                                                        1  => 'passed',
+                                                        0  => ($finalScore !== null) ? 'failed' : 'no_grade',
+                                                        -1 => 'studying',
+                                                        default => 'pending'
+                                                    };
+                                                }
+
+                                                $equivalent['learning_status'] = $learningStatus;
+                                                $equivalent['final_score'] = $finalScore;
+                                                return $equivalent;
+                                            });
+
+                                            // TÌM ĐIỂM CHÍNH VÀ TƯƠNG ĐƯƠNG CHO MODAL
+                                            $gradeInfo = null;
+                                            $subjectIdsToCheck = array_merge([$subject->id], $equivalentItems->pluck('id')->toArray());
+
+                                            foreach ($subjectIdsToCheck as $id) {
+                                                $grade = $studentGrades->get($id);
+                                                if ($grade) {
+                                                    if ($grade->is_passed == 1) {
+                                                        $gradeInfo = $grade;
+                                                        break;
+                                                    }
+                                                    if (!$gradeInfo) {
+                                                        $gradeInfo = $grade;
+                                                    } elseif ($grade->is_passed == -1 && $gradeInfo->is_passed == 0) {
+                                                        $gradeInfo = $grade;
+                                                    }
+                                                }
+                                            }
+
+                                            $learningStatus = 'pending';
+                                            $finalScore = null;
+                                            $passedByEquivalentCode = null;
+
+                                            if ($gradeInfo) {
+                                                $statusValue = (int) $gradeInfo->is_passed;
+                                                $finalScore = $gradeInfo->score_10;
+
+                                                $learningStatus = match($statusValue) {
+                                                    1  => 'passed',
+                                                    0  => ($finalScore !== null) ? 'failed' : 'no_grade',
+                                                    -1 => 'studying',
+                                                    default => 'pending'
+                                                };
+
+                                                if ($gradeInfo->subject_id !== $subject->id) {
+                                                    $equivalentMatch = $equivalentItems->firstWhere('id', $gradeInfo->subject_id);
+                                                    if ($equivalentMatch) {
+                                                        $passedByEquivalentCode = $equivalentMatch['code'];
+                                                    }
+                                                }
+                                            }
+
+                                            return [
+                                                'id' => (int) $subject->id,
+                                                'row_index' => $index + 1,
+                                                'code' => (string) $subject->code,
+                                                'name' => $this->localizedName($subject),
+                                                'syllabus_url' => $subject->syllabus_url,
+                                                'syllabus_preview_url' => $subject->syllabus_preview_url,
+                                                'credits' => (float) ($subject->credits ?? 0),
+                                                'theory' => (float) ($subject->credits_theory ?? 0),
+                                                'practice' => (float) ($subject->credits_practice ?? 0),
+                                                'prerequisite_subjects' => $prerequisiteNames,
+                                                'prerequisite_subjects_codes' => $prerequisiteCodes,
+                                                'type' => (string) ($subject->pivot->type ?? 'required'),
+                                                'note' => (string) ($subject->pivot->notes ?? ''),
+                                                'can_expand' => (int) $equivalentItems->count() > 0,
+                                                'equivalents_count' => (int) $equivalentItems->count(),
+                                                'equivalents' => $equivalentItems,
+                                                'learning_status' => $learningStatus,
+                                                'final_score' => $finalScore,
+                                                'passed_by_equivalent_code' => $passedByEquivalentCode,
+                                            ];
+                                        });
+                                };
+
+                                $currentRows = $buildSemesterRows($currentSemesterTimeline);
+                                $nextRows = $buildSemesterRows($nextSemesterTimeline);
+                            @endphp
+
+                            <div class="space-y-4 md:text-[16px] py-0 px-1 max-h-[65vh] overflow-y-auto pr-1">
+                                <div class="rounded-md border border-gray-200">
+                                    <div class="flex flex-wrap items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-modal-current')">
+                                        <div class="flex items-center gap-2">
                                         <span class="tooltip tooltip-right z-100 font-medium" x-bind:data-tip="isOpen('table-semester-modal-current') ? 'Thu gọn' : 'Mở rộng'">
                                             <x-icon
                                                 name="o-chevron-down"
@@ -1168,22 +1653,21 @@ class extends Component {
                                                 x-bind:class="isOpen('table-semester-modal-current') ? 'rotate-180' : ''"
                                             />
                                         </span>
-                                        <h3 class="text-md md:text-lg font-semibold select-none">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} {{ data_get($currentSemesterTimeline, 'semester_name')?'('.data_get($currentSemesterTimeline, 'semester_name').')':'' }}</h3>
-{{--                                        <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($currentSemesterTimeline) ?: __('') }}</div>--}}
+                                            <h3 class="text-md md:text-lg font-semibold select-none">{{ __('Current semester') }}: {{__('Semester')}} {{ data_get($currentSemesterTimeline, 'semester_no') }} {{ data_get($currentSemesterTimeline, 'semester_name')?'('.data_get($currentSemesterTimeline, 'semester_name').')':'' }}</h3>
+                                        </div>
+                                        <span
+                                            class="text-md">{{ count(data_get($currentSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
                                     </div>
-                                    <span
-                                        class="text-md">{{ count(data_get($currentSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($currentSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
-                                </div>
 
-                                <div class="overflow-x-auto rounded border border-base-300 bg-white transition-all duration-300" x-show="isOpen('table-semester-modal-current')" x-collapse>
-                                    <x-table
-                                        :headers="$this->semesterHeaders()"
-                                        :rows="$currentRows"
-                                        wire:model="expanded"
-                                        expandable
-                                        expandable-condition="can_expand"
-                                        striped
-                                        class="bg-white
+                                    <div class="overflow-x-auto rounded border border-base-300 bg-white transition-all duration-300" x-show="isOpen('table-semester-modal-current')" x-collapse>
+                                        <x-table
+                                            :headers="$this->semesterHeaders()"
+                                            :rows="$currentRows"
+                                            wire:model="expanded"
+                                            expandable
+                                            expandable-condition="can_expand"
+                                            striped
+                                            class="bg-white
                                         md:text-[16px]!
                                         [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
                                         [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
@@ -1191,145 +1675,6 @@ class extends Component {
                                         [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
                                         [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
                                     "
-                                    >
-                                        @scope('cell_no', $subject)
-                                        <span class="select-none">{{ $subject['row_index'] }}</span>
-                                        @endscope
-
-                                        @scope('cell_code', $subject)
-                                        <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
-                                        @endscope
-
-                                        @scope('cell_name', $subject)
-                                        {!! $this->renderSubjectName($subject) !!}
-                                        @endscope
-
-                                        @scope('cell_credits', $subject)
-                                        {{ Subject::formatCredit($subject['credits']) }}
-                                        @endscope
-
-                                        @scope('cell_theory', $subject)
-                                        {{ Subject::formatCredit($subject['theory']) }}
-                                        @endscope
-
-                                        @scope('cell_practice', $subject)
-                                        {{ Subject::formatCredit($subject['practice']) }}
-                                        @endscope
-
-                                        @scope('cell_prerequisite_subjects', $subject)
-                                        {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
-                                        @endscope
-
-                                        @scope('cell_prerequisite_subjects_codes', $subject)
-                                        {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
-                                        @endscope
-
-                                        @scope('cell_type', $subject)
-                                        @php
-                                            $typeLabel = match ($subject['type']) {
-                                                'required' => __('Required'),
-                                                'elective' => __('Elective'),
-                                                'pcbb' => __('Hardware Required'),
-                                                default => strtoupper((string) $subject['type']),
-                                            };
-
-                                            $typeClass = match ($subject['type']) {
-                                                'required' => 'badge-error',
-                                                'elective' => 'badge-success',
-                                                'pcbb' => 'badge-warning',
-                                                default => 'badge-neutral',
-                                            };
-                                        @endphp
-                                        <x-badge
-                                            :value="$typeLabel"
-                                            class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
-                                        />
-                                        @endscope
-
-                                        @scope('cell_note', $subject)
-                                        {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
-                                        @endscope
-
-                                        @scope('expansion', $subject)
-                                        @if(($subject['equivalents_count'] ?? 0) > 0)
-                                            <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
-                                                <div class="font-semibold mb-3">
-                                                    {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
-                                                </div>
-                                                <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                    <table class="table md:text-[16px]">
-                                                        <thead>
-                                                        <tr>
-                                                            <th class="w-14">{{ __('No.') }}</th>
-                                                            <th>{{ __('Subject code') }}</th>
-                                                            <th>{{ __('Subject name') }}</th>
-                                                            <th class="w-24">{{ __('Credits') }}</th>
-                                                            <th class="w-20">{{ __('Theory') }}</th>
-                                                            <th class="w-20">{{ __('Practice') }}</th>
-                                                        </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                        @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
-                                                            <tr>
-                                                                <td>{{ $index + 1 }}</td>
-                                                                <td class="font-semibold">{{ $equivalent['code'] }}</td>
-                                                                <td>{{ $equivalent['name'] }}</td>
-                                                                <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
-                                                                <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
-                                                                <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        @else
-                                            <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
-                                        @endif
-                                        @endscope
-
-                                        <x-slot:empty>
-                                            <div class="py-3 text-center text-gray-500">{{ __('No subjects.') }}</div>
-                                        </x-slot:empty>
-                                    </x-table>
-                                </div>
-                            </div>
-
-                            <div class="rounded-md border border-gray-200">
-                                @if($nextSemesterTimeline)
-                                    <div class="flex flex-wrap items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-modal-next')">
-                                        <div class="flex items-center gap-2">
-                                            <span class="tooltip tooltip-right font-medium" x-bind:data-tip="isOpen('table-semester-modal-next') ? 'Thu gọn' : 'Mở rộng'">
-                                            <x-icon
-                                                name="o-chevron-down"
-                                                class="w-5 h-5 cursor-pointer transition-transform"
-                                                x-bind:class="isOpen('table-semester-modal-next') ? 'rotate-180' : ''"
-                                            />
-                                        </span>
-                                            <h3 class="text-md md:text-lg cursor-pointer font-semibold select-none">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} {{ data_get($nextSemesterTimeline, 'semester_name')?'('.data_get($nextSemesterTimeline, 'semester_name').')':'' }}</h3>
-{{--                                            <div class="text-sm text-white/90">{{ $this->formatSemesterTimeline($nextSemesterTimeline) ?: __('') }}</div>--}}
-                                        </div>
-                                        <span
-                                            class="text-md">{{ count(data_get($nextSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($nextSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
-                                    </div>
-                                @endif
-                                @if($nextSemesterTimeline)
-                                    <div class="overflow-x-auto rounded border border-base-300 bg-white transition-all duration-300" x-show="isOpen('table-semester-modal-next')" x-collapse>
-                                        <x-table
-                                            :headers="$this->semesterHeaders()"
-                                            :rows="$nextRows"
-                                            wire:model="expanded"
-                                            expandable
-                                            expandable-condition="can_expand"
-                                            striped
-                                            class="bg-white
-                                            md:text-[16px]!
-                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
-                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
-                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                            [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
-                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                        "
                                         >
                                             @scope('cell_no', $subject)
                                             <span class="select-none">{{ $subject['row_index'] }}</span>
@@ -1385,6 +1730,41 @@ class extends Component {
                                             />
                                             @endscope
 
+                                            @scope('cell_learning_status', $subject)
+                                            @php
+                                                $status = $subject['learning_status'] ?? 'pending';
+                                            @endphp
+
+                                            @if($status === 'passed')
+                                                <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                            @elseif($status === 'failed')
+                                                <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                            @elseif($status === 'no_grade')
+                                                <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                            @elseif($status === 'studying')
+                                                <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                            @else
+                                                <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                            @endif
+                                            @endscope
+
+                                            @scope('cell_final_score', $subject)
+                                            <div>
+                                                @if($subject['final_score'] !== null)
+                                                    <div class="flex flex-col items-center justify-center">
+                                                        <span class="font-bold text-slate-700">{{ $subject['final_score'] }}</span>
+                                                        @if(!empty($subject['passed_by_equivalent_code']))
+                                                            <span class="text-[11px] text-fita2 font-medium whitespace-nowrap mt-1" title="Học thay bằng môn tương đương: {{ $subject['passed_by_equivalent_code'] }}">
+                                                                ({{ $subject['passed_by_equivalent_code'] }})
+                                                            </span>
+                                                        @endif
+                                                    </div>
+                                                @else
+                                                    <span class="text-gray-300">-</span>
+                                                @endif
+                                            </div>
+                                            @endscope
+
                                             @scope('cell_note', $subject)
                                             {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
                                             @endscope
@@ -1396,15 +1776,15 @@ class extends Component {
                                                         {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
                                                     </div>
                                                     <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                        <table class="table md:text-[16px]">
+                                                        <table class="table md:text-[14px]">
                                                             <thead>
                                                             <tr>
-                                                                <th class="w-14">{{ __('No.') }}</th>
+                                                                <th class="w-10">{{ __('No.') }}</th>
                                                                 <th>{{ __('Subject code') }}</th>
                                                                 <th>{{ __('Subject name') }}</th>
-                                                                <th class="w-24">{{ __('Credits') }}</th>
-                                                                <th class="w-20">{{ __('Theory') }}</th>
-                                                                <th class="w-20">{{ __('Practice') }}</th>
+                                                                <th class="w-16">{{ __('Credits') }}</th>
+                                                                <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
+                                                                <th class="w-16 text-center">{{ __('Điểm') }}</th>
                                                             </tr>
                                                             </thead>
                                                             <tbody>
@@ -1414,8 +1794,22 @@ class extends Component {
                                                                     <td class="font-semibold">{{ $equivalent['code'] }}</td>
                                                                     <td>{{ $equivalent['name'] }}</td>
                                                                     <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
-                                                                    <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
-                                                                    <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                                    <td class="text-center">
+                                                                        @if($equivalent['learning_status'] === 'passed')
+                                                                            <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                                                        @elseif($equivalent['learning_status'] === 'failed')
+                                                                            <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                                                        @elseif($equivalent['learning_status'] === 'no_grade')
+                                                                            <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                                                        @elseif($equivalent['learning_status'] === 'studying')
+                                                                            <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                                                        @else
+                                                                            <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                                                        @endif
+                                                                    </td>
+                                                                    <td class="text-center font-bold text-slate-700">
+                                                                        {{ $equivalent['final_score'] ?? '-' }}
+                                                                    </td>
                                                                 </tr>
                                                             @endforeach
                                                             </tbody>
@@ -1432,222 +1826,45 @@ class extends Component {
                                             </x-slot:empty>
                                         </x-table>
                                     </div>
-                                @endif
-                            </div>
-                        </div>
+                                </div>
 
-                        <x-slot:actions>
-                            <x-button label="{{ __('Close') }}" class="bg-fita2 text-white" wire:click="$wire.showSemesterTimelineModal = false" />
-                        </x-slot:actions>
-                    </x-modal>
-                @endif
-
-                <div class="relative min-h-60">
-                    <div
-                        wire:loading.delay.short
-                        wire:target="programMajorSlug,selectedMajorSlug,intakeId,semesterNo,viewMode,search,typeFilter"
-                        class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
-                    >
-                        <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
-                            <x-loading class="text-primary loading-lg" />
-                            <span class="text-sm text-gray-600">{{ __('Loading data...') }}</span>
-                        </div>
-                    </div>
-
-                    <div
-                        wire:loading.class="opacity-60 pointer-events-none"
-                        wire:loading.class.remove="opacity-100"
-                        wire:target="programMajorSlug,selectedMajorSlug,intakeId,semesterNo,viewMode,search,typeFilter"
-                        class="transition-opacity duration-150"
-                    >
-                        @if($viewMode === 'semester')
-                            <div class="space-y-4">
-                                @forelse($semesterBlocks as $semesterBlock)
-                                    <x-card shadow class="p-0!">
-                                        <div class="flex items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-{{$semesterBlock['semester_no']}}')">
+                                <div class="rounded-md border border-gray-200">
+                                    @if($nextSemesterTimeline)
+                                        <div class="flex flex-wrap items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-modal-next')">
                                             <div class="flex items-center gap-2">
-                                                <span class="tooltip tooltip-top font-medium" x-bind:data-tip="isOpen('table-semester-{{$semesterBlock['semester_no']}}') ? 'Thu gọn' : 'Mở rộng'">
-                                                    <x-icon
-                                                        name="o-chevron-down"
-                                                        class="w-5 h-5 cursor-pointer transition-transform"
-                                                        x-bind:class="isOpen('table-semester-{{$semesterBlock['semester_no']}}') ? 'rotate-180' : ''"
-                                                    />
-                                                </span>
-                                                <h3 class="text-md md:text-lg cursor-pointer font-semibold select-none">{{__('Semester')}} {{ $semesterBlock['semester_no'] }} {{ $semesterBlock['semester_name']? '('.$semesterBlock['semester_name'].')' :'' }}</h3>
-                                                @if(!empty($semesterBlock['timeline']))
-{{--                                                    <div class="text-sm text-white/90">{{ $semesterBlock['timeline'] }}</div>--}}
-                                                @endif
+                                            <span class="tooltip tooltip-right font-medium" x-bind:data-tip="isOpen('table-semester-modal-next') ? 'Thu gọn' : 'Mở rộng'">
+                                            <x-icon
+                                                name="o-chevron-down"
+                                                class="w-5 h-5 cursor-pointer transition-transform"
+                                                x-bind:class="isOpen('table-semester-modal-next') ? 'rotate-180' : ''"
+                                            />
+                                        </span>
+                                                <h3 class="text-md md:text-lg cursor-pointer font-semibold select-none">{{ __('Next semester') }}: {{__('Semester')}} {{ data_get($nextSemesterTimeline, 'semester_no') }} {{ data_get($nextSemesterTimeline, 'semester_name')?'('.data_get($nextSemesterTimeline, 'semester_name').')':'' }}</h3>
                                             </div>
                                             <span
-                                                class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{ Subject::formatCredit($semesterBlock['total_credits']) }} {{__('Credits ')}}</span>
+                                                class="text-md">{{ count(data_get($nextSemesterTimeline, 'subjects')) }} {{__('subject')}} • {{ Subject::formatCredit(data_get($nextSemesterTimeline, 'total_credits')) }} {{__('Credits ')}}</span>
                                         </div>
-
-                                        @if($semesterBlock['subjects']->isEmpty())
-                                            <div class="text-sm text-gray-500">Không có môn học trong học kỳ này.</div>
-                                        @else
-                                            <div class="overflow-x-auto transition-all duration-300" x-show="isOpen('table-semester-{{$semesterBlock['semester_no']}}')" x-collapse>
-                                                <x-table
-                                                    :headers="$this->semesterHeaders()"
-                                                    :rows="$semesterBlock['subjects']"
-                                                    wire:model="expanded"
-                                                    expandable
-                                                    expandable-condition="can_expand"
-                                                    striped
-                                                    class="bg-white
-                                                    md:text-[16px]!
-                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
-                                                    [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
-                                                    [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                                    [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
-                                                    [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                                "
-                                                >
-                                                    @scope('cell_no', $subject)
-                                                    <span class="select-none">{{ $subject['row_index'] }}</span>
-                                                    @endscope
-
-                                                    @scope('cell_code', $subject)
-                                                    <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
-                                                    @endscope
-
-                                                    @scope('cell_name', $subject)
-                                                    {!! $this->renderSubjectName($subject) !!}
-                                                    @endscope
-
-                                                    @scope('cell_credits', $subject)
-                                                    {{ Subject::formatCredit($subject['credits']) }}
-                                                    @endscope
-
-                                                    @scope('cell_theory', $subject)
-                                                    {{ Subject::formatCredit($subject['theory']) }}
-                                                    @endscope
-
-                                                    @scope('cell_practice', $subject)
-                                                    {{ Subject::formatCredit($subject['practice']) }}
-                                                    @endscope
-
-                                                    @scope('cell_prerequisite_subjects', $subject)
-                                                    {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
-                                                    @endscope
-
-                                                    @scope('cell_prerequisite_subjects_codes', $subject)
-                                                    {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
-                                                    @endscope
-
-                                                    @scope('cell_type', $subject)
-                                                    @php
-                                                        $typeLabel = match ($subject['type']) {
-                                                            'required' => __('Required'),
-                                                            'elective' => __('Elective'),
-                                                            'pcbb' => __('Hardware Required'),
-                                                            default => strtoupper((string) $subject['type']),
-                                                        };
-
-                                                        $typeClass = match ($subject['type']) {
-                                                            'required' => 'badge-error',
-                                                            'elective' => 'badge-success',
-                                                            'pcbb' => 'badge-warning',
-                                                            default => 'badge-neutral',
-                                                        };
-                                                    @endphp
-                                                    <x-badge
-                                                        :value="$typeLabel"
-                                                        class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
-                                                    />
-                                                    @endscope
-
-                                                    @scope('expansion', $subject)
-                                                    @if(($subject['equivalents_count'] ?? 0) > 0)
-                                                        <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
-                                                            <div class="font-semibold mb-3">
-                                                                {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
-                                                            </div>
-                                                            <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                                <table class="table md:text-[16px]">
-                                                                    <thead>
-                                                                    <tr>
-                                                                        <th class="w-14">{{ __('No.') }}</th>
-                                                                        <th>{{ __('Subject code') }}</th>
-                                                                        <th>{{ __('Subject name') }}</th>
-                                                                        <th class="w-24">{{ __('Credits') }}</th>
-                                                                        <th class="w-20">{{ __('Theory') }}</th>
-                                                                        <th class="w-20">{{ __('Practice') }}</th>
-                                                                    </tr>
-                                                                    </thead>
-                                                                    <tbody>
-                                                                    @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
-                                                                        <tr>
-                                                                            <td>{{ $index + 1 }}</td>
-                                                                            <td class="font-semibold">{{ $equivalent['code'] }}</td>
-                                                                            <td>{{ $equivalent['name'] }}</td>
-                                                                            <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
-                                                                            <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
-                                                                            <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
-                                                                        </tr>
-                                                                    @endforeach
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        </div>
-                                                    @else
-                                                        <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
-                                                    @endif
-                                                    @endscope
-                                                </x-table>
-                                            </div>
-                                        @endif
-                                    </x-card>
-                                @empty
-                                    <x-card shadow>
-                                        <div class="text-sm text-gray-500">Không có dữ liệu môn học theo học kỳ.</div>
-                                    </x-card>
-                                @endforelse
-                            </div>
-                        @else
-                            <div class="space-y-4">
-                                @forelse($groupBlocks as $groupBlock)
-                                    <x-card shadow class="p-0!">
-                                        <div class="flex flex-wrap items-center justify-between gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-{{$groupBlock['group_name']}}')">
-                                            <div class="flex items-center gap-2">
-                                                <span class="tooltip tooltip-top font-medium" x-bind:data-tip="isOpen('table-semester-{{$groupBlock['group_name']}}') ? 'Thu gọn' : 'Mở rộng'">
-                                                    <x-icon
-                                                        name="o-chevron-down"
-                                                        class="w-5 h-5 cursor-pointer transition-transform"
-                                                        x-bind:class="isOpen('table-semester-{{$groupBlock['group_name']}}') ? 'rotate-180' : ''"
-                                                    />
-                                                </span>
-                                                <h3 class="text-md md:text-lg font-semibold cursor-pointer select-none">{{ $groupBlock['group_name'] }}</h3>
-                                            </div>
-                                            <div class="text-md">
-                                                {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ Subject::formatCredit($groupBlock['total_credits']) }}
-                                                {{__('Credits ')}}
-                                            </div>
-                                        </div>
-
-                                        <div class="overflow-x-auto transition-all duration-300" x-show="isOpen('table-semester-{{$groupBlock['group_name']}}')" x-collapse>
+                                    @endif
+                                    @if($nextSemesterTimeline)
+                                        <div class="overflow-x-auto rounded border border-base-300 bg-white transition-all duration-300" x-show="isOpen('table-semester-modal-next')" x-collapse>
                                             <x-table
-                                                :headers="$this->groupHeaders()"
-                                                :rows="$groupBlock['subjects']"
+                                                :headers="$this->semesterHeaders()"
+                                                :rows="$nextRows"
                                                 wire:model="expanded"
                                                 expandable
                                                 expandable-condition="can_expand"
                                                 striped
-                                                @click.stop="if ($event.target.closest('a, button, input, select')) return; const row = $event.target.closest('tr'); if (row && row.dataset.rowId) { toggleExpand(parseInt(row.dataset.rowId)); }"
-                                                class="
-                                        bg-white md:text-[16px]!
-                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
-                                        [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
-                                        [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
-                                        [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
-                                        [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
-                                    "
+                                                class="bg-white
+                                            md:text-[16px]!
+                                            [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                            [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                            [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                            [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                            [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                        "
                                             >
                                                 @scope('cell_no', $subject)
-                                                {{ $subject['row_index'] }}
-                                                @endscope
-
-                                                @scope('cell_semester_no', $subject)
-                                                HK {{ $subject['semester_no'] }}
+                                                <span class="select-none">{{ $subject['row_index'] }}</span>
                                                 @endscope
 
                                                 @scope('cell_code', $subject)
@@ -1704,22 +1921,57 @@ class extends Component {
                                                 {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
                                                 @endscope
 
+                                                @scope('cell_learning_status', $subject)
+                                                @php
+                                                    $status = $subject['learning_status'] ?? 'pending';
+                                                @endphp
+
+                                                @if($status === 'passed')
+                                                    <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                                @elseif($status === 'failed')
+                                                    <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                                @elseif($status === 'no_grade')
+                                                    <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                                @elseif($status === 'studying')
+                                                    <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                                @else
+                                                    <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                                @endif
+                                                @endscope
+
+                                                @scope('cell_final_score', $subject)
+                                                <div>
+                                                    @if($subject['final_score'] !== null)
+                                                        <div class="flex flex-col items-center justify-center">
+                                                            <span class="font-bold text-slate-700">{{ $subject['final_score'] }}</span>
+                                                            @if(!empty($subject['passed_by_equivalent_code']))
+                                                                <span class="text-[11px] text-fita2 font-medium whitespace-nowrap mt-1" title="Học thay bằng môn tương đương: {{ $subject['passed_by_equivalent_code'] }}">
+                                                                ({{ $subject['passed_by_equivalent_code'] }})
+                                                            </span>
+                                                            @endif
+                                                        </div>
+                                                    @else
+                                                        <span class="text-gray-300">-</span>
+                                                    @endif
+                                                </div>
+                                                @endscope
+
                                                 @scope('expansion', $subject)
                                                 @if(($subject['equivalents_count'] ?? 0) > 0)
                                                     <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
-                                                        <div class="font-semibold text-primary mb-3">
-                                                            {{ __('Equivalent subjects for') }} {{ $subject['code'] }} - {{ $subject['name'] }}
+                                                        <div class="font-semibold mb-3">
+                                                            {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
                                                         </div>
                                                         <div class="overflow-x-auto rounded border border-base-300 bg-white">
-                                                            <table class="table md:text-[16px]">
+                                                            <table class="table md:text-[14px]">
                                                                 <thead>
                                                                 <tr>
-                                                                    <th class="w-14">{{ __('No.') }}</th>
+                                                                    <th class="w-10">{{ __('No.') }}</th>
                                                                     <th>{{ __('Subject code') }}</th>
                                                                     <th>{{ __('Subject name') }}</th>
-                                                                    <th class="w-24">{{ __('Credits') }}</th>
-                                                                    <th class="w-20">{{ __('Theory') }}</th>
-                                                                    <th class="w-20">{{ __('Practice') }}</th>
+                                                                    <th class="w-16">{{ __('Credits') }}</th>
+                                                                    <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
+                                                                    <th class="w-16 text-center">{{ __('Điểm') }}</th>
                                                                 </tr>
                                                                 </thead>
                                                                 <tbody>
@@ -1729,8 +1981,22 @@ class extends Component {
                                                                         <td class="font-semibold">{{ $equivalent['code'] }}</td>
                                                                         <td>{{ $equivalent['name'] }}</td>
                                                                         <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
-                                                                        <td>{{ Subject::formatCredit($equivalent['credits_theory'] ?? 0) }}</td>
-                                                                        <td>{{ Subject::formatCredit($equivalent['credits_practice'] ?? 0) }}</td>
+                                                                        <td class="text-center">
+                                                                            @if($equivalent['learning_status'] === 'passed')
+                                                                                <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                                                            @elseif($equivalent['learning_status'] === 'failed')
+                                                                                <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                                                            @elseif($equivalent['learning_status'] === 'no_grade')
+                                                                                <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                                                            @elseif($equivalent['learning_status'] === 'studying')
+                                                                                <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                                                            @else
+                                                                                <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                                                            @endif
+                                                                        </td>
+                                                                        <td class="text-center font-bold text-slate-700">
+                                                                            {{ $equivalent['final_score'] ?? '-' }}
+                                                                        </td>
                                                                     </tr>
                                                                 @endforeach
                                                                 </tbody>
@@ -1741,19 +2007,434 @@ class extends Component {
                                                     <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
                                                 @endif
                                                 @endscope
+
+                                                <x-slot:empty>
+                                                    <div class="py-3 text-center text-gray-500">{{ __('No subjects.') }}</div>
+                                                </x-slot:empty>
                                             </x-table>
                                         </div>
-                                    </x-card>
-                                @empty
-                                    <x-card shadow>
-                                        <div class="text-sm text-gray-500">Không có dữ liệu môn học theo nhóm môn.</div>
-                                    </x-card>
-                                @endforelse
+                                    @endif
+                                </div>
                             </div>
-                        @endif
+
+                            <x-slot:actions>
+                                <x-button label="{{ __('Close') }}" class="bg-fita2 text-white" wire:click="$wire.showSemesterTimelineModal = false" />
+                            </x-slot:actions>
+                        </x-modal>
+                    @endif
+
+                    <div class="relative min-h-60">
+                        <div
+                            wire:loading.delay.short
+                            wire:target="programMajorSlug,selectedMajorSlug,intakeId,semesterNo,viewMode,search,typeFilter,statusFilter"
+                            class="absolute inset-0 z-20 rounded-md bg-white/65 backdrop-blur-[2px] transition-all duration-300"
+                        >
+                            <div class="sticky top-[35vh] w-full flex flex-col items-center gap-2 mt-10">
+                                <x-loading class="text-primary loading-lg" />
+                                <span class="text-sm text-gray-600">{{ __('Loading data...') }}</span>
+                            </div>
+                        </div>
+
+                        <div
+                            wire:loading.class="opacity-60 pointer-events-none"
+                            wire:loading.class.remove="opacity-100"
+                            wire:target="programMajorSlug,selectedMajorSlug,intakeId,semesterNo,viewMode,search,typeFilter,statusFilter"
+                            class="transition-opacity duration-150"
+                        >
+                            @if($viewMode === 'semester')
+                                <div class="space-y-4">
+                                    @forelse($semesterBlocks as $semesterBlock)
+                                        <x-card shadow class="p-0!">
+                                            <div class="flex items-center justify-between bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-{{$semesterBlock['semester_no']}}')">
+                                                <div class="flex items-center gap-2">
+                                                <span class="tooltip tooltip-top font-medium" x-bind:data-tip="isOpen('table-semester-{{$semesterBlock['semester_no']}}') ? 'Thu gọn' : 'Mở rộng'">
+                                                    <x-icon
+                                                        name="o-chevron-down"
+                                                        class="w-5 h-5 cursor-pointer transition-transform"
+                                                        x-bind:class="isOpen('table-semester-{{$semesterBlock['semester_no']}}') ? 'rotate-180' : ''"
+                                                    />
+                                                </span>
+                                                    <h3 class="text-md md:text-lg cursor-pointer font-semibold select-none">{{__('Semester')}} {{ $semesterBlock['semester_no'] }} {{ $semesterBlock['semester_name']? '('.$semesterBlock['semester_name'].')' :'' }}</h3>
+                                                </div>
+                                                <span
+                                                    class="text-md">{{ count($semesterBlock['subjects']) }} {{__('subject')}} • {{ Subject::formatCredit($semesterBlock['total_credits']) }} {{__('Credits ')}}</span>
+                                            </div>
+
+                                            @if($semesterBlock['subjects']->isEmpty())
+                                                <div class="text-sm text-gray-500 p-4">Không có môn học phù hợp với bộ lọc trong học kỳ này.</div>
+                                            @else
+                                                <div class="overflow-x-auto transition-all duration-300" x-show="isOpen('table-semester-{{$semesterBlock['semester_no']}}')" x-collapse>
+                                                    <x-table
+                                                        :headers="$this->semesterHeaders()"
+                                                        :rows="$semesterBlock['subjects']"
+                                                        wire:model="expanded"
+                                                        expandable
+                                                        expandable-condition="can_expand"
+                                                        striped
+                                                        class="bg-white
+                                                    md:text-[16px]!
+                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                                    [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                                    [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                                    [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                                    [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                                "
+                                                    >
+                                                        @scope('cell_no', $subject)
+                                                        <span class="select-none">{{ $subject['row_index'] }}</span>
+                                                        @endscope
+
+                                                        @scope('cell_code', $subject)
+                                                        <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                                        @endscope
+
+                                                        @scope('cell_name', $subject)
+                                                        {!! $this->renderSubjectName($subject) !!}
+                                                        @endscope
+
+                                                        @scope('cell_credits', $subject)
+                                                        {{ Subject::formatCredit($subject['credits']) }}
+                                                        @endscope
+
+                                                        @scope('cell_theory', $subject)
+                                                        {{ Subject::formatCredit($subject['theory']) }}
+                                                        @endscope
+
+                                                        @scope('cell_practice', $subject)
+                                                        {{ Subject::formatCredit($subject['practice']) }}
+                                                        @endscope
+
+                                                        @scope('cell_prerequisite_subjects', $subject)
+                                                        {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                                        @endscope
+
+                                                        @scope('cell_prerequisite_subjects_codes', $subject)
+                                                        {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                                        @endscope
+
+                                                        @scope('cell_type', $subject)
+                                                        @php
+                                                            $typeLabel = match ($subject['type']) {
+                                                                'required' => __('Required'),
+                                                                'elective' => __('Elective'),
+                                                                'pcbb' => __('Hardware Required'),
+                                                                default => strtoupper((string) $subject['type']),
+                                                            };
+
+                                                            $typeClass = match ($subject['type']) {
+                                                                'required' => 'badge-error',
+                                                                'elective' => 'badge-success',
+                                                                'pcbb' => 'badge-warning',
+                                                                default => 'badge-neutral',
+                                                            };
+                                                        @endphp
+                                                        <x-badge
+                                                            :value="$typeLabel"
+                                                            class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
+                                                        />
+                                                        @endscope
+
+                                                        @scope('cell_learning_status', $subject)
+                                                        @php
+                                                            $status = $subject['learning_status'] ?? 'pending';
+                                                        @endphp
+
+                                                        @if($status === 'passed')
+                                                            <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                                        @elseif($status === 'failed')
+                                                            <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                                        @elseif($status === 'no_grade')
+                                                            <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                                        @elseif($status === 'studying')
+                                                            <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                                        @else
+                                                            <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                                        @endif
+                                                        @endscope
+
+                                                        @scope('cell_final_score', $subject)
+                                                        <div>
+                                                            @if($subject['final_score'] !== null)
+                                                                <div class="flex flex-col items-center justify-center">
+                                                                    <span class="font-bold text-slate-700">{{ $subject['final_score'] }}</span>
+                                                                    @if(!empty($subject['passed_by_equivalent_code']))
+                                                                        <span class="text-[11px] text-fita2 font-medium whitespace-nowrap mt-1" title="Học thay bằng môn tương đương: {{ $subject['passed_by_equivalent_code'] }}">
+                                                                        ({{ $subject['passed_by_equivalent_code'] }})
+                                                                    </span>
+                                                                    @endif
+                                                                </div>
+                                                            @else
+                                                                <span class="text-gray-300">-</span>
+                                                            @endif
+                                                        </div>
+                                                        @endscope
+
+                                                        @scope('cell_note', $subject)
+                                                        {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
+                                                        @endscope
+
+                                                        @scope('expansion', $subject)
+                                                        @if(($subject['equivalents_count'] ?? 0) > 0)
+                                                            <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                                                <div class="font-semibold mb-3">
+                                                                    {{ __('List of equivalent subjects for') }} <span class="text-fita2 font-bold">{{ $subject['name'] }} - {{ $subject['code'] }}:</span>
+                                                                </div>
+                                                                <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                                    <table class="table md:text-[14px]">
+                                                                        <thead>
+                                                                        <tr>
+                                                                            <th class="w-10">{{ __('No.') }}</th>
+                                                                            <th>{{ __('Subject code') }}</th>
+                                                                            <th>{{ __('Subject name') }}</th>
+                                                                            <th class="w-16">{{ __('Credits') }}</th>
+                                                                            <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
+                                                                            <th class="w-16 text-center">{{ __('Điểm') }}</th>
+                                                                        </tr>
+                                                                        </thead>
+                                                                        <tbody>
+                                                                        @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                                            <tr>
+                                                                                <td>{{ $index + 1 }}</td>
+                                                                                <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                                                <td>{{ $equivalent['name'] }}</td>
+                                                                                <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                                <td class="text-center">
+                                                                                    @if($equivalent['learning_status'] === 'passed')
+                                                                                        <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                                                                    @elseif($equivalent['learning_status'] === 'failed')
+                                                                                        <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                                                                    @elseif($equivalent['learning_status'] === 'no_grade')
+                                                                                        <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                                                                    @elseif($equivalent['learning_status'] === 'studying')
+                                                                                        <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                                                                    @else
+                                                                                        <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                                                                    @endif
+                                                                                </td>
+                                                                                <td class="text-center font-bold text-slate-700">
+                                                                                    {{ $equivalent['final_score'] ?? '-' }}
+                                                                                </td>
+                                                                            </tr>
+                                                                        @endforeach
+                                                                        </tbody>
+                                                                    </table>
+                                                                </div>
+                                                            </div>
+                                                        @else
+                                                            <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                                        @endif
+                                                        @endscope
+                                                    </x-table>
+                                                </div>
+                                            @endif
+                                        </x-card>
+                                    @empty
+                                        <x-card shadow>
+                                            <div class="text-sm text-gray-500">Không có dữ liệu môn học theo học kỳ.</div>
+                                        </x-card>
+                                    @endforelse
+                                </div>
+                            @else
+                                <div class="space-y-4">
+                                    @forelse($groupBlocks as $groupBlock)
+                                        <x-card shadow class="p-0!">
+                                            <div class="flex flex-wrap items-center justify-between gap-2 bg-fita2 rounded-t-md px-4 py-2 text-white select-none cursor-pointer" @click="toggle('table-semester-{{$groupBlock['group_name']}}')">
+                                                <div class="flex items-center gap-2">
+                                                <span class="tooltip tooltip-top font-medium" x-bind:data-tip="isOpen('table-semester-{{$groupBlock['group_name']}}') ? 'Thu gọn' : 'Mở rộng'">
+                                                    <x-icon
+                                                        name="o-chevron-down"
+                                                        class="w-5 h-5 cursor-pointer transition-transform"
+                                                        x-bind:class="isOpen('table-semester-{{$groupBlock['group_name']}}') ? 'rotate-180' : ''"
+                                                    />
+                                                </span>
+                                                    <h3 class="text-md md:text-lg font-semibold cursor-pointer select-none">{{ $groupBlock['group_name'] }}</h3>
+                                                </div>
+                                                <div class="text-md">
+                                                    {{ $groupBlock['total_subjects'] }} {{__('subject')}} • {{ Subject::formatCredit($groupBlock['total_credits']) }}
+                                                    {{__('Credits ')}}
+                                                </div>
+                                            </div>
+
+                                            <div class="overflow-x-auto transition-all duration-300" x-show="isOpen('table-semester-{{$groupBlock['group_name']}}')" x-collapse>
+                                                <x-table
+                                                    :headers="$this->groupHeaders()"
+                                                    :rows="$groupBlock['subjects']"
+                                                    wire:model="expanded"
+                                                    expandable
+                                                    expandable-condition="can_expand"
+                                                    striped
+                                                    @click.stop="if ($event.target.closest('a, button, input, select')) return; const row = $event.target.closest('tr'); if (row && row.dataset.rowId) { toggleExpand(parseInt(row.dataset.rowId)); }"
+                                                    class="
+                                        bg-white md:text-[16px]!
+                                        [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                        [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50
+                                        [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                        [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                        [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                    "
+                                                >
+                                                    @scope('cell_no', $subject)
+                                                    {{ $subject['row_index'] }}
+                                                    @endscope
+
+                                                    @scope('cell_semester_no', $subject)
+                                                    HK {{ $subject['semester_no'] }}
+                                                    @endscope
+
+                                                    @scope('cell_code', $subject)
+                                                    <span class="font-medium">{!! $this->highlightMatch($subject['code']) !!}</span>
+                                                    @endscope
+
+                                                    @scope('cell_name', $subject)
+                                                    {!! $this->renderSubjectName($subject) !!}
+                                                    @endscope
+
+                                                    @scope('cell_credits', $subject)
+                                                    {{ Subject::formatCredit($subject['credits']) }}
+                                                    @endscope
+
+                                                    @scope('cell_theory', $subject)
+                                                    {{ Subject::formatCredit($subject['theory']) }}
+                                                    @endscope
+
+                                                    @scope('cell_practice', $subject)
+                                                    {{ Subject::formatCredit($subject['practice']) }}
+                                                    @endscope
+
+                                                    @scope('cell_prerequisite_subjects', $subject)
+                                                    {!! $this->highlightMatch($subject['prerequisite_subjects']) !!}
+                                                    @endscope
+
+                                                    @scope('cell_prerequisite_subjects_codes', $subject)
+                                                    {!! $this->highlightMatch($subject['prerequisite_subjects_codes']) !!}
+                                                    @endscope
+
+                                                    @scope('cell_type', $subject)
+                                                    @php
+                                                        $typeLabel = match ($subject['type']) {
+                                                            'required' => __('Required'),
+                                                            'elective' => __('Elective'),
+                                                            'pcbb' => __('Hardware Required'),
+                                                            default => strtoupper((string) $subject['type']),
+                                                        };
+
+                                                        $typeClass = match ($subject['type']) {
+                                                            'required' => 'badge-error',
+                                                            'elective' => 'badge-success',
+                                                            'pcbb' => 'badge-warning',
+                                                            default => 'badge-neutral',
+                                                        };
+                                                    @endphp
+                                                    <x-badge
+                                                        :value="$typeLabel"
+                                                        class="{{ $typeClass }} text-white font-semibold badge-md whitespace-nowrap"
+                                                    />
+                                                    @endscope
+
+                                                    @scope('cell_learning_status', $subject)
+                                                    @php
+                                                        $status = $subject['learning_status'] ?? 'pending';
+                                                    @endphp
+
+                                                    @if($status === 'passed')
+                                                        <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                                    @elseif($status === 'failed')
+                                                        <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                                    @elseif($status === 'no_grade')
+                                                        <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                                    @elseif($status === 'studying')
+                                                        <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                                    @else
+                                                        <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                                    @endif
+                                                    @endscope
+
+                                                    @scope('cell_final_score', $subject)
+                                                    <div>
+                                                        @if($subject['final_score'] !== null)
+                                                            <div class="flex flex-col items-center justify-center">
+                                                                <span class="font-bold text-slate-700">{{ $subject['final_score'] }}</span>
+                                                                @if(!empty($subject['passed_by_equivalent_code']))
+                                                                    <span class="text-[11px] text-fita2 font-medium whitespace-nowrap mt-1" title="Học thay bằng môn tương đương: {{ $subject['passed_by_equivalent_code'] }}">
+                                                                        ({{ $subject['passed_by_equivalent_code'] }})
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                        @else
+                                                            <span class="text-gray-300">-</span>
+                                                        @endif
+                                                    </div>
+                                                    @endscope
+
+                                                    @scope('cell_note', $subject)
+                                                    {{ trim((string) ($subject['note'] ?? '')) !== '' ? $subject['note'] : '' }}
+                                                    @endscope
+
+                                                    @scope('expansion', $subject)
+                                                    @if(($subject['equivalents_count'] ?? 0) > 0)
+                                                        <div class="rounded-lg border border-primary/20 bg-primary/5 p-4 my-2">
+                                                            <div class="font-semibold text-primary mb-3">
+                                                                {{ __('Equivalent subjects for') }} {{ $subject['code'] }} - {{ $subject['name'] }}
+                                                            </div>
+                                                            <div class="overflow-x-auto rounded border border-base-300 bg-white">
+                                                                <table class="table md:text-[14px]">
+                                                                    <thead>
+                                                                    <tr>
+                                                                        <th class="w-10">{{ __('No.') }}</th>
+                                                                        <th>{{ __('Subject code') }}</th>
+                                                                        <th>{{ __('Subject name') }}</th>
+                                                                        <th class="w-16">{{ __('Credits') }}</th>
+                                                                        <th class="w-24 text-center">{{ __('Trạng thái') }}</th>
+                                                                        <th class="w-16 text-center">{{ __('Điểm') }}</th>
+                                                                    </tr>
+                                                                    </thead>
+                                                                    <tbody>
+                                                                    @foreach(($subject['equivalents'] ?? []) as $index => $equivalent)
+                                                                        <tr>
+                                                                            <td>{{ $index + 1 }}</td>
+                                                                            <td class="font-semibold">{{ $equivalent['code'] }}</td>
+                                                                            <td>{{ $equivalent['name'] }}</td>
+                                                                            <td>{{ Subject::formatCredit($equivalent['credits']) }}</td>
+                                                                            <td class="text-center">
+                                                                                @if($equivalent['learning_status'] === 'passed')
+                                                                                    <x-badge value="{{ __('Đạt') }}" class="badge-success text-white font-semibold badge-md" />
+                                                                                @elseif($equivalent['learning_status'] === 'failed')
+                                                                                    <x-badge value="{{ __('Trượt') }}" class="badge-error text-white font-semibold badge-md" />
+                                                                                @elseif($equivalent['learning_status'] === 'no_grade')
+                                                                                    <x-badge value="{{ __('Chưa có') }}" class="badge-error badge-dash font-semibold badge-md whitespace-nowrap" />
+                                                                                @elseif($equivalent['learning_status'] === 'studying')
+                                                                                    <x-badge value="{{ __('Đang học') }}" class="badge-warning text-white font-semibold badge-md whitespace-nowrap" />
+                                                                                @else
+                                                                                    <span class="text-gray-400 text-md italic">{{ __('Chưa học') }}</span>
+                                                                                @endif
+                                                                            </td>
+                                                                            <td class="text-center font-bold text-slate-700">
+                                                                                {{ $equivalent['final_score'] ?? '-' }}
+                                                                            </td>
+                                                                        </tr>
+                                                                    @endforeach
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    @else
+                                                        <div class="text-sm text-gray-500 py-2">{{ __('No equivalent subjects.') }}</div>
+                                                    @endif
+                                                    @endscope
+                                                </x-table>
+                                            </div>
+                                        </x-card>
+                                    @empty
+                                        <x-card shadow>
+                                            <div class="text-sm text-gray-500">Không có dữ liệu môn học theo nhóm môn.</div>
+                                        </x-card>
+                                    @endforelse
+                                </div>
+                            @endif
+                        </div>
                     </div>
-                </div>
-            @endif
+
+                </div> @endif
         </div>
     </div>
     <div id="mary-global-tooltip" class="fixed hidden pointer-events-none" style="z-index: 99999;">
@@ -1764,7 +2445,6 @@ class extends Component {
     </div>
 
     <script>
-        // Chạy ngay lập tức, dùng window flag để chống duplicate event khi chuyển trang SPA
         if (!window.maryTooltipInitialized) {
             window.maryTooltipInitialized = true;
             window.maryNoteMergeInitialized = true;
@@ -1964,4 +2644,3 @@ class extends Component {
         }
     </script>
 </div>
-
