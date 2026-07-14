@@ -638,6 +638,7 @@
 {{-- end main layout --}}
 
 <x-toast class="z-50" />
+<livewire:client.sync-password-warning-toast />
 <div x-data="{ show: false }" @scroll.window="show = window.pageYOffset > 300">
     <x-button
         icon="s-arrow-up"

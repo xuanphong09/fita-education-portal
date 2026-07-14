@@ -78,6 +78,9 @@ class AuthenticateController extends Controller
             $this->sendPasswordSetupLinkIfNeeded($user);
 
             Auth::login($user, true);
+
+            $showSyncPasswordWarning = false;
+
             if ($user->user_type === 'student') {
                 $user->loadMissing('student');
 
@@ -86,8 +89,20 @@ class AuthenticateController extends Controller
                 if ($student && filled($student->vnua_password)) {
                     SyncStudentGradesJob::dispatch($student->id, false);
                 }
+                else{
+                    $showSyncPasswordWarning = true;
+                }
             }
             $request->session()->regenerate();
+
+            if ($showSyncPasswordWarning) {
+                return redirect()
+                    ->route('client.home')
+                    ->with(
+                        'sync_password_warning',
+                        __('Please go to Username → Account to start syncing immediately.')
+                    );
+            }
 
             return redirect()->route('client.home');
         } catch (QueryException $e) {
