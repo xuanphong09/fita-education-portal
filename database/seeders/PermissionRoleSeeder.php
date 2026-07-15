@@ -30,6 +30,7 @@ class PermissionRoleSeeder extends Seeder
             ['name' => 'cau_hinh_trang_gioi_thieu', 'display_name' => 'Cấu hình trang giới thiệu'],
             ['name' => 'cau_hinh_menu_tieu_de', 'display_name' => 'Cấu hình menu tiêu đề'],
             ['name' => 'cau_hinh_chan_trang', 'display_name' => 'Cấu hình chân trang'],
+            ['name' => 'xem_diem_sinh_vien', 'display_name' => 'Xem điểm sinh viên'],
         ];
 
         $obsoletePermissions = [

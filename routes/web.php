@@ -190,6 +190,10 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
         Route::livewire('/subject-equivalent/index', 'pages::admin.subject-equivalent.index')->name('admin.subject-equivalent.index');
     });
 
+    Route::middleware('permission:xem_diem_sinh_vien')->group(function () {
+        Route::livewire('/users/{user}/grades', 'pages::admin.users.student-grades')->name('admin.users.student-grades');
+    });
+
     // ---- Preview (chỉ cần auth, không cần permission riêng) ----
     Route::livewire('/preview/introduction-page', 'pages::admin.preview.introduction-page')->name('admin.preview.introduction');
     Route::livewire('/preview/header-footer', 'pages::admin.preview.header-footer')->name('admin.preview.header-footer');
@@ -197,19 +201,6 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::livewire('/preview/post-new', 'pages::admin.preview.post-new')->name('admin.preview.post.new');
     Route::livewire('/preview/lecturer/{slug}', 'pages::admin.preview.lecturer')->name('admin.preview.lecturer');
 });
-use App\Models\User;
-use App\Mail\FirstTimePasswordSetup;
-
-//Route::get('/test-email', function () {
-//    // Tạo một User giả lập hoặc lấy User đầu tiên trong DB
-//    $user = User::first() ?? new User(['name' => 'Nguyễn Văn A', 'email' => 'nva@vnua.edu.vn']);
-//
-//    // Giả lập URL thiết lập mật khẩu
-//    $fakeUrl = url('/thiet-lap-mat-khau?token=demo-token-123456');
-//
-//    // Return thẳng Mailable ra trình duyệt
-//    return new FirstTimePasswordSetup($user, $fakeUrl);
-//});
 
 //Route::get('/fix-links', function () {
 //

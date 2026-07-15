@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Department;
+use App\Models\Intake;
+use App\Models\Major;
+use App\Models\ProgramMajor;
 use App\Models\User;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -19,6 +23,16 @@ new class extends Component {
     public string $filterUserType = '';
     #[Url(as: 'role')]
     public string $filterRole = '';
+    #[Url(as: 'department')]
+    public $filterDepartment = '';
+    #[Url(as: 'intake')]
+    public $filterIntake = '';
+    #[Url(as: 'programMajor')]
+    public  $filterProgramMajor = '';
+    #[Url(as: 'major')]
+    public $filterMajor = '';
+    #[Url(as: 'grades')]
+    public bool $filterGrades = false;
 
     public function getRoleOptionsProperty()
     {
@@ -27,6 +41,113 @@ new class extends Component {
             ->get(['id', 'display_name'])
             ->map(fn($role) => ['id' => $role->id, 'name' => $role->display_name])
             ->toArray();
+    }
+
+    public function getDepartmentOptionsProperty()
+    {
+        return Department::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn($department) => ['id' => $department->id, 'name' => $department->name])
+            ->toArray();
+    }
+
+    public function getIntakesProperty()
+    {
+        return Intake::query()
+            ->whereHas('trainingPrograms', function ($query) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+            })
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn(Intake $intake) => [
+                'id' => $intake->id,
+                'name' => $intake->name,
+            ]);
+    }
+
+    public function getProgramMajorsProperty()
+    {
+        $intakeId = $this->filterIntake;
+
+        return ProgramMajor::query()
+            ->where('is_active', true)
+            ->where(function ($q) use ($intakeId) {
+                $q->whereHas('trainingPrograms', function ($query) use ($intakeId) {
+                    $query->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+
+                    if ($intakeId) {
+                        $query->where('intake_id', $intakeId);
+                    }
+                })->orWhereHas('majors.trainingPrograms', function ($query) use ($intakeId) {
+                    $query->where('status', 'published')
+                        ->whereNotNull('published_at')
+                        ->where('published_at', '<=', now());
+
+                    if ($intakeId) {
+                        $query->where('intake_id', $intakeId);
+                    }
+                });
+            })
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get()
+            ->map(function ($major) {
+                return [
+                    'id' => $major->id,
+                    'name' => $major->getTranslation('name', app()->getLocale(), false)
+                        ?: $major->getTranslation('name', 'vi', false)
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
+                ];
+            });
+    }
+
+    public function getMajorsProperty()
+    {
+        if (!$this->filterProgramMajor) {
+            return collect();
+        }
+
+        $intakeId = $this->filterIntake;
+
+        return Major::query()
+            ->where('program_major_id', $this->filterProgramMajor)
+            ->where('is_active', true)
+            ->whereHas('trainingPrograms', function ($query) use ($intakeId) {
+                $query->where('status', 'published')
+                    ->whereNotNull('published_at')
+                    ->where('published_at', '<=', now());
+
+                if ($intakeId) {
+                    $query->where('intake_id', $intakeId);
+                }
+            })
+            ->orderByRaw("COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name, '$.vi')), JSON_UNQUOTE(JSON_EXTRACT(name, '$.en')), slug) asc")
+            ->get()
+            ->map(function (Major $major) {
+                return [
+                    'id' => $major->id,
+                    'name' => $major->getTranslation('name', app()->getLocale(), false)
+                        ?: $major->getTranslation('name', 'vi', false)
+                            ?: $major->getTranslation('name', 'en', false)
+                                ?: $major->slug,
+                ];
+            });
+    }
+
+    public function updatedFilterProgramMajor(): void
+    {
+        $this->filterMajor = '';
+    }
+
+    public function updatedFilterIntake(): void
+    {
+        $this->filterProgramMajor = '';
+        $this->filterMajor = '';
     }
 
     public function getUsersProperty()
@@ -54,6 +175,26 @@ new class extends Component {
             ->when($this->filterRole !== '', function ($query) {
                 $query->whereHas('roles', function ($roleQuery) {
                     $roleQuery->where('id', $this->filterRole);
+                });
+            })
+            ->when($this->filterDepartment !== '', function ($query) {
+                $query->whereHas('lecturer.department', function ($departmentQuery) {
+                    $departmentQuery->where('id', $this->filterDepartment);
+                });
+            })
+            ->when($this->filterIntake !== '', function ($query) {
+                $query->whereHas('student', function ($studentQuery) {
+                    $studentQuery->where('intake_id', $this->filterIntake);
+                });
+            })
+            ->when($this->filterProgramMajor !== '', function ($query) {
+                $query->whereHas('student', function ($trainingProgramQuery) {
+                    $trainingProgramQuery->where('program_major_id', $this->filterProgramMajor);
+                });
+            })
+            ->when($this->filterMajor !== '', function ($query) {
+                $query->whereHas('student', function ($trainingProgramQuery) {
+                    $trainingProgramQuery->where('major_id', $this->filterMajor);
                 });
             })
             ->when($this->filterUserType !== '', function ($query) {
@@ -93,6 +234,11 @@ new class extends Component {
     public function updatedFilterUserType()
     {
         $this->resetPage();
+        $this->filterRole = '';
+        $this->filterDepartment = '';
+        $this->filterIntake = '';
+        $this->filterProgramMajor = '';
+        $this->filterMajor = '';
     }
 }
 ?>
@@ -152,6 +298,48 @@ new class extends Component {
             option-label="name"
             class="w-full md:w-48"
         />
+        @if($this->departmentOptions && $filterUserType === 'lecturer')
+            <x-select
+                wire:model.live="filterDepartment"
+                placeholder="Tất cả bộ môn"
+                placeholder-value=""
+                :options="$this->departmentOptions"
+                option-value="id"
+                option-label="name"
+                class="w-full md:w-48"
+            />
+        @endif
+
+        @if($filterUserType === 'student')
+            <x-select
+                wire:model.live="filterIntake"
+                :options="$this->intakes"
+                option-value="id"
+                option-label="name"
+                placeholder="{{ __('No intake selected') }}"
+            />
+
+            <x-select
+                wire:key="select-program-major"
+                wire:model.live="filterProgramMajor"
+                :options="$this->programMajors"
+                option-value="id"
+                option-label="name"
+                placeholder="{{ !$filterIntake ? __('Select intake first') : __('Select major') }}"
+                :disabled="empty($filterIntake)"
+            />
+
+            <x-select
+                wire:key="select-major-{{ $filterProgramMajor }}"
+                wire:model.live="filterMajor"
+                :options="$this->majors"
+                option-value="id"
+                option-label="name"
+                placeholder="{{ !$filterProgramMajor ? __('Select specialization first') : __('No specialization selected') }}"
+                :disabled="empty($filterProgramMajor) || $this->majors->isEmpty()"
+            />
+        @endif
+
     </div>
     {{--    end - header--}}
 
@@ -179,13 +367,13 @@ new class extends Component {
                 data-tip="Thời điểm người dùng đăng nhập gần nhất vào hệ thống"
             >
                 <span>{{ $header['label'] }}</span>
-                <x-icon name="o-information-circle" class="w-4 h-4 text-gray-400" />
+                <x-icon name="o-information-circle" class="w-4 h-4 text-gray-400"/>
             </div>
             @endscope
 
             {{-- Cột 1: STT --}}
             @scope('cell_id', $user)
-                {{ ($this->users->currentPage() - 1) * $this->users->perPage() + $loop->iteration }}
+            {{ ($this->users->currentPage() - 1) * $this->users->perPage() + $loop->iteration }}
             @endscope
 
             {{-- Cột 2: Gom Avatar, Tên và Email --}}
@@ -238,9 +426,9 @@ new class extends Component {
             {{-- Cột 5: Trạng thái Hoạt động/Bị khóa --}}
             @scope('cell_is_active', $user)
             @if($user->is_active)
-                <x-badge value="Hoạt động" class="badge-success badge-outline badge-md font-semibold"/>
+                <x-badge value="Hoạt động" class="badge-success badge-outline badge-md font-semibold whitespace-nowrap"/>
             @else
-                <x-badge value="Đã khóa" class="badge-error badge-outline badge-md font-semibold"/>
+                <x-badge value="Đã khóa" class="badge-error badge-outline badge-md font-semibold whitespace-nowrap"/>
             @endif
             @endscope
 
@@ -259,6 +447,22 @@ new class extends Component {
             {{-- Cột 6: Hành động --}}
             @scope('cell_actions', $user)
             <div class="flex space-x-2 justify-center">
+                @can('xem_diem_sinh_vien')
+                    @if(
+                        $user->user_type === 'student'
+                        && $user->student
+                        && filled($user->student->vnua_password)
+                        && $user->student->grade_sync_status === 'success'
+                    )
+                        <x-button
+                            icon="o-eye"
+                            class="btn-sm btn-ghost text-success [&]:hover:bg-gray-200/40 [&]:hover:border-gray-400/70"
+                            tooltip="Xem tiến độ học tập"
+                            link="{{ route('admin.users.student-grades', $user->id) }}"
+                            external
+                        />
+                    @endif
+                @endcan
                 <x-button
                     icon="o-pencil"
                     class="btn-sm btn-ghost text-primary [&]:hover:bg-gray-200/40 [&]:hover:border-gray-400/70"
