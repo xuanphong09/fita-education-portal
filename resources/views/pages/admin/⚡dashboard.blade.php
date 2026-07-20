@@ -203,104 +203,105 @@
                 </div>
             </header>
             {{-- ===== CHỈ SỐ ===== --}}
-            <section class="space-y-4">
-                <div class="flex items-center justify-between gap-3">
-                    <div>
-                        <h2 class="text-xl font-bold text-gray-900">{{ __('Chỉ số') }}</h2>
-                        <p class="text-sm text-gray-500">{{ __('Các số liệu tổng quan nhanh trong hệ thống.') }}</p>
+            @if(auth()->user()->can('quan_ly_nguoi_dung') || $canViewPostStats)
+                <section class="space-y-4">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-900">{{ __('Chỉ số') }}</h2>
+                            <p class="text-sm text-gray-500">{{ __('Các số liệu tổng quan nhanh trong hệ thống.') }}</p>
+                        </div>
+                        <div class="hidden md:block text-sm text-gray-500">
+                            {{ __('Cập nhật mới nhất') }}: {{ now()->format('H:i') }}
+                        </div>
                     </div>
-                    <div class="hidden md:block text-sm text-gray-500">
-                        {{ __('Cập nhật mới nhất') }}: {{ now()->format('H:i') }}
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                        @can('quan_ly_nguoi_dung')
+                            <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                                <a href="{{route('admin.user.user-list')}}" wire:navigate>
+                                    <div class="h-1 bg-linear-to-r from-sky-400 to-blue-500"></div>
+                                    <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                        <div>
+                                            <div class="text-gray-500 text-sm font-medium">{{ __('Tổng người dùng') }}</div>
+                                            <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalUsers) }}</div>
+        {{--                                    <div class="text-sm text-sky-600 mt-2">{{ __('Theo quyền quản lý người dùng') }}</div>--}}
+                                        </div>
+                                        <div class="w-14 h-14 rounded-2xl bg-sky-100 flex items-center justify-center">
+                                            <x-icon name="o-users" class="w-7 h-7 text-sky-600" />
+                                        </div>
+                                    </div>
+                                </a>
+                            </x-card>
+                        @endcan
+
+                        @if($canViewPostStats)
+                            <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                                <a href="{{route('admin.post.index')}}" wire:navigate>
+                                    <div class="h-1 bg-linear-to-r from-emerald-400 to-green-500"></div>
+                                    <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                        <div>
+                                            <div class="text-gray-500 text-sm font-medium">{{ __('Tổng bài viết') }}</div>
+                                            <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalPosts) }}</div>
+                                            <div class="text-sm text-emerald-600 mt-2">{{ __('Bài viết đã xuất bản và chờ duyệt') }}</div>
+                                        </div>
+                                        <div class="w-14 md:w-20 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center">
+                                            <x-icon name="o-document-text" class="w-7 h-7 text-emerald-600" />
+                                        </div>
+                                    </div>
+                                </a>
+                            </x-card>
+
+                            <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                                <a href="{{route('admin.posts.pending')}}" wire:navigate>
+                                    <div class="h-1 bg-linear-to-r from-amber-400 to-orange-500"></div>
+                                    <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                        <div>
+                                            <div class="text-gray-500 text-sm font-medium">{{ __('Chờ duyệt') }}</div>
+                                            <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($pendingPosts) }}</div>
+                                            <div class="text-sm text-orange-600 mt-2">{{ $pendingPosts > 0 ? __('Cần xem lại') : __('Không có bài chờ duyệt') }}</div>
+                                        </div>
+                                        <div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center">
+                                            <x-icon name="o-clock" class="w-7 h-7 text-orange-600" />
+                                        </div>
+                                    </div>
+                                </a>
+                            </x-card>
+
+                            <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                                <a href="{{route('admin.post.index')}}" wire:navigate>
+                                    <div class="h-1 bg-linear-to-r from-indigo-400 to-violet-500"></div>
+                                    <div class="px-4 pt-4 flex items-center justify-between gap-4">
+                                        <div>
+                                            <div class="text-gray-500 text-sm font-medium">{{ __('Đã duyệt') }}</div>
+                                            <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($approvedPosts) }}</div>
+                                            <div class="text-sm text-indigo-600 mt-2">{{ round(($approvedPosts / max($totalPosts, 1)) * 100) }}% {{ __('tổng bài viết') }}</div>
+                                        </div>
+                                        <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center">
+                                            <x-icon name="o-check-circle" class="w-7 h-7 text-indigo-600" />
+                                        </div>
+                                    </div>
+                                </a>
+                            </x-card>
+                        @endif
+
+                        @can('quan_ly_nguoi_dung')
+    {{--                        <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">--}}
+    {{--                            <div class="h-1 bg-linear-to-r from-purple-400 to-fuchsia-500"></div>--}}
+    {{--                            <div class="px-4 pt-4 flex items-center justify-between gap-4">--}}
+    {{--                                <div>--}}
+    {{--                                    <div class="text-gray-500 text-sm font-medium">{{ __('Quyền hạn') }}</div>--}}
+    {{--                                    <div class="text-3xl font-bold text-gray-900 mt-2">{{ count(auth()->user()->getAllPermissions() ?? []) }}</div>--}}
+    {{--                                    <div class="text-sm text-purple-600 mt-2">{{ __('Tổng số quyền đang có') }}</div>--}}
+    {{--                                </div>--}}
+    {{--                                <div class="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center">--}}
+    {{--                                    <x-icon name="o-cog-6-tooth" class="w-7 h-7 text-purple-600" />--}}
+    {{--                                </div>--}}
+    {{--                            </div>--}}
+    {{--                        </x-card>--}}
+                        @endcan
                     </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                    @can('quan_ly_nguoi_dung')
-                        <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <a href="{{route('admin.user.user-list')}}" wire:navigate>
-                                <div class="h-1 bg-linear-to-r from-sky-400 to-blue-500"></div>
-                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                    <div>
-                                        <div class="text-gray-500 text-sm font-medium">{{ __('Tổng người dùng') }}</div>
-                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalUsers) }}</div>
-    {{--                                    <div class="text-sm text-sky-600 mt-2">{{ __('Theo quyền quản lý người dùng') }}</div>--}}
-                                    </div>
-                                    <div class="w-14 h-14 rounded-2xl bg-sky-100 flex items-center justify-center">
-                                        <x-icon name="o-users" class="w-7 h-7 text-sky-600" />
-                                    </div>
-                                </div>
-                            </a>
-                        </x-card>
-                    @endcan
-
-                    @if($canViewPostStats)
-                        <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <a href="{{route('admin.post.index')}}" wire:navigate>
-                                <div class="h-1 bg-linear-to-r from-emerald-400 to-green-500"></div>
-                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                    <div>
-                                        <div class="text-gray-500 text-sm font-medium">{{ __('Tổng bài viết') }}</div>
-                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($totalPosts) }}</div>
-                                        <div class="text-sm text-emerald-600 mt-2">{{ __('Bài viết đã xuất bản và chờ duyệt') }}</div>
-                                    </div>
-                                    <div class="w-14 md:w-20 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center">
-                                        <x-icon name="o-document-text" class="w-7 h-7 text-emerald-600" />
-                                    </div>
-                                </div>
-                            </a>
-                        </x-card>
-
-                        <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <a href="{{route('admin.posts.pending')}}" wire:navigate>
-                                <div class="h-1 bg-linear-to-r from-amber-400 to-orange-500"></div>
-                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                    <div>
-                                        <div class="text-gray-500 text-sm font-medium">{{ __('Chờ duyệt') }}</div>
-                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($pendingPosts) }}</div>
-                                        <div class="text-sm text-orange-600 mt-2">{{ $pendingPosts > 0 ? __('Cần xem lại') : __('Không có bài chờ duyệt') }}</div>
-                                    </div>
-                                    <div class="w-14 h-14 rounded-2xl bg-orange-100 flex items-center justify-center">
-                                        <x-icon name="o-clock" class="w-7 h-7 text-orange-600" />
-                                    </div>
-                                </div>
-                            </a>
-                        </x-card>
-
-                        <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                            <a href="{{route('admin.post.index')}}" wire:navigate>
-                                <div class="h-1 bg-linear-to-r from-indigo-400 to-violet-500"></div>
-                                <div class="px-4 pt-4 flex items-center justify-between gap-4">
-                                    <div>
-                                        <div class="text-gray-500 text-sm font-medium">{{ __('Đã duyệt') }}</div>
-                                        <div class="text-3xl font-bold text-gray-900 mt-2">{{ number_format($approvedPosts) }}</div>
-                                        <div class="text-sm text-indigo-600 mt-2">{{ round(($approvedPosts / max($totalPosts, 1)) * 100) }}% {{ __('tổng bài viết') }}</div>
-                                    </div>
-                                    <div class="w-14 h-14 rounded-2xl bg-indigo-100 flex items-center justify-center">
-                                        <x-icon name="o-check-circle" class="w-7 h-7 text-indigo-600" />
-                                    </div>
-                                </div>
-                            </a>
-                        </x-card>
-                    @endif
-
-                    @can('quan_ly_nguoi_dung')
-{{--                        <x-card class="border-0 shadow-sm hover:shadow-md transition-shadow overflow-hidden">--}}
-{{--                            <div class="h-1 bg-linear-to-r from-purple-400 to-fuchsia-500"></div>--}}
-{{--                            <div class="px-4 pt-4 flex items-center justify-between gap-4">--}}
-{{--                                <div>--}}
-{{--                                    <div class="text-gray-500 text-sm font-medium">{{ __('Quyền hạn') }}</div>--}}
-{{--                                    <div class="text-3xl font-bold text-gray-900 mt-2">{{ count(auth()->user()->getAllPermissions() ?? []) }}</div>--}}
-{{--                                    <div class="text-sm text-purple-600 mt-2">{{ __('Tổng số quyền đang có') }}</div>--}}
-{{--                                </div>--}}
-{{--                                <div class="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center">--}}
-{{--                                    <x-icon name="o-cog-6-tooth" class="w-7 h-7 text-purple-600" />--}}
-{{--                                </div>--}}
-{{--                            </div>--}}
-{{--                        </x-card>--}}
-                    @endcan
-                </div>
-            </section>
-
+                </section>
+            @endif
             {{-- ===== BÀI VIẾT ===== --}}
             @if($canViewPostStats)
                 <section class="space-y-4">
@@ -418,58 +419,61 @@
             @endcan
 
             {{-- ===== QUẢN TRỊ HỆ THỐNG ===== --}}
-            <section class="space-y-4">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-900">{{ __('Quản trị hệ thống') }}</h2>
-                    <p class="text-sm text-gray-500">{{ __('Thông tin kỹ thuật và quyền hạn hiện tại.') }}</p>
-                </div>
+            @if(auth()->user()->hasRole('super_admin') || auth()->user()->can('quan_ly_nguoi_dung'))
+                <section class="space-y-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-gray-900">{{ __('Quản trị hệ thống') }}</h2>
+                        <p class="text-sm text-gray-500">{{ __('Thông tin kỹ thuật và quyền hạn hiện tại.') }}</p>
+                    </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    @can('quan_ly_nguoi_dung')
-                        <x-card title="{{ __('Phân quyền tổng quan') }}" class="shadow-sm lg:col-span-2">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div class="text-center p-4 bg-linear-to-br from-sky-50 to-sky-100 rounded-2xl">
-                                    <x-icon name="o-users" class="w-8 h-8 text-sky-600 mx-auto mb-2" />
-                                    <div class="text-2xl font-bold text-sky-900">{{ number_format($totalStudents) }}</div>
-                                    <div class="text-sm text-sky-700">{{ __('Sinh viên') }}</div>
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        @can('quan_ly_nguoi_dung')
+                            <x-card title="{{ __('Phân quyền tổng quan') }}" class="shadow-sm lg:col-span-2">
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div class="text-center p-4 bg-linear-to-br from-sky-50 to-sky-100 rounded-2xl">
+                                        <x-icon name="o-users" class="w-8 h-8 text-sky-600 mx-auto mb-2" />
+                                        <div class="text-2xl font-bold text-sky-900">{{ number_format($totalStudents) }}</div>
+                                        <div class="text-sm text-sky-700">{{ __('Sinh viên') }}</div>
+                                    </div>
+                                    <div class="text-center p-4 bg-linear-to-br from-violet-50 to-violet-100 rounded-2xl">
+                                        <x-icon name="o-academic-cap" class="w-8 h-8 text-violet-600 mx-auto mb-2" />
+                                        <div class="text-2xl font-bold text-violet-900">{{ number_format($totalLecturers) }}</div>
+                                        <div class="text-sm text-violet-700">{{ __('Giảng viên') }}</div>
+                                    </div>
+                                    <div class="text-center p-4 bg-linear-to-br from-emerald-50 to-emerald-100 rounded-2xl">
+                                        <x-icon name="o-cog-6-tooth" class="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+                                        <div class="text-2xl font-bold text-emerald-900">{{ count(auth()->user()->getAllPermissions() ?? []) }}</div>
+                                        <div class="text-sm text-emerald-700">{{ __('Quyền hạn') }}</div>
+                                    </div>
                                 </div>
-                                <div class="text-center p-4 bg-linear-to-br from-violet-50 to-violet-100 rounded-2xl">
-                                    <x-icon name="o-academic-cap" class="w-8 h-8 text-violet-600 mx-auto mb-2" />
-                                    <div class="text-2xl font-bold text-violet-900">{{ number_format($totalLecturers) }}</div>
-                                    <div class="text-sm text-violet-700">{{ __('Giảng viên') }}</div>
+                            </x-card>
+                        @endcan
+                        @if(auth()->user()->hasRole('super_admin'))
+                            <x-card title="{{ __('Thông tin hệ thống') }}" class="shadow-sm">
+                                <div class="space-y-3 text-sm">
+                                    <div class="flex justify-between gap-4">
+                                        <span class="text-gray-600">{{ __('Phiên bản Laravel') }}</span>
+                                        <span class="font-medium text-gray-900">{{ app()->version() }}</span>
+                                    </div>
+                                    <div class="flex justify-between gap-4">
+                                        <span class="text-gray-600">{{ __('Múi giờ') }}</span>
+                                        <span class="font-medium text-gray-900">{{ config('app.timezone') }}</span>
+                                    </div>
+                                    <div class="flex justify-between gap-4">
+                                        <span class="text-gray-600">{{ __('Ngôn ngữ') }}</span>
+                                        <span class="font-medium text-gray-900 uppercase">{{ app()->getLocale() }}</span>
+                                    </div>
+                                    <hr class="my-2">
+                                    <div class="flex justify-between gap-4">
+                                        <span class="text-gray-600">{{ __('Truy cập cuối') }}</span>
+                                        <span class="font-medium text-gray-900 text-xs text-right">{{ auth()->user()->last_login_at ? auth()->user()->last_login_at->locale('vi')->format('d/m/Y H:i') : 'N/A' }}</span>
+                                    </div>
                                 </div>
-                                <div class="text-center p-4 bg-linear-to-br from-emerald-50 to-emerald-100 rounded-2xl">
-                                    <x-icon name="o-cog-6-tooth" class="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-                                    <div class="text-2xl font-bold text-emerald-900">{{ count(auth()->user()->getAllPermissions() ?? []) }}</div>
-                                    <div class="text-sm text-emerald-700">{{ __('Quyền hạn') }}</div>
-                                </div>
-                            </div>
-                        </x-card>
-                    @endcan
-
-                    <x-card title="{{ __('Thông tin hệ thống') }}" class="shadow-sm">
-                        <div class="space-y-3 text-sm">
-                            <div class="flex justify-between gap-4">
-                                <span class="text-gray-600">{{ __('Phiên bản Laravel') }}</span>
-                                <span class="font-medium text-gray-900">{{ app()->version() }}</span>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <span class="text-gray-600">{{ __('Múi giờ') }}</span>
-                                <span class="font-medium text-gray-900">{{ config('app.timezone') }}</span>
-                            </div>
-                            <div class="flex justify-between gap-4">
-                                <span class="text-gray-600">{{ __('Ngôn ngữ') }}</span>
-                                <span class="font-medium text-gray-900 uppercase">{{ app()->getLocale() }}</span>
-                            </div>
-                            <hr class="my-2">
-                            <div class="flex justify-between gap-4">
-                                <span class="text-gray-600">{{ __('Truy cập cuối') }}</span>
-                                <span class="font-medium text-gray-900 text-xs text-right">{{ auth()->user()->last_login_at ? auth()->user()->last_login_at->locale('vi')->format('d/m/Y H:i') : 'N/A' }}</span>
-                            </div>
-                        </div>
-                    </x-card>
-                </div>
-            </section>
+                            </x-card>
+                        @endif
+                    </div>
+                </section>
+            @endif
         </div>
         {{-- Sử dụng @script của Livewire thay vì thẻ <script> thông thường --}}
         @script

@@ -168,7 +168,7 @@ new class extends Component {
                     <x-button icon="o-trash" class="btn-sm btn-ghost text-danger" tooltip="Xóa"
                               wire:click="delete({{ $role->id }})"
                               spinner="delete({{ $role->id }})"
-                              :hidden="$role->users_count > 0 || $role->name === 'sper_admin'"
+                              :hidden="$role->users_count > 0 || $role->name === 'super_admin'"
                     />
                 @endif
             </div>
