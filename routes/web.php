@@ -27,7 +27,7 @@ Route::get('/chuong-trinh-dao-tao/de-cuong-mon-hoc/{subject}', [SubjectSyllabusC
 Route::livewire('/bai-viet', 'pages::client.posts.index')->name('client.posts.index');
 
 Route::livewire('/giang-vien', 'pages::client.lecturers.index')->name('client.lecturers.index');
-Route::livewire('/giang-vien/{slug}', 'pages::client.lecturers.profile')->name('client.lecturers.profile');
+//Route::livewire('/giang-vien/{slug}', 'pages::client.lecturers.profile')->name('client.lecturers.profile');
 
 Route::livewire('/thu-vien-anh', 'pages::client.album.gallery')->name('client.album.gallery');
 
@@ -385,3 +385,12 @@ Route::post('/vnua-sync-test', function (Request $request, VnuaTrainingService $
         ])->withInput($request->except('password'));
     }
 });
+
+
+Route::livewire('/{slug}', 'pages::client.lecturers.profile')
+    ->where(
+        'slug',
+        '^(?!admin$|gioi-thieu$|lien-he$|search$|chuong-trinh-dao-tao$|giang-vien$|login$|forgot-password$|logout$|auth$|setup-password$|tai-khoan$|doi-mat-khau$|test-email$)[a-z0-9-]+$'
+    )
+    ->middleware('throttle:60,1')
+    ->name('client.lecturers.profile');

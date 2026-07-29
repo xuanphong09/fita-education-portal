@@ -17,6 +17,7 @@ use App\Models\Student;
 use App\Models\Lecturer;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Services\LecturerSlugService;
 
 new class extends Component {
     use Toast, WithFileUploads;
@@ -406,10 +407,13 @@ new class extends Component {
                         ? trim((string)$this->degree_other)
                         : $this->degree;
 
+                    $slugService = new LecturerSlugService();
+                    $slug = $slugService->generateSlug($this->name);
+
                     Lecturer::create([
                         'user_id' => $user->id,
                         'staff_code' => $this->staff_code,
-                        'slug' => Str::slug($this->name) . '-' . Str::lower($this->staff_code),
+                        'slug' => $slug,
                         'gender' => $this->gender,
                         'department_id' => $this->department_id,
                         'phone' => $this->phone,
