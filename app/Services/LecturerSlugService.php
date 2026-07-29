@@ -191,4 +191,34 @@ class LecturerSlugService
 
         return $query->doesntExist();
     }
+
+    /**
+     * Generate slug from email prefix (before @). If taken, append -1, -2...
+     *
+     * @param string $email
+     * @param ?int $excludeLecturerId
+     * @return string
+     */
+    public function generateFromEmail(string $email, ?int $excludeLecturerId = null): string
+    {
+        $local = strtolower(explode('@', $email)[0] ?? '');
+        // remove diacritics and non-alnum
+        $local = $this->removeDiacritics($local);
+        $local = preg_replace('/[^a-z0-9]/', '', strtolower($local));
+
+        if ($local === '') {
+            // fallback to name-based candidate
+            $local = $this->buildSlug($nameParts['surname'] ?? '', $nameParts['middleName'] ?? '', $nameParts['lastName'] ?? '');
+        }
+
+        $candidate = $local;
+        $i = 1;
+        while (! $this->isSlugUnique($candidate, $excludeLecturerId)) {
+            $candidate = $local . '-' . $i;
+            $i++;
+        }
+
+        return $candidate;
+    }
 }
+

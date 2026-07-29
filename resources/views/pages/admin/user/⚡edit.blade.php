@@ -633,7 +633,7 @@ new class extends Component {
                         : $this->degree;
 
                     $slugService = new LecturerSlugService();
-                    $slug = $slugService->generateSlug($this->name, $this->lecturerId);
+                    $slug = $slugService->generateFromEmail($this->email, $this->lecturerId);
 
                     Lecturer::updateOrCreate(
                         ['user_id' => $user->id],

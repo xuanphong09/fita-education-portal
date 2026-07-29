@@ -408,7 +408,7 @@ new class extends Component {
                         : $this->degree;
 
                     $slugService = new LecturerSlugService();
-                    $slug = $slugService->generateSlug($this->name);
+                    $slug = $slugService->generateFromEmail($this->email);
 
                     Lecturer::create([
                         'user_id' => $user->id,
