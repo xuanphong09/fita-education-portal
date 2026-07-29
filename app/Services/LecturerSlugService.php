@@ -49,11 +49,35 @@ class LecturerSlugService
      */
     public function generateCandidates(array $nameParts): array
     {
+        $surname = $nameParts['surname'] ?? '';
+        $middleName = $nameParts['middleName'] ?? '';
+        $lastName = $nameParts['lastName'] ?? '';
+
+        // middleParts: array of middle tokens (preserve original tokens if available)
+        $middleParts = $nameParts['middleParts'] ?? [];
+        if (empty($middleParts) && $middleName !== '') {
+            // fallback: split by spaces (in case parseFullName provided single string)
+            $middleParts = preg_split('/\s+/', $middleName);
+        }
+
+        // Build initials by taking first char of each middle token
+        $middleInitials = '';
+        foreach ($middleParts as $mp) {
+            $middleInitials .= mb_substr($mp, 0, 1);
+        }
+
+        $firstSurnameChar = mb_substr($surname, 0, 1);
+        $firstTwoSurnameChars = mb_substr($surname, 0, 2);
+
         return [
-            $this->buildSlug($nameParts['surname'][0] ?? '', $nameParts['middleName'][0] ?? '', $nameParts['lastName']),
-            $this->buildSlug(substr($nameParts['surname'], 0, 2), $nameParts['middleName'][0] ?? '', $nameParts['lastName']),
-            $this->buildSlug($nameParts['surname'], $nameParts['middleName'][0] ?? '', $nameParts['lastName']),
-            $this->buildSlug($nameParts['surname'], $nameParts['middleName'], $nameParts['lastName']),
+            // 1. first char of surname + initials of middle parts + last name
+            $this->buildSlug($firstSurnameChar, $middleInitials, $lastName),
+            // 2. first two chars of surname + initials of middle parts + last name
+            $this->buildSlug($firstTwoSurnameChars, $middleInitials, $lastName),
+            // 3. full surname + initials of middle parts + last name
+            $this->buildSlug($surname, $middleInitials, $lastName),
+            // 4. full surname + full middle name (concatenated) + last name
+            $this->buildSlug($surname, implode('', $middleParts), $lastName),
         ];
     }
 
@@ -67,7 +91,7 @@ class LecturerSlugService
     public function parseFullName(string $fullName): array
     {
         $fullName = trim($fullName);
-        $parts = preg_split('/\s+/', $fullName);
+        $parts = preg_split('/\s+/', $fullName); // normalize spaces
 
         if (count($parts) < 2) {
             return [
@@ -88,11 +112,14 @@ class LecturerSlugService
         // More than 2 parts: first is surname, last is lastName, middle are in between
         $surname = array_shift($parts);
         $lastName = array_pop($parts);
-        $middleName = implode('', $parts); // Combine remaining parts
+        // Keep middle parts as array to build initials
+        $middleParts = $parts;
+        $middleName = implode('', $parts); // Combine remaining parts for fallback
 
         return [
             'surname' => $surname,
             'middleName' => $middleName,
+            'middleParts' => $middleParts,
             'lastName' => $lastName,
         ];
     }
@@ -112,10 +139,12 @@ class LecturerSlugService
         $slug = Str::lower($slug);
         // Remove Vietnamese diacritics
         $slug = $this->removeDiacritics($slug);
-        // Keep only a-z and 0-9
-        $slug = preg_replace('/[^a-z0-9]/', '', $slug);
+                // Normalize multiple spaces and trim
+                $slug = preg_replace('/\s+/', '', $slug);
+                // Keep only a-z and 0-9
+                $slug = preg_replace('/[^a-z0-9]/', '', $slug);
 
-        return $slug;
+                return $slug;
     }
 
     /**
