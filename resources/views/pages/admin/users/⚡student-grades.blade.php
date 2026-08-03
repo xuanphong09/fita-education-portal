@@ -1049,47 +1049,47 @@ class extends Component {
                             <span>{{ $viewingUser?->name }} - {{ $viewingUser?->student?->student_code }}</span>
                         </div>
                     @endif
-{{--                    <div class="w-full md:col-span-1 col-span-5">--}}
-{{--                        <x-select--}}
-{{--                            label="{{__('Intake')}}"--}}
-{{--                            wire:model.live="intakeId"--}}
-{{--                            :options="$intakeOptions"--}}
-{{--                            option-value="id"--}}
-{{--                            option-label="name"--}}
-{{--                            placeholder="{{ __('No intake selected') }}"--}}
-{{--                            :disabled="$isLockedProfile || empty($intakeOptions)"--}}
-{{--                        />--}}
-{{--                    </div>--}}
+                    <div class="w-full md:col-span-1 col-span-5">
+                        <x-select
+                            label="{{__('Intake')}}"
+                            wire:model.live="intakeId"
+                            :options="$intakeOptions"
+                            option-value="id"
+                            option-label="name"
+                            placeholder="{{ __('No intake selected') }}"
+                            :disabled="$isLockedProfile || empty($intakeOptions)"
+                        />
+                    </div>
 
-{{--                    <div class="w-full md:col-span-2 col-span-5">--}}
-{{--                        <x-select--}}
-{{--                            label="{{__('Major')}}"--}}
-{{--                            wire:model.live="programMajorSlug"--}}
-{{--                            placeholder="{{ $this->intakeId ? __('No major selected') : __('Select intake first') }}"--}}
-{{--                            :options="$programMajorOptions->map(fn ($item) => [--}}
-{{--                            'value' => $item->slug,--}}
-{{--                            'label' => $this->localizedName($item),--}}
-{{--                        ])->values()->toArray()"--}}
-{{--                            option-value="value"--}}
-{{--                            option-label="label"--}}
-{{--                            :disabled="$isLockedProfile || !$this->intakeId || $programMajorOptions->isEmpty()"--}}
-{{--                        />--}}
-{{--                    </div>--}}
+                    <div class="w-full md:col-span-2 col-span-5">
+                        <x-select
+                            label="{{__('Major')}}"
+                            wire:model.live="programMajorSlug"
+                            placeholder="{{ $this->intakeId ? __('No major selected') : __('Select intake first') }}"
+                            :options="$programMajorOptions->map(fn ($item) => [
+                            'value' => $item->slug,
+                            'label' => $this->localizedName($item),
+                        ])->values()->toArray()"
+                            option-value="value"
+                            option-label="label"
+                            :disabled="$isLockedProfile || !$this->intakeId || $programMajorOptions->isEmpty()"
+                        />
+                    </div>
 
-{{--                    <div class="w-full md:col-span-2 col-span-5">--}}
-{{--                        <x-select--}}
-{{--                            label="{{__('Specialization/Area of specialization')}}"--}}
-{{--                            wire:model.live="selectedMajorSlug"--}}
-{{--                            placeholder="{{ $this->programMajorSlug ? __('No specialization selected') : __('Select major first') }}"--}}
-{{--                            :options="$majorOptions->map(fn ($item) => [--}}
-{{--                            'value' => $item->slug,--}}
-{{--                            'label' => $this->localizedName($item),--}}
-{{--                        ])->values()->toArray()"--}}
-{{--                            option-value="value"--}}
-{{--                            option-label="label"--}}
-{{--                            :disabled="$isLockedProfile || !$this->intakeId || !$this->programMajorSlug || $majorOptions->isEmpty()"--}}
-{{--                        />--}}
-{{--                    </div>--}}
+                    <div class="w-full md:col-span-2 col-span-5">
+                        <x-select
+                            label="{{__('Specialization/Area of specialization')}}"
+                            wire:model.live="selectedMajorSlug"
+                            placeholder="{{ $this->programMajorSlug ? __('No specialization selected') : __('Select major first') }}"
+                            :options="$majorOptions->map(fn ($item) => [
+                            'value' => $item->slug,
+                            'label' => $this->localizedName($item),
+                        ])->values()->toArray()"
+                            option-value="value"
+                            option-label="label"
+                            :disabled="$isLockedProfile || !$this->intakeId || !$this->programMajorSlug || $majorOptions->isEmpty()"
+                        />
+                    </div>
                 </div>
                 <div class="flex flex-wrap items-end gap-4 mt-2">
                     <div class="w-full sm:w-50">
