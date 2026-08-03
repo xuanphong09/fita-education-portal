@@ -1205,7 +1205,8 @@ class extends Component {
                     $total_credits_earned = $student?->total_credits_earned ?? 0;
                     $last_academic_stats_updated_at = $student?->last_academic_stats_updated_at?->format('H:i d/m/Y');
                     $total_program_credits = $activeProgram->total_credits > 0 ? $activeProgram->total_credits : 1;
-
+                    $total_elective_credits = max($activeProgram->elective_credits, 0);
+                    $total_required_credits = $total_program_credits - $total_elective_credits;
                     $classification = $this->getDegreeClassification($gpa_4);
                     $badgeClass = match($classification) {
                         'Xuất sắc', 'Excellent' => 'badge-secondary',
@@ -1362,7 +1363,7 @@ class extends Component {
                             <h2 class="text-2xl font-bold">{{ $programTitle }}</h2>
                             <div class="flex flex-wrap gap-2 md:text-[16px] lg:justify-end justify-start mb-4">
                                 <x-badge value="Phiên bản: {{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
-                                <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits')}}" class="badge-outline badge-md" />
+{{--                                <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits')}}" class="badge-outline badge-md" />--}}
                                 @if($currentSemesterTimeline)
                                     <x-button
                                         label="{{ __('Current semester') }}"
@@ -1383,10 +1384,15 @@ class extends Component {
                                     <div><span class="font-normal">{{__('Duration time')}}:</span> {{ $programDuration }}</div>
                                     <div class="sm:col-span-2"><span class="font-normal">{{__('Language')}}:</span> {{ $programLanguage }}</div>
                                 </div>
+                                <div class="mt-3 grid grid-cols-1 gap-x-15 md:text-[16px] text-gray-800 font-medium">
+                                    <div><span class="font-normal">{{__('Total compulsory credits')}}:</span> {{ Subject::formatCredit($total_required_credits) }}</div>
+                                    <div><span class="font-normal">{{__('Total elective credits')}}:</span> {{ Subject::formatCredit($total_elective_credits) }}</div>
+                                    <div><span class="font-normal">{{__('Total credits of the training program')}}:</span> {{ Subject::formatCredit($total_program_credits) }}</div>
+                                </div>
                             </div>
                             <div class="w-full lg:w-auto mt-4 lg:mt-0">
                                 @if($gpa_4 !== null)
-                                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 shadow-sm w-full lg:min-w-[350px]">
+                                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 shadow-sm w-full lg:min-w-87.5">
                                         <div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
                                             <h3 class="font-bold text-gray-700">{{ __('Kết quả học tập tích lũy') }}</h3>
                                             <x-button @click="showTargetCalc = !showTargetCalc" class="btn btn-xs btn-outline btn-primary" icon="o-calculator">

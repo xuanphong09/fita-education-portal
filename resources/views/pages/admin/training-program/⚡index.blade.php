@@ -226,6 +226,7 @@ new class extends Component {
                 'duration_time' => $sourceProgram->duration_time,
                 'school_year_start' => $this->duplicate_school_year_start,
                 'school_year_end' => $this->duplicate_school_year_end,
+                'elective_credits' => (int) ($sourceProgram->elective_credits ?? 0),
                 'total_credits' => $sourceProgram->total_credits,
                 'name' => [
                     'vi' => $this->duplicate_name_vi,
@@ -714,5 +715,4 @@ new class extends Component {
         </x-slot:actions>
     </x-modal>
 </div>
-
 

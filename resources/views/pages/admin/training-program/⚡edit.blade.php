@@ -29,6 +29,8 @@ new class extends Component {
     public ?int $school_year_start = null;
     public ?int $school_year_end = null;
     public string $version = 'v1';
+    public int $required_credits = 0;
+    public int $elective_credits = 0;
     public int $total_credits = 0;
     public string $status = 'draft';
     public ?string $published_at = null;
@@ -54,7 +56,9 @@ new class extends Component {
         $this->school_year_start = $program->school_year_start;
         $this->school_year_end = $program->school_year_end;
         $this->version = $program->version;
-        $this->total_credits = $program->total_credits;
+        $this->elective_credits = (int) ($program->elective_credits ?? 0);
+        $this->required_credits = max(0, (int) $program->total_credits - $this->elective_credits);
+        $this->recalculateTotalCredits();
         $this->status = $program->status;
         $this->published_at = $program->published_at ? $program->published_at->format('Y-m-d H:i:s') : null;
         $this->notes = $program->notes ?? '';
@@ -122,6 +126,8 @@ new class extends Component {
                     }
                 }),
             ],
+            'required_credits' => ['required', 'integer', 'min:0', 'max:300'],
+            'elective_credits' => ['required', 'integer', 'min:0', 'max:300'],
             'total_credits' => ['required', 'integer', 'min:0', 'max:300'],
             'status' => ['required', Rule::in(['draft', 'published', 'archived'])],
             'published_at' => ['nullable', 'date'],
@@ -156,6 +162,14 @@ new class extends Component {
         'intake_id.unique' => 'Chương trình đào tạo cho Khóa, Ngành và Chuyên ngành này đã tồn tại!',
         'version.required' => 'Phiên bản là bắt buộc.',
         'version.max' => 'Phiên bản không được vượt quá 20 ký tự.',
+        'required_credits.required' => 'Tổng số tín chỉ bắt buộc là bắt buộc.',
+        'required_credits.integer' => 'Tổng số tín chỉ bắt buộc phải là số nguyên.',
+        'required_credits.min' => 'Tổng số tín chỉ bắt buộc không được nhỏ hơn 0.',
+        'required_credits.max' => 'Tổng số tín chỉ bắt buộc không được lớn hơn 300.',
+        'elective_credits.required' => 'Tổng số tín chỉ tự chọn là bắt buộc.',
+        'elective_credits.integer' => 'Tổng số tín chỉ tự chọn phải là số nguyên.',
+        'elective_credits.min' => 'Tổng số tín chỉ tự chọn không được nhỏ hơn 0.',
+        'elective_credits.max' => 'Tổng số tín chỉ tự chọn không được lớn hơn 300.',
         'total_credits.required' => 'Tổng số tín chỉ là bắt buộc.',
         'total_credits.integer' => 'Tổng số tín chỉ phải là số nguyên.',
         'total_credits.min' => 'Tổng số tín chỉ không được nhỏ hơn 0.',
@@ -179,8 +193,21 @@ new class extends Component {
         $this->version = $intakeName ? trim((string) $intakeName) . ' - ' . (string) $year : '';
     }
 
+    private function recalculateTotalCredits(): void
+    {
+        $required = max(0, (int) ($this->required_credits ?? 0));
+        $elective = max(0, (int) ($this->elective_credits ?? 0));
+        $this->required_credits = $required;
+        $this->elective_credits = $elective;
+        $this->total_credits = $required + $elective;
+    }
+
     public function updated($property): void
     {
+        if (in_array($property, ['required_credits', 'elective_credits'], true)) {
+            $this->recalculateTotalCredits();
+        }
+
         // Khi thay đổi ngành, xóa chuyên ngành cũ và refresh version
         if ($property === 'program_major_id') {
             $this->major_id = null;
@@ -254,6 +281,7 @@ new class extends Component {
     public function save(): void
     {
         $this->refreshVersion();
+        $this->recalculateTotalCredits();
 
         try {
             $this->validate();
@@ -292,6 +320,7 @@ new class extends Component {
             'school_year_start' => $this->school_year_start,
             'school_year_end' => $this->school_year_end,
             'version' => trim($this->version),
+            'elective_credits' => $this->elective_credits,
             'total_credits' => $this->total_credits,
             'status' => $this->status,
             'published_at' => $publishedAt,
@@ -348,7 +377,11 @@ new class extends Component {
                     <x-input label="Năm bắt đầu" type="number" wire:model.live.debounce.400ms="school_year_start" placeholder="2026"/>
                     <x-input label="Năm kết thúc" type="number" wire:model.live.debounce.400ms="school_year_end" placeholder="2030"/>
                 </div>
-                <x-input label="Tổng số tín chỉ " type="number" min="0" wire:model.live.debounce.400ms="total_credits" placeholder="131"/>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                    <x-input label="Tổng số TC bắt buộc" type="number" min="0" wire:model.live.debounce.400ms="required_credits" placeholder="120"/>
+                    <x-input label="Tổng số TC tự chọn" type="number" min="0" wire:model.live.debounce.400ms="elective_credits" placeholder="11"/>
+                    <x-input label="Tổng số tín chỉ" type="number" min="0" wire:model="total_credits" readonly/>
+                </div>
             </x-card>
 
             <x-card title="Ghi chú" shadow class="p-3!">
@@ -372,5 +405,4 @@ new class extends Component {
         </div>
     </div>
 </div>
-
 

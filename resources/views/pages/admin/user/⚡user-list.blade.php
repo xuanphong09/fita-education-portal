@@ -1113,17 +1113,16 @@ new class extends Component {
             @endscope
 
             @scope('cell_actions', $user)
-            <div class="flex justify-center space-x-2">
-                <x-button
-                    icon="o-eye"
-                    class="{{ $this->canViewStudentGrades($user)
-                            ? 'btn-sm btn-ghost text-success'
-                            : 'hidden' }}"
-                    tooltip="Xem tiến độ học tập"
-                    link="{{ route('admin.users.student-grades', $user->id) }}"
-                    external
-                />
-
+            <div class="flex justify-end space-x-2">
+                @if($this->canViewStudentGrades($user))
+                    <x-button
+                        icon="o-eye"
+                        class="{{'btn-sm btn-ghost text-success'}}"
+                        tooltip="Xem tiến độ học tập"
+                        link="{{ route('admin.users.student-grades', $user->id) }}"
+                        external
+                    />
+                @endif
                 <x-button
                     icon="o-pencil"
                     class="btn-sm btn-ghost text-primary"

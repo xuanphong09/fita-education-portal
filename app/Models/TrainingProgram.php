@@ -25,6 +25,7 @@ class TrainingProgram extends Model
         'school_year_start',
         'school_year_end',
         'version',
+        'elective_credits',
         'total_credits',
         'status',
         'published_at',
@@ -43,6 +44,7 @@ class TrainingProgram extends Model
         'school_year_start' => 'integer',
         'school_year_end' => 'integer',
         'duration_time' => 'integer',
+        'elective_credits' => 'integer',
         'total_credits' => 'integer',
     ];
 
@@ -97,5 +99,4 @@ class TrainingProgram extends Model
             ->orderBy('program_semester_subjects.order');
     }
 }
-
 
