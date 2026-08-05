@@ -11,6 +11,7 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use App\Services\GraduationEligibilityService;
 
 new
 #[Layout('layouts.client')]
@@ -47,6 +48,8 @@ class extends Component {
     public bool $showSemesterTimelineModal = true;
     public bool $pendingOpenSemesterTimelineModal = true;
     public ?string $canonicalRedirectUrl = null;
+
+    public bool $showGraduationModal = false;
 
     #[Computed]
     public function majorLabel(): string
@@ -504,6 +507,7 @@ class extends Component {
     {
         $studentGrades = collect();
         $user = Auth::user();
+        $graduationEvaluation = null;
 
         if ($user?->student) {
             $studentGrades = $user->student
@@ -896,6 +900,15 @@ class extends Component {
                 })
                 ->sortBy('group_sort_order')
                 ->values();
+
+            if ($activeProgram && $user?->student) {
+                $graduationEvaluation = app(
+                    GraduationEligibilityService::class
+                )->evaluate(
+                    $user->student,
+                    $activeProgram
+                );
+            }
         } else {
             $this->showSemesterTimelineModal = false;
             $this->pendingOpenSemesterTimelineModal = false;
@@ -912,6 +925,7 @@ class extends Component {
             'programMajorOptions' => $programMajorOptions,
             'majorOptions' => $majorOptions,
             'studentGrades' => $studentGrades,
+            'graduationEvaluation' => $graduationEvaluation,
         ];
     }
 
@@ -976,6 +990,12 @@ class extends Component {
             ->values()
             ->first();
     }
+
+    public function openGraduationModal(): void
+    {
+        $this->showGraduationModal = true;
+    }
+
 };
 ?>
 
@@ -1435,12 +1455,23 @@ class extends Component {
 
                             <div class="w-full lg:w-auto mt-4 lg:mt-0">
                                 @if($gpa_4 !== null)
-                                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 shadow-sm w-full lg:min-w-[350px]">
+                                    <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 shadow-sm w-full lg:min-w-87.5">
                                         <div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
                                             <h3 class="font-bold text-gray-700">{{ __('Kết quả học tập tích lũy') }}</h3>
-                                            <x-button @click="showTargetCalc = !showTargetCalc" class="btn btn-xs btn-outline btn-primary" icon="o-calculator">
-                                                {{ __('Tính điểm') }}
-                                            </x-button>
+                                            <div>
+                                                @if($graduationEvaluation)
+                                                    <x-button
+                                                        label="{{ __(' Kết quả xét tốt nghiệp ') }}"
+                                                        icon="o-document-magnifying-glass"
+                                                        class="btn-primary btn btn-xs btn-outline me-2"
+                                                        wire:click="openGraduationModal"
+                                                        spinner="openGraduationModal"
+                                                    />
+                                                @endif
+                                                <x-button @click="showTargetCalc = !showTargetCalc" class="btn btn-xs btn-outline btn-primary" icon="o-calculator">
+                                                    {{ __('Tính điểm') }}
+                                                </x-button>
+                                            </div>
                                         </div>
 
                                         <div class="grid grid-cols-3 gap-x-2 gap-y-3 text-sm md:text-base">
@@ -1531,6 +1562,352 @@ class extends Component {
                             </div>
                         </div>
                     </x-card>
+
+                    @if($graduationEvaluation)
+                        @php
+                            $graduationChecks = collect(
+                                $graduationEvaluation['checks']
+                            );
+
+                            $missingRequired = collect(
+                                $graduationEvaluation['missing_required_subjects']
+                            );
+
+                            $missingStatusCounts = $missingRequired
+                                ->countBy('learning_status');
+                        @endphp
+
+                        {{-- Modal kết quả xét tốt nghiệp --}}
+                        <x-modal
+                            wire:model="showGraduationModal"
+                            title="{{ __('Kết quả xét điều kiện tốt nghiệp') }}"
+                            separator
+                            box-class="w-11/12 max-w-6xl"
+                            class="showGraduationModal"
+                        >
+                            <div class="max-h-[70vh] space-y-5 overflow-y-auto px-1">
+                                {{-- Thông báo kết quả tổng thể --}}
+                                <div
+                                    class="flex items-start gap-3 rounded-lg border p-4
+                                    {{ $graduationEvaluation['eligible']
+                                        ? 'border-green-200 bg-green-50'
+                                        : 'border-red-200 bg-red-50' }}"
+                                >
+                                    <x-icon
+                                        name="{{ $graduationEvaluation['eligible']
+                                        ? 'o-check-circle'
+                                        : 'o-x-circle' }}"
+                                        class="h-7 w-7 shrink-0
+                                        {{ $graduationEvaluation['eligible']
+                                            ? 'text-green-600'
+                                            : 'text-red-600' }}"
+                                    />
+
+                                <div>
+                                    <div
+                                        class="text-lg font-bold
+                                        {{ $graduationEvaluation['eligible']
+                                            ? 'text-green-700'
+                                            : 'text-red-700' }}"
+                                    >
+                                            {{ $graduationEvaluation['eligible']
+                                                ? __('Đủ điều kiện tốt nghiệp')
+                                                : __('Chưa đủ điều kiện tốt nghiệp') }}
+                                        </div>
+
+                                        <p class="mt-1 text-sm text-gray-600">
+                                            Kết quả được tính dựa trên môn bắt buộc,
+                                            tín chỉ tự chọn, tổng tín chỉ và điểm trung bình
+                                            tích lũy. Học phần PCBB không được tính.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {{-- Các điều kiện xét tốt nghiệp --}}
+                                <div>
+                                    <h3 class="mb-3 text-lg font-bold">
+                                        {{ __('Tổng hợp điều kiện') }}
+                                    </h3>
+
+                                    <div class="grid gap-3 md:grid-cols-2">
+                                        @foreach($graduationChecks as $checkKey => $check)
+                                            <div
+                                                class="flex items-center justify-between gap-3
+                                                rounded-lg border p-3
+                                                {{ $check['passed']
+                                                    ? 'border-green-200 bg-green-50'
+                                                    : 'border-red-200 bg-red-50' }}"
+                                            >
+                                                <div class="flex items-center gap-2">
+                                                    <x-icon
+                                                        name="{{ $check['passed']
+                                                            ? 'o-check-circle'
+                                                            : 'o-x-circle' }}"
+                                                        class="h-6 w-6
+                                                        {{ $check['passed']
+                                                            ? 'text-green-600'
+                                                            : 'text-red-600' }}"
+                                                    />
+
+                                                    <span class="font-medium">
+                                                        {{ $check['label'] }}
+                                                    </span>
+                                                </div>
+
+                                                <span class="whitespace-nowrap font-bold">
+                                                    @switch($checkKey)
+                                                        @case('required_subjects')
+                                                            {{ $check['completed'] }}
+                                                            /
+                                                            {{ $check['required'] }}
+                                                            môn
+                                                            @break
+
+                                                        @case('elective_credits')
+                                                        @case('total_credits')
+                                                            {{ Subject::formatCredit($check['earned']) }}
+                                                            /
+                                                            {{ Subject::formatCredit($check['required']) }}
+                                                            TC
+                                                            @break
+
+                                                        @case('gpa')
+                                                            {{ $check['current'] ?? '—' }}
+                                                            /
+                                                            {{ $check['required'] }}
+                                                            @break
+                                                    @endswitch
+                                                </span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+
+                                {{-- Danh sách môn bắt buộc chưa hoàn thành --}}
+                                <div>
+                                    <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                        <div>
+                                            <h3 class="text-lg font-bold">
+                                                {{ __('Môn bắt buộc chưa hoàn thành') }}
+                                            </h3>
+
+                                            <p class="mt-1 text-sm text-gray-500">
+                                                Danh sách bao gồm môn chưa học, đang học,
+                                                chưa có điểm hoặc đã học nhưng bị trượt.
+                                            </p>
+                                        </div>
+
+                                        @if($missingRequired->isNotEmpty())
+                                            <div class="flex flex-wrap gap-2">
+                                                @if(($missingStatusCounts['not_studied'] ?? 0) > 0)
+                                                    <x-badge
+                                                        value="Chưa học: {{ $missingStatusCounts['not_studied'] }}"
+                                                        class="badge-ghost font-semibold badge-md"
+                                                    />
+                                                @endif
+
+                                                @if(($missingStatusCounts['studying'] ?? 0) > 0)
+                                                    <x-badge
+                                                        value="Đang học: {{ $missingStatusCounts['studying'] }}"
+                                                        class="badge-info text-white font-semibold badge-md"
+                                                    />
+                                                @endif
+
+                                                @if(($missingStatusCounts['no_grade'] ?? 0) > 0)
+                                                    <x-badge
+                                                        value="Chưa có điểm: {{ $missingStatusCounts['no_grade'] }}"
+                                                        class="badge-warning text-white font-semibold badge-md"
+                                                    />
+                                                @endif
+
+                                                @if(($missingStatusCounts['failed'] ?? 0) > 0)
+                                                    <x-badge
+                                                        value="Trượt: {{ $missingStatusCounts['failed'] }}"
+                                                        class="badge-error text-white font-semibold badge-md"
+                                                    />
+                                                @endif
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    @if($missingRequired->isNotEmpty())
+                                        @php
+                                            $headers = [
+                                                ['key' => 'semester', 'label' => 'Học kỳ', 'class' => 'whitespace-nowrap'],
+                                                ['key' => 'code', 'label' => 'Mã môn', 'class' => 'whitespace-nowrap'],
+                                                ['key' => 'name', 'label' => 'Tên môn'],
+                                                ['key' => 'credits', 'label' => 'Số TC', 'class' => 'text-center whitespace-nowrap'],
+                                                ['key' => 'status', 'label' => 'Trạng thái', 'class' => 'text-center whitespace-nowrap'],
+                                                ['key' => 'score', 'label' => 'Điểm hệ 10', 'class' => 'text-center whitespace-nowrap'],
+                                                ['key' => 'equivalents', 'label' => 'Môn thay thế được chấp nhận'],
+                                            ];
+
+                                        @endphp
+
+                                        <div class="overflow-x-auto rounded-lg border border-gray-200">
+                                            {{-- Thuộc tính striped thay thế cho class table-zebra --}}
+                                            <x-table :headers="$headers" :rows="$missingRequired" striped
+                                                 class="bg-white
+                                                    md:text-[16px]!
+                                                    [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]!
+                                                    [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap
+                                                    [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left
+                                                    [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50
+                                                    [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
+                                                "
+                                            >
+
+                                                {{-- Cột: Học kỳ --}}
+                                                @scope('cell_semester', $subject)
+                                                @if(($subject['semester_no'] ?? 0) > 0)
+                                                    <div class="font-semibold whitespace-nowrap">
+                                                        Học kỳ {{ $subject['semester_no'] }}
+                                                    </div>
+
+                                                    @if(filled($subject['semester_name'] ?? null))
+                                                        <div class="text-sm text-gray-500">
+                                                            {{ $subject['semester_name'] }}
+                                                        </div>
+                                                    @endif
+                                                @else
+                                                    <span class="text-gray-400 whitespace-nowrap">
+                                                        Chưa xác định
+                                                    </span>
+                                                @endif
+                                                @endscope
+
+                                                {{-- Cột: Mã môn --}}
+                                                @scope('cell_code', $subject)
+                                                <span class="whitespace-nowrap font-semibold">
+                                                    {{ $subject['code'] }}
+                                                </span>
+                                                @endscope
+
+                                                {{-- Cột: Tên môn --}}
+                                                @scope('cell_name', $subject)
+                                                    <div class="min-w-52">
+                                                        {{ $subject['name'] }}
+                                                    </div>
+                                                @endscope
+
+                                                {{-- Cột: Số tín chỉ --}}
+                                                @scope('cell_credits', $subject)
+                                                {{ Subject::formatCredit($subject['credits']) }}
+                                                @endscope
+
+                                                {{-- Cột: Trạng thái --}}
+                                                @scope('cell_status', $subject)
+                                                @php
+                                                    $statusMeta = match($subject['learning_status'] ?? 'not_studied') {
+                                                        'failed' => [
+                                                            'label' => 'Trượt',
+                                                            'class' => 'badge-error text-white font-semibold badge-md',
+                                                        ],
+                                                        'studying' => [
+                                                            'label' => 'Đang học',
+                                                            'class' => 'badge-warning text-white font-semibold badge-md whitespace-nowrap',
+                                                        ],
+                                                        'no_grade' => [
+                                                            'label' => 'Chưa có điểm',
+                                                            'class' => 'badge-error badge-dash font-semibold badge-md whitespace-nowrap',
+                                                        ],
+                                                        default => [
+                                                            'label' => 'Chưa học',
+                                                            'class' => 'text-gray-400 text-md italic!"',
+                                                        ],
+                                                    };
+                                                @endphp
+
+                                                <x-badge
+                                                    value="{{ $statusMeta['label'] }}"
+                                                    class="{{ $statusMeta['class'] }}"
+                                                />
+                                                @endscope
+
+                                                {{-- Cột: Điểm hệ 10 --}}
+                                                @scope('cell_score', $subject)
+                                                <span class="font-semibold">
+                                                    @if($subject['score_10'] !== null)
+                                                        {{ $subject['score_10'] }}
+                                                    @else
+                                                        <span class="text-gray-400">—</span>
+                                                    @endif
+                                                </span>
+                                                @endscope
+
+                                                {{-- Cột: Môn thay thế --}}
+                                                @scope('cell_equivalents', $subject)
+                                                <div class="min-w-60 flex flex-col gap-2">
+
+                                                    {{-- 1. Hiển thị Môn học Tương đương (Equivalents) --}}
+                                                    @foreach($subject['equivalents'] ?? [] as $equivalent)
+                                                        <div class="flex items-center gap-2">
+                                                            <x-badge value="{{ $equivalent['code'] }}" class="badge-outline" />
+                                                            <span class="text-md flex-1">{{ $equivalent['name'] }}</span>
+
+                                                            @php $eqStatus = $equivalent['learning_status'] ?? null; @endphp
+                                                            @if($eqStatus === 'studying')
+                                                                <x-badge value="Đang học" class="badge-warning text-white badge-sm whitespace-nowrap" />
+                                                            @elseif($eqStatus === 'failed')
+                                                                <x-badge value="Trượt" class="badge-error text-white badge-sm whitespace-nowrap" />
+                                                            @elseif($eqStatus === 'no_grade')
+                                                                <x-badge value="Chưa có điểm" class="badge-error badge-dash badge-sm whitespace-nowrap" />
+                                                            @endif
+                                                        </div>
+                                                    @endforeach
+
+                                                    {{-- 2. Hiển thị Nhóm môn Thay thế KLTN (Substitutes) --}}
+                                                    @if(!empty($subject['substitutes']))
+                                                        <div class="mt-1 pt-2 border-t border-gray-200 border-dashed">
+                                                            <div class="text-md font-semibold text-primary mb-2">Hoặc học nhóm môn thay thế (Cần {{ Subject::formatCredit($subject['credits']) }} TC):</div>
+
+                                                            @foreach($subject['substitutes'] as $substitute)
+                                                                <div class="flex items-center gap-2 mb-1.5">
+                                                                    <x-badge value="{{ $substitute['code'] }}" class="badge-outline bg-gray-50" />
+                                                                    <span class="text-md flex-1">{{ $substitute['name'] }} <span class="font-semibold">({{ Subject::formatCredit($substitute['credits']) }}TC)</span></span>
+
+                                                                    @if($substitute['learning_status'] === 'passed')
+                                                                        <x-badge value="Đạt" class="badge-success text-white badge-sm whitespace-nowrap" />
+                                                                    @elseif($substitute['learning_status'] === 'studying')
+                                                                        <x-badge value="Đang học" class="badge-warning text-white badge-sm whitespace-nowrap" />
+                                                                    @elseif($substitute['learning_status'] === 'failed')
+                                                                        <x-badge value="Trượt" class="badge-error text-white badge-sm whitespace-nowrap" />
+                                                                    @elseif($substitute['learning_status'] === 'no_grade')
+                                                                        <x-badge value="Chưa có điểm" class="badge-error badge-dash badge-sm whitespace-nowrap" />
+                                                                    @endif
+                                                                </div>
+                                                            @endforeach
+                                                        </div>
+                                                    @endif
+
+                                                    {{-- Nếu không có cả tương đương lẫn thay thế --}}
+                                                    @if(empty($subject['equivalents']) && empty($subject['substitutes']))
+                                                        <span class="text-md text-gray-400">Không có cấu hình môn thay thế</span>
+                                                    @endif
+                                                </div>
+                                                @endscope
+
+                                            </x-table>
+                                        </div>
+                                    @else
+                                        <div class="flex items-center gap-3 rounded-lg border border-green-200 bg-green-50 p-4">
+                                            <x-icon name="o-check-circle" class="h-6 w-6 text-green-600" />
+                                            <span class="font-medium text-green-700">
+                                                Đã hoàn thành toàn bộ môn bắt buộc.
+                                            </span>
+                                        </div>
+                                    @endif
+                                </div>
+                            </div>
+
+                            <x-slot:actions>
+                                <x-button
+                                    label="{{ __('Close') }}" class="bg-fita2 text-white"
+                                    wire:click="$wire.showGraduationModal = false"
+                                />
+                            </x-slot:actions>
+                        </x-modal>
+                    @endif
 
                     @if($currentSemesterTimeline)
                         @php

@@ -21,6 +21,8 @@ new class extends Component {
     public bool $modalAddSubject = false;
     public array $expanded = [];
 
+    public bool $isReplacement = false;
+
     public ?int $selectedSemesterId = null;
     public ?int $editingSemesterId = null;
 
@@ -42,12 +44,14 @@ new class extends Component {
     public string $subjectSearch = '';
     public string $semesterSubjectSearch = '';
     public string $prerequisiteSearch = '';
+    public string $substituteSearch = '';
     public string $equivalentSearch = '';
     public int $subjectSearchMinLength = 2;
     public int $subjectSearchLimit = 30;
 
     public array $attach_subject_prerequisite_id = [];
     public array $attach_subject_equivalent_id = [];
+    public array $attach_subject_substitute_id = [];
 
     public function mount(int $id): void
     {
@@ -298,6 +302,30 @@ new class extends Component {
     public function getFilteredSubjectUsedOptionsProperty(): array
     {
         $keyword = trim($this->prerequisiteSearch);
+
+        if ($keyword === '') {
+            return $this->subjectUsedOptions;
+        }
+
+        $normalizedKeyword = $this->normalizeSearchText($keyword);
+
+        return collect($this->subjectUsedOptions)
+            ->filter(function (array $subject) use ($keyword, $normalizedKeyword) {
+                $searchText = (string) ($subject['search_text'] ?? $subject['name'] ?? '');
+
+                if (mb_stripos($searchText, $keyword) !== false) {
+                    return true;
+                }
+
+                return str_contains($this->normalizeSearchText($searchText), $normalizedKeyword);
+            })
+            ->values()
+            ->all();
+    }
+
+    public function getFilteredSubjectSubstitutesOptionsProperty(): array
+    {
+        $keyword = trim($this->substituteSearch);
 
         if ($keyword === '') {
             return $this->subjectUsedOptions;
@@ -622,10 +650,23 @@ new class extends Component {
                 ->map(fn ($id) => (int) $id)
                 ->values()
                 ->all();
+
+            $this->attach_subject_substitute_id = \Illuminate\Support\Facades\DB::table('program_semester_subjects')
+                ->join('program_semesters', 'program_semester_subjects.program_semester_id', '=', 'program_semesters.id')
+                ->where('program_semesters.training_program_id', $this->programId)
+                ->where('program_semester_subjects.substitute_for_id', $subject->id)
+                ->pluck('program_semester_subjects.subject_id')
+                ->map(fn($id) => (int) $id)
+                ->toArray();
+
+            // Bật toggle "Môn thay thế" nếu đã có dữ liệu
+            $this->isReplacement = count($this->attach_subject_substitute_id) > 0;
         } else {
             $this->attach_credits = '';
             $this->attach_subject_prerequisite_id = [];
             $this->attach_subject_equivalent_id = [];
+            $this->attach_subject_substitute_id = [];
+            $this->isReplacement = false;
         }
     }
 
@@ -642,7 +683,10 @@ new class extends Component {
         $this->attach_subject_prerequisite_id = [];
         $this->attach_subject_equivalent_id = [];
         $this->prerequisiteSearch = '';
+        $this->substituteSearch = '';
         $this->equivalentSearch = '';
+        $this->isReplacement = false;
+        $this->attach_subject_substitute_id = [];
     }
 
     public function openCreateSubjectPivot(): void
@@ -723,6 +767,8 @@ new class extends Component {
                 'distinct',
                 'different:attach_subject_id',
             ],
+            'attach_subject_substitute_id' => ['array'],
+            'attach_subject_substitute_id.*' => ['integer', 'exists:subjects,id', 'different:attach_subject_id'],
         ]);
 
         $targetSemester = ProgramSemester::query()
@@ -782,6 +828,24 @@ new class extends Component {
         }
 
 //        $this->recalculateSemesterCredits($targetSemester->id);
+
+        $programSemesterIds = ProgramSemester::query()
+            ->where('training_program_id', $this->programId)
+            ->pluck('id');
+
+        // Bước A: Xóa bỏ liên kết thay thế cũ của môn này (Reset về null)
+        \Illuminate\Support\Facades\DB::table('program_semester_subjects')
+            ->whereIn('program_semester_id', $programSemesterIds)
+            ->where('substitute_for_id', $this->attach_subject_id)
+            ->update(['substitute_for_id' => null]);
+
+        // Bước B: Nếu có bật tính năng Thay thế & có chọn môn, thì Cập nhật lại DB
+        if ($this->isReplacement && !empty($this->attach_subject_substitute_id)) {
+            \Illuminate\Support\Facades\DB::table('program_semester_subjects')
+                ->whereIn('program_semester_id', $programSemesterIds)
+                ->whereIn('subject_id', $this->attach_subject_substitute_id)
+                ->update(['substitute_for_id' => $this->attach_subject_id]);
+        }
 
         // Chuyển view hiển thị sang học kỳ vừa chuyển tới
         $this->selectedSemesterId = $targetSemester->id;
@@ -1438,6 +1502,43 @@ new class extends Component {
                     @endif
                 </div>
                 {{--                </div>--}}
+
+                <div class="mt-4 col-span-2 ">
+                    <x-checkbox wire:model.live="isReplacement" class="checkbox-primary" label="Môn/Nhóm môn thay thế" hint="Chọn để hiển thị danh sách môn học thay thế"/>
+                    @if($isReplacement)
+                        <x-input
+                            icon="o-magnifying-glass"
+                            placeholder="Tìm theo mã, tên, tín chỉ hoặc học kỳ..."
+                            wire:model.live.debounce.300ms="substituteSearch"
+                            clearable
+                        />
+                        <div class="relative mt-2">
+                            <div class="relative grid grid-cols-1 lg:grid-cols-2 gap-4 p-5 bg-gray-50/50 rounded-xl border border-gray-200 shadow-sm max-h-50 overflow-auto">
+                                @forelse($this->filteredSubjectSubstitutesOptions as $subject)
+                                    <div class="select-none" wire:key="subject-substitute-{{ $subject['id'] }}">
+                                        <x-checkbox
+                                            label="{{ ($subject['code'] ?? '') . ' - ' . ($subject['name_vi'] ?? '')  }} ({{ $subject['credits'] ?? '0' }} TC - HK {{ $subject['semester_no'] ?? '—' }})"
+                                            wire:model="attach_subject_substitute_id"
+                                            value="{{ $subject['id'] }}"
+                                            class="checkbox-primary checkbox-sm"
+                                        />
+                                    </div>
+                                @empty
+                                    <div class="col-span-full text-center py-4 text-red-500">
+                                        Chưa có môn học nào trong chương trình đào tạo này.
+                                    </div>
+                                @endforelse
+                                <div wire:loading.flex wire:target="substituteSearch,attach_subject_id" class="absolute inset-0 z-10 items-center justify-center rounded-xl bg-white/70 backdrop-blur-sm">
+                                    <div class="flex items-center gap-2 text-sm text-gray-600">
+                                        <x-loading class="loading-spinner text-primary" />
+                                        <span>Đang lọc môn học...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+
                 <div class="md:col-span-2">
                     <x-textarea label="Ghi chú" wire:model.live.debounce.300ms="attach_notes" rows="3" />
                 </div>

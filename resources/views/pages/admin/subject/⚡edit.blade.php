@@ -503,6 +503,17 @@ new class extends Component {
             if ($program) {
                 $program->syncSubjectPrerequisites($this->id, $prerequisiteIds);
             }
+
+//            if ($program) {
+//                $validPrerequisiteIds = \Illuminate\Support\Facades\DB::table('program_semester_subjects')
+//                    ->join('program_semesters', 'program_semesters.id', '=', 'program_semester_subjects.program_semester_id')
+//                    ->where('program_semesters.training_program_id', $programId)
+//                    ->whereIn('program_semester_subjects.subject_id', $prerequisiteIds)
+//                    ->pluck('program_semester_subjects.subject_id')
+//                    ->toArray();
+//
+//                $program->syncSubjectPrerequisites($this->id, $validPrerequisiteIds);
+//            }
         }
 
         try {

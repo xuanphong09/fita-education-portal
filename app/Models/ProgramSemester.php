@@ -34,7 +34,7 @@ class ProgramSemester extends Model
     public function subjects(): BelongsToMany
     {
         return $this->belongsToMany(Subject::class, 'program_semester_subjects')
-            ->withPivot(['type', 'notes', 'order'])
+            ->withPivot(['type', 'notes', 'order', 'substitute_for_id'])
             ->withTimestamps();
     }
 

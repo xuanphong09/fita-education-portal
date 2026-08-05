@@ -231,9 +231,25 @@ new class extends Component {
 
     public function getUsersProperty()
     {
-        return $this->usersQuery()
-            ->orderBy(...array_values($this->sortBy))
-            ->paginate($this->perPage);
+        $query = $this->usersQuery();
+
+        $sortColumn = $this->sortBy['column'];
+        $sortDirection = $this->sortBy['direction'];
+
+        // Xử lý sort riêng cho cột grade_sync_status (vì nó nằm ở bảng students)
+        if ($sortColumn === 'grade_sync_status') {
+            $query->orderBy(
+                Student::select('grade_sync_status')
+                    ->whereColumn('students.user_id', 'users.id')
+                    ->limit(1),
+                $sortDirection
+            );
+        } else {
+            // Các cột khác thuộc bảng users thì sort bình thường (thêm tiền tố users. để tránh lỗi)
+            $query->orderBy('users.' . $sortColumn, $sortDirection);
+        }
+
+        return $query->paginate($this->perPage);
     }
 
     /**
@@ -305,7 +321,8 @@ new class extends Component {
             ->where('user_type', 'student')
             ->whereHas('student', function (Builder $query) {
                 $query->whereNotNull('vnua_password')
-                    ->where('vnua_password', '!=', '');
+                    ->where('vnua_password', '!=', '')
+                    ->where('grade_sync_status', '=', 'success');
             })
             ->count();
     }
@@ -359,7 +376,8 @@ new class extends Component {
             ->where('user_type', 'student')
             ->whereHas('student', function (Builder $query) {
                 $query->whereNotNull('vnua_password')
-                    ->where('vnua_password', '!=', '');
+                    ->where('vnua_password', '!=', '')
+                    ->where('grade_sync_status', '=', 'success');
             })
             ->pluck('users.id')
             ->map(fn($id) => (int)$id)
@@ -680,7 +698,7 @@ new class extends Component {
             ['key' => 'user_code', 'label' => 'Mã định danh', 'sortable' => false],
             ['key' => 'roles', 'label' => 'Vai trò', 'sortable' => false, 'class' => 'w-48'],
             ['key' => 'is_active', 'label' => 'Trạng thái'],
-            ['key' => 'grade_sync_status', 'label' => 'Đồng bộ đào tạo', 'sortable' => false, 'class' => 'w-44'],
+            ['key' => 'grade_sync_status', 'label' => 'Đồng bộ đào tạo', 'class' => 'w-44'],
             ['key' => 'last_login_at', 'label' => 'Đăng nhập cuối', 'class' => 'w-32 px-2'],
 //            ['key' => 'created_at', 'label' => 'Ngày tạo', 'class' => 'w-32 px-2'],
             ['key' => 'actions', 'label' => 'Hành động', 'sortable' => false, 'class' => 'w-12 p-2'],

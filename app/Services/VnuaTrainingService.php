@@ -687,7 +687,17 @@ class VnuaTrainingService
         }
 
         if (is_numeric($raw)) {
-            return (int) $raw === 1 ? 1 : 0;
+            $numericResult = (int) $raw;
+
+            if ($numericResult === 1) {
+                return 1;
+            }
+
+            if ($numericResult === -1) {
+                return -1;
+            }
+
+            return 0;
         }
 
         $normalized = mb_strtolower(trim((string) $raw));
