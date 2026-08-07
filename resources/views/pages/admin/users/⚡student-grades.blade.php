@@ -1381,7 +1381,7 @@ class extends Component {
 
                     <x-card shadow>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <h2 class="text-2xl font-bold">{{ $programTitle }}</h2>
+                            <h2 class="text-2xl font-bold">{{ $programTitle }} ({{$activeProgram->school_year_start }} - {{ $activeProgram->school_year_end }})</h2>
                             <div class="flex flex-wrap gap-2 md:text-[16px] lg:justify-end justify-start mb-4">
                                 <x-badge value="Phiên bản: {{ $activeProgram->version }}" class="badge-md bg-fita2 text-white" />
 {{--                                <x-badge value="{{ Subject::formatCredit($activeProgram->total_credits) }} {{__('Credits')}}" class="badge-outline badge-md" />--}}
