@@ -2006,7 +2006,7 @@ class extends Component {
                                                             @foreach($subject['equivalents'] ?? [] as $equivalent)
                                                                 <div class="flex items-center gap-2">
                                                                     <x-badge value="{{ $equivalent['code'] }}" class="badge-outline" />
-                                                                    <span class="text-md flex-1">{{ $equivalent['name'] }}<span class="font-semibold">({{ Subject::formatCredit($equivalent['credits']) }}TC)</span></span>
+                                                                    <span class="text-md flex-1">{{ $equivalent['name'] }} <span class="font-semibold">({{ Subject::formatCredit($equivalent['credits']) }}TC)</span></span>
                                                                     @php $eqStatus = $equivalent['learning_status'] ?? null; @endphp
                                                                     @if($eqStatus === 'studying')
                                                                         <x-badge value="Đang học" class="badge-warning text-white badge-sm whitespace-nowrap" />
