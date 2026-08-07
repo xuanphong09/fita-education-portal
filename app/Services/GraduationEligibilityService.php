@@ -386,9 +386,15 @@ class GraduationEligibilityService
          * - Không tính lại môn đã dùng thay thế môn bắt buộc.
          */
         $electiveSubjects = $graduationSubjects
-            ->filter(
-                fn ($subject) => $this->subjectType($subject) === 'elective'
-            )
+            ->filter(function ($subject) {
+                // 1. Phải là môn tự chọn
+                $isElective = $this->subjectType($subject) === 'elective';
+
+                // 2. KHÔNG PHẢI là môn thay thế (substitute_for_id rỗng)
+                $isNotSubstitute = empty($subject->pivot->substitute_for_id);
+
+                return $isElective && $isNotSubstitute;
+            })
             ->values();
 
         $passedElectiveSubjects = $electiveSubjects
@@ -417,6 +423,70 @@ class GraduationEligibilityService
                 )?->score_10,
             ])
             ->unique('subject_id')
+            ->values();
+
+        $missingElectiveSubjects = $electiveSubjects
+            ->reject(function ($subject) use ($bestGrades) {
+                // Loại bỏ các môn ĐÃ ĐẠT
+                $grade = $bestGrades->get((int) $subject->id);
+                return $grade && (int) $grade->is_passed === 1;
+            })
+            ->map(function ($subject) use ($bestGrades, $pcbbSubjectIds) {
+                $grade = $bestGrades->get((int) $subject->id);
+                $learningStatus = 'not_studied';
+
+                if ($grade) {
+                    if ((int) $grade->is_passed === -1) {
+                        $learningStatus = 'studying';
+                    } elseif ($this->gradeNumericScore($grade) >= 0) {
+                        $learningStatus = 'failed';
+                    } else {
+                        $learningStatus = 'no_grade';
+                    }
+                }
+
+                // 1. Quét tìm môn thay thế (tương đương) y như môn bắt buộc
+                $validEquivalentSubjects = collect($subject->equivalents)
+                    ->reject(fn ($equivalent) => $pcbbSubjectIds->contains((int) $equivalent->id))
+                    ->unique(fn ($equivalent) => (int) $equivalent->id)
+                    ->values();
+
+                $equivalentsData = $validEquivalentSubjects->map(function ($equivalent) use ($bestGrades) {
+                    $eqGrade = $bestGrades->get((int) $equivalent->id);
+                    $eqStatus = 'not_studied';
+
+                    if ($eqGrade) {
+                        $eqStatus = match ((int) $eqGrade->is_passed) {
+                            1 => 'passed',
+                            -1 => 'studying',
+                            0 => $this->gradeNumericScore($eqGrade) >= 0 ? 'failed' : 'no_grade',
+                            default => 'not_studied',
+                        };
+                    }
+
+                    return [
+                        'id' => (int) $equivalent->id,
+                        'code' => (string) $equivalent->code,
+                        'name' => $this->subjectName($equivalent),
+                        'credits' => (float) ($equivalent->credits ?? 0),
+                        'learning_status' => $eqStatus,
+                        'final_score' => $eqGrade ? $eqGrade->score_10 : null,
+                    ];
+                })->all();
+
+                return [
+                    'id' => (int) $subject->id,
+                    'code' => (string) $subject->code,
+                    'name' => $this->subjectName($subject),
+                    'credits' => (float) ($subject->credits ?? 0),
+                    'semester_no' => (int) ($subject->graduation_semester_no ?? 0),
+                    'semester_name' => trim((string) ($subject->graduation_semester_name ?? '')), // Thêm thông tin tên kỳ
+                    'learning_status' => $learningStatus,
+                    'score_10' => $grade ? $grade->score_10 : null,
+                    'equivalents' => $equivalentsData, // Thêm danh sách môn tương đương
+                    'substitutes' => [], // Môn tự chọn thường không có quy tắc "thay thế" đặc biệt, nhưng cứ để mảng rỗng cho View khỏi lỗi
+                ];
+            })
             ->values();
 
         /*
@@ -517,7 +587,7 @@ class GraduationEligibilityService
             'missing_required_subjects' => $missingRequiredSubjects,
 
             'passed_elective_subjects' => $passedElectiveSubjects,
-
+            'missing_elective_subjects' => $missingElectiveSubjects,
             'summary' => [
                 'pcbb_subjects_excluded' => $pcbbSubjectIds->count(),
 

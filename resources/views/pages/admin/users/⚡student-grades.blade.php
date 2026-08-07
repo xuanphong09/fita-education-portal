@@ -1667,14 +1667,14 @@ class extends Component {
                                                 @if(($missingStatusCounts['studying'] ?? 0) > 0)
                                                     <x-badge
                                                         value="Đang học: {{ $missingStatusCounts['studying'] }}"
-                                                        class="badge-info text-white font-semibold badge-md"
+                                                        class="badge-warning text-white font-semibold badge-md"
                                                     />
                                                 @endif
 
                                                 @if(($missingStatusCounts['no_grade'] ?? 0) > 0)
                                                     <x-badge
                                                         value="Chưa có điểm: {{ $missingStatusCounts['no_grade'] }}"
-                                                        class="badge-warning text-white font-semibold badge-md"
+                                                        class="badge-error badge-outline badge-dash font-semibold badge-md"
                                                     />
                                                 @endif
 
@@ -1691,6 +1691,7 @@ class extends Component {
                                     @if($missingRequired->isNotEmpty())
                                         @php
                                             $headers = [
+                                                 ['key' => 'id', 'label' => '#', 'class' => 'w-8'],
                                                 ['key' => 'semester', 'label' => 'Học kỳ', 'class' => 'whitespace-nowrap'],
                                                 ['key' => 'code', 'label' => 'Mã môn', 'class' => 'whitespace-nowrap'],
                                                 ['key' => 'name', 'label' => 'Tên môn'],
@@ -1714,6 +1715,9 @@ class extends Component {
                                                     [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!
                                                 "
                                             >
+                                                @scope('cell_id', $subject)
+                                                {{ $loop->iteration }}
+                                                @endscope
 
                                                 {{-- Cột: Học kỳ --}}
                                                 @scope('cell_semester', $subject)
@@ -1801,7 +1805,7 @@ class extends Component {
                                                     @foreach($subject['equivalents'] ?? [] as $equivalent)
                                                         <div class="flex items-center gap-2">
                                                             <x-badge value="{{ $equivalent['code'] }}" class="badge-outline" />
-                                                            <span class="text-md flex-1">{{ $equivalent['name'] }}</span>
+                                                            <span class="text-md flex-1">{{ $equivalent['name'] }} <span class="font-semibold">({{ Subject::formatCredit($equivalent['credits']) }}TC)</span></span>
 
                                                             @php $eqStatus = $equivalent['learning_status'] ?? null; @endphp
                                                             @if($eqStatus === 'studying')
@@ -1840,7 +1844,7 @@ class extends Component {
 
                                                     {{-- Nếu không có cả tương đương lẫn thay thế --}}
                                                     @if(empty($subject['equivalents']) && empty($subject['substitutes']))
-                                                        <span class="text-md text-gray-400">Không có cấu hình môn thay thế</span>
+                                                        <span class="text-md text-gray-400">—</span>
                                                     @endif
                                                 </div>
                                                 @endscope
@@ -1853,6 +1857,136 @@ class extends Component {
                                             <span class="font-medium text-green-700">
                                                 Đã hoàn thành toàn bộ môn bắt buộc.
                                             </span>
+                                        </div>
+                                    @endif
+
+                                    @if(!$graduationEvaluation['checks']['elective_credits']['passed'])
+                                        <div class="mt-8 border-t border-gray-200 pt-5">
+                                            <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                                <div>
+                                                    <h3 class="text-lg font-bold text-blue-800">
+                                                        {{ __('Danh sách môn tự chọn khả dụng') }}
+                                                    </h3>
+                                                    <p class="mt-1 text-sm text-gray-600">
+                                                        Sinh viên còn thiếu <strong class="text-red-600">{{ Subject::formatCredit($graduationEvaluation['checks']['elective_credits']['missing']) }} TC</strong> tự chọn.
+                                                        Dưới đây là các môn tự chọn trong CTĐT mà sinh viên chưa đạt để có thể đăng ký học.
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            @php
+                                                $missingElectives = collect($graduationEvaluation['missing_elective_subjects'] ?? [])
+                                                    ->map(function ($subject) {
+                                                        $subject['status_weight'] = match ($subject['learning_status']) {
+                                                            'studying'    => 1,
+                                                            'failed'      => 2,
+                                                            'no_grade'    => 3,
+                                                            'not_studied' => 4,
+                                                            default       => 5,
+                                                        };
+                                                        return $subject;
+                                                    })->sortBy([
+//                                                        [$this->missingSortBy['column'] ?? 'status_weight', $this->missingSortBy['direction'] ?? 'asc'],
+                                                        ['credits', 'desc'],
+                                                        ['semester_no', 'asc'],
+                                                        ['code', 'asc'],
+                                                    ])->values();
+
+                                                // BỘ CỘT GIỐNG HỆT NHƯ BẢNG MÔN BẮT BUỘC
+                                                $headersElective = [
+                                                    ['key' => 'id', 'label' => '#', 'class' => 'w-8'],
+                                                    ['key' => 'semester', 'label' => 'Học kỳ', 'class' => 'whitespace-nowrap'],
+                                                    ['key' => 'code', 'label' => 'Mã môn', 'class' => 'whitespace-nowrap'],
+                                                    ['key' => 'name', 'label' => 'Tên môn'],
+                                                    ['key' => 'credits', 'label' => 'Số TC', 'class' => 'text-center whitespace-nowrap'],
+                                                    ['key' => 'status_weight', 'label' => 'Trạng thái', 'class' => 'text-center whitespace-nowrap'],
+                                                    ['key' => 'score_10', 'label' => 'Điểm hệ 10', 'class' => 'text-center whitespace-nowrap', 'sortable' => false],
+                                                    ['key' => 'equivalents', 'label' => 'Môn thay thế được chấp nhận', 'sortable' => false],
+                                                ];
+                                            @endphp
+
+                                            @if($missingElectives->isNotEmpty())
+                                                <div class="overflow-x-auto rounded-lg border border-gray-200">
+                                                    <x-table :headers="$headersElective" :rows="$missingElectives" striped
+                                                             class="bg-white md:text-[16px]! [&_table]:border-collapse [&_table]:rounded-md [&_th]:text-left [&_th]:md:text-[16px]! [&_th]:bg-white [&_th]:text-black! [&_th]:rounded-md [&_th]:hover:bg-gray-100/50 [&_th]:whitespace-wrap [&_td]:text-black [&_td]:border-t [&_td]:border-gray-200 [&_td]:text-left [&_tbody_tr]:cursor-pointer [&_tbody_tr:hover]:bg-gray-200/50 [&_tr:hover]:bg-gray-100 [&_tr:nth-child(2n)]:bg-gray-100/30!"
+                                                    >
+                                                        @scope('cell_id', $subject)
+                                                        {{ $loop->iteration }}
+                                                        @endscope
+
+                                                        @scope('cell_semester', $subject)
+                                                        @if(($subject['semester_no'] ?? 0) > 0)
+                                                            <div class="font-semibold whitespace-nowrap">
+                                                                Học kỳ {{ $subject['semester_no'] }}
+                                                            </div>
+                                                            @if(filled($subject['semester_name'] ?? null))
+                                                                <div class="text-sm text-gray-500">
+                                                                    {{ $subject['semester_name'] }}
+                                                                </div>
+                                                            @endif
+                                                        @else
+                                                            <span class="text-gray-400 whitespace-nowrap">Chưa xác định</span>
+                                                        @endif
+                                                        @endscope
+
+                                                        @scope('cell_code', $subject)
+                                                        <span class="whitespace-nowrap font-semibold">{{ $subject['code'] }}</span>
+                                                        @endscope
+
+                                                        @scope('cell_name', $subject)
+                                                        <div class="min-w-52">{{ $subject['name'] }}</div>
+                                                        @endscope
+
+                                                        @scope('cell_credits', $subject)
+                                                        {{ Subject::formatCredit($subject['credits']) }}
+                                                        @endscope
+
+                                                        @scope('cell_status_weight', $subject)
+                                                        @php
+                                                            $statusMeta = match($subject['learning_status'] ?? 'not_studied') {
+                                                                'failed' => ['label' => 'Trượt', 'class' => 'badge-error text-white font-semibold badge-md'],
+                                                                'studying' => ['label' => 'Đang học', 'class' => 'badge-warning text-white font-semibold badge-md whitespace-nowrap'],
+                                                                'no_grade' => ['label' => 'Chưa có điểm', 'class' => 'badge-error badge-dash font-semibold badge-md whitespace-nowrap'],
+                                                                default => ['label' => 'Chưa học', 'class' => 'text-gray-400 text-md'],
+                                                            };
+                                                        @endphp
+                                                        <x-badge value="{{ $statusMeta['label'] }}" class="{{ $statusMeta['class'] }}" />
+                                                        @endscope
+
+                                                        @scope('cell_score_10', $subject)
+                                                        <span class="font-semibold text-gray-700">
+                                                    {{ $subject['score_10'] !== null ? $subject['score_10'] : '—' }}
+                                                </span>
+                                                        @endscope
+
+                                                        @scope('cell_equivalents', $subject)
+                                                        <div class="min-w-60 flex flex-col gap-2">
+                                                            @foreach($subject['equivalents'] ?? [] as $equivalent)
+                                                                <div class="flex items-center gap-2">
+                                                                    <x-badge value="{{ $equivalent['code'] }}" class="badge-outline" />
+                                                                    <span class="text-md flex-1">{{ $equivalent['name'] }}<span class="font-semibold">({{ Subject::formatCredit($equivalent['credits']) }}TC)</span></span>
+                                                                    @php $eqStatus = $equivalent['learning_status'] ?? null; @endphp
+                                                                    @if($eqStatus === 'studying')
+                                                                        <x-badge value="Đang học" class="badge-warning text-white badge-sm whitespace-nowrap" />
+                                                                    @elseif($eqStatus === 'failed')
+                                                                        <x-badge value="Trượt" class="badge-error text-white badge-sm whitespace-nowrap" />
+                                                                    @elseif($eqStatus === 'no_grade')
+                                                                        <x-badge value="Chưa có điểm" class="badge-error badge-dash badge-sm whitespace-nowrap" />
+                                                                    @endif
+                                                                </div>
+                                                            @endforeach
+
+                                                            @if(empty($subject['equivalents']))
+                                                                <span class="text-md text-gray-400">—</span>
+                                                            @endif
+                                                        </div>
+                                                        @endscope
+
+                                                    </x-table>
+                                                </div>
+                                            @else
+                                                <div class="text-sm text-gray-500 italic">Không có môn tự chọn nào trong cấu hình chương trình.</div>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>

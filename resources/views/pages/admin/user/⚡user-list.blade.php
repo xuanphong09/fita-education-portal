@@ -236,7 +236,7 @@ new class extends Component {
         $sortColumn = $this->sortBy['column'];
         $sortDirection = $this->sortBy['direction'];
 
-        // Xử lý sort riêng cho cột grade_sync_status (vì nó nằm ở bảng students)
+        // 1. TIÊU CHÍ 1: Sắp xếp theo cột người dùng bấm trên giao diện
         if ($sortColumn === 'grade_sync_status') {
             $query->orderBy(
                 Student::select('grade_sync_status')
@@ -245,8 +245,12 @@ new class extends Component {
                 $sortDirection
             );
         } else {
-            // Các cột khác thuộc bảng users thì sort bình thường (thêm tiền tố users. để tránh lỗi)
+            // Các cột khác thuộc bảng users
             $query->orderBy('users.' . $sortColumn, $sortDirection);
+        }
+
+        if ($sortColumn !== 'created_at') {
+            $query->orderBy('users.created_at', 'desc');
         }
 
         return $query->paginate($this->perPage);
