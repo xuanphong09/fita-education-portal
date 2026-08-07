@@ -221,7 +221,8 @@ new class extends Component {
                     ->whereHas('student', function (Builder $studentQuery) {
                         $studentQuery
                             ->whereNotNull('vnua_password')
-                            ->where('vnua_password', '!=', '');
+                            ->where('vnua_password', '!=', '')
+                        ->where('grade_sync_status', '=', 'success');
                     });
             })
             ->when($this->filterUserType !== '', function (Builder $query) {
@@ -637,7 +638,8 @@ new class extends Component {
             'syncing' => 'Đang đồng bộ',
             'success' => 'Thành công',
             'failed' => 'Thất bại',
-            'invalid_password' => 'Sai mật khẩu',
+//            'invalid_password' => 'Sai mật khẩu',
+            'invalid_password' => 'Chưa kết nối',
             'no_data' => 'Không có dữ liệu',
             'not_connected' => 'Chưa kết nối',
             'not_student' => '-',
@@ -648,12 +650,10 @@ new class extends Component {
     public function syncStatusBadgeClass(User $user): string
     {
         return match ($this->syncStatus($user)) {
-            'queued' => 'badge-warning',
+            'queued', 'no_data' => 'badge-warning',
             'syncing' => 'badge-info text-white',
             'success' => 'badge-success text-white',
-            'failed', 'invalid_password' => 'badge-error text-white',
-            'no_data' => 'badge-warning',
-            'not_connected', 'not_student', 'idle' => 'badge-ghost text-gray-700',
+//            'failed', 'invalid_password' => 'badge-error text-white',
             default => 'badge-ghost text-gray-700',
         };
     }
