@@ -238,13 +238,40 @@ new class extends Component {
 
             $subjects = $sourceProgram->semesters->flatMap(fn($semester) => $semester->subjects)->unique('id')->values();
 
+            // Lấy năm học bắt đầu của chương trình mới làm mốc tính toán
+            $baseYear = (int) $this->duplicate_school_year_start;
+
             foreach ($sourceProgram->semesters as $semester) {
+                $semesterNo = $semester->semester_no;
+
+                // Tính số năm cộng thêm (cứ 2 học kỳ thì qua 1 năm học mới)
+                $yearOffset = floor(($semesterNo - 1) / 2);
+                $startYear = $baseYear + $yearOffset;
+                $endYear = $startYear + 1;
+
+                // Xác định là HK1 hay HK2 dựa vào tính chẵn/lẻ của semester_no
+                $hkType = ($semesterNo % 2 !== 0) ? 1 : 2;
+
+                // Khởi tạo tên học kỳ mới
+                $newSemesterName = "HK{$hkType}-{$startYear}-{$endYear}";
+
+                // Khởi tạo thời gian (định dạng Y-m-d chuẩn của CSDL)
+                if ($hkType === 1) {
+                    // Học kỳ 1 (Học kỳ lẻ)
+                    $startDate = "{$startYear}-08-01";
+                    $endDate = "{$endYear}-01-20";
+                } else {
+                    // Học kỳ 2 (Học kỳ chẵn)
+                    $startDate = "{$endYear}-01-21";
+                    $endDate = "{$endYear}-07-31";
+                }
+
                 $newSemester = $newProgram->semesters()->create([
-                    'semester_no' => $semester->semester_no,
-                    'semester_name' => $semester->semester_name,
+                    'semester_no' => $semesterNo,
+                    'semester_name' => $newSemesterName,
                     'total_credits' => $semester->total_credits,
-                    'start_date' => $semester->start_date,
-                    'end_date' => $semester->end_date,
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
                 ]);
 
                 foreach ($semester->subjects as $subject) {
@@ -265,7 +292,6 @@ new class extends Component {
                 if (!empty($prerequisites)) {
                     \App\Models\SubjectPrerequisite::syncForProgramSubject($newProgram->id, $subject->id, $prerequisites);
                 }
-
             }
         });
 
