@@ -222,7 +222,7 @@ new class extends Component {
                         $studentQuery
                             ->whereNotNull('vnua_password')
                             ->where('vnua_password', '!=', '')
-                        ->where('grade_sync_status', '=', 'success');
+                            ->where('grade_sync_status', '=', 'success');
                     });
             })
             ->when($this->filterUserType !== '', function (Builder $query) {
@@ -637,11 +637,9 @@ new class extends Component {
             'queued' => 'Đang chờ',
             'syncing' => 'Đang đồng bộ',
             'success' => 'Thành công',
-            'failed' => 'Thất bại',
+            'failed', 'invalid_password', 'not_connected' => 'Chưa kết nối',
 //            'invalid_password' => 'Sai mật khẩu',
-            'invalid_password' => 'Chưa kết nối',
             'no_data' => 'Không có dữ liệu',
-            'not_connected' => 'Chưa kết nối',
             'not_student' => '-',
             default => 'Chưa đồng bộ',
         };

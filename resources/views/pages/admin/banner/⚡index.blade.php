@@ -218,7 +218,9 @@ class extends Component {
             'url' => trim($this->url) !== '' ? trim($this->url) : null,
             'image' => $imagePath,
             'position' => $this->position,
-            'order' => $this->is_active?$this->order: 0,
+            'order' => $this->is_active
+                ? $this->order
+                : ((Banner::max('order') ?? 0) + 1),
             'is_active' => $this->is_active,
         ]);
 
@@ -262,7 +264,7 @@ class extends Component {
             'url' => trim($this->url) !== '' ? trim($this->url) : null,
             'image' => $imagePath,
             'position' => $this->position,
-            'order' => $this->is_active? (Banner::max('order') ?? 0) + 1: 0,
+            'order' => $this->is_active ? ($this->order==0 ? ((Banner::max('order') ?? 0) + 1) : $this->order) : 0,
             'is_active' => $this->is_active,
         ]);
 

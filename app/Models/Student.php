@@ -24,7 +24,11 @@ class Student extends Model
         'gpa_4',
         'gpa_10',
         'total_credits_earned',
-        'last_academic_stats_updated_at'
+        'last_academic_stats_updated_at',
+        'grade_sync_status',
+        'grade_sync_message',
+        'grade_sync_started_at',
+        'grade_sync_failed_at',
     ];
 
     protected function casts(): array
