@@ -279,6 +279,7 @@ new class extends Component {
                         'type' => $subject->pivot->type,
                         'notes' => $subject->pivot->notes,
                         'order' => $subject->pivot->order,
+                        'substitute_for_id' => $subject->pivot->substitute_for_id??null,
                     ]);
                 }
             }
