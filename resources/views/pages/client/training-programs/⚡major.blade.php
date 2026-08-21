@@ -1259,6 +1259,74 @@ class extends Component {
                         default => 'badge-error'
                     };
                     $progressPercent = min(100, round(($total_credits_earned / $total_program_credits) * 100, 1));
+
+                    $isEligible = (bool) ($graduationEvaluation['eligible'] ?? false);
+                    $durationYears = (float) ($activeProgram->duration_time ?: 4);
+                    $maxAllowedYears = $durationYears * 2; // Khung đào tạo tối đa (ví dụ 4 năm -> tối đa 8 năm)
+
+                    $firstSemester = $activeProgram->semesters->sortBy('semester_no')->first();
+                    $lastSemester  = $activeProgram->semesters->sortByDesc('semester_no')->first();
+
+                    $programStartDate = filled($firstSemester?->start_date)
+                        ? \Illuminate\Support\Carbon::parse($firstSemester->start_date)->startOfDay()
+                        : ($activeProgram->school_year_start ? \Illuminate\Support\Carbon::createFromDate($activeProgram->school_year_start, 9, 1)->startOfDay() : null);
+
+                    $programStandardEndDate = filled($lastSemester?->end_date)
+                        ? \Illuminate\Support\Carbon::parse($lastSemester->end_date)->endOfDay()
+                        : ($activeProgram->school_year_end ? \Illuminate\Support\Carbon::createFromDate($activeProgram->school_year_end, 6, 30)->endOfDay() : null);
+
+                    $programMaxEndDate = $programStartDate ? (clone $programStartDate)->addYears($maxAllowedYears)->endOfDay() : null;
+
+                    $now = now();
+                    $timeProgressPercent = null;
+                    $timeProgressLabel = null;
+                    $timeBadgeLabel = '';
+                    $timeBadgeClass = '';
+                    $timeProgressBarClass = 'progress-info';
+
+                    if ($programStartDate && $programStandardEndDate && $programStandardEndDate->greaterThan($programStartDate)) {
+                        $totalStandardDays = $programStartDate->diffInDays($programStandardEndDate) ?: 1;
+
+                        if ($now->lessThan($programStartDate)) {
+                            $timeProgressPercent = 0;
+                            $timeProgressLabel = __('Chưa bắt đầu');
+                            $timeBadgeLabel = __('Chưa bắt đầu khóa');
+                            $timeBadgeClass = 'badge-ghost';
+                        } elseif ($programMaxEndDate && $now->greaterThan($programMaxEndDate)) {
+                            $timeProgressPercent = 100;
+                            $timeProgressLabel = __('Hết hạn tối đa');
+                            $timeBadgeLabel = $isEligible ? __('Đủ ĐK (Quá hạn tối đa)') : __('Hết hạn đào tạo tối đa');
+                            $timeBadgeClass = 'badge-error';
+                            $timeProgressBarClass = 'progress-error';
+                        } elseif ($now->greaterThan($programStandardEndDate)) {
+                            $timeProgressPercent = 100;
+                            $timeProgressLabel = $programStartDate->format('m/Y') . ' - ' . $programStandardEndDate->format('m/Y');
+
+                            if ($isEligible) {
+                                $timeBadgeLabel = __('Đúng hạn');
+                                $timeBadgeClass = 'badge-success';
+                                $timeProgressBarClass = 'progress-success';
+                            } else {
+                                $timeBadgeLabel = __('Đang kéo dài tiến độ');
+                                $timeBadgeClass = 'badge-warning';
+                                $timeProgressBarClass = 'progress-warning';
+                            }
+                        } else {
+                            $passedDays = $programStartDate->diffInDays($now);
+                            $timeProgressPercent = min(100, max(0, round(($passedDays / $totalStandardDays) * 100, 1)));
+                            $timeProgressLabel = $programStartDate->format('m/Y') . ' - ' . $programStandardEndDate->format('m/Y');
+
+                            if ($isEligible) {
+                                $timeBadgeLabel = __('Đúng hạn');
+                                $timeBadgeClass = 'badge-success';
+                                $timeProgressBarClass = 'progress-success';
+                            } else {
+                                $timeBadgeLabel = __('Trong thời gian đào tạo');
+                                $timeBadgeClass = 'badge-success';
+                                $timeProgressBarClass = 'progress-info';
+                            }
+                        }
+                    }
                 @endphp
 
                 <div x-data="{
@@ -1456,7 +1524,7 @@ class extends Component {
                             <div class="w-full lg:w-auto mt-4 lg:mt-0">
                                 @if($gpa_4 !== null)
                                     <div class="bg-gray-50 rounded-lg p-4 border border-gray-100 shadow-sm w-full lg:min-w-87.5">
-                                        <div class="flex justify-between items-center mb-3 border-b border-gray-200 pb-2">
+                                        <div class="flex justify-between items-center flex-wrap mb-3 border-b border-gray-200 pb-2">
                                             <h3 class="font-bold text-gray-700">{{ __('Kết quả học tập tích lũy') }}</h3>
                                             <div>
                                                 @if($graduationEvaluation)
@@ -1494,6 +1562,25 @@ class extends Component {
                                                 </div>
                                                 <progress class="progress progress-success w-full h-2.5" value="{{ $progressPercent }}" max="100"></progress>
                                             </div>
+                                            @if($timeProgressPercent !== null)
+                                                <div class="col-span-3 pt-1 border-t border-gray-200/60 -mt-2">
+                                                    <div class="flex flex-wrap items-center justify-between text-gray-600 text-sm font-medium mb-1 gap-1">
+                                                        <span class="flex items-center gap-1.5">
+                                                            <x-icon name="o-clock" class="w-4 h-4 text-gray-400" />
+                                                            {{ __('Tiến độ thời gian') }}
+                                                            @if($timeProgressLabel)
+                                                                <span class="text-sm text-gray-400 font-normal">({{ $timeProgressLabel }})</span>
+                                                            @endif
+                                                        </span>
+
+                                                        <div class="flex items-center gap-2">
+                                                            <x-badge :value="$timeBadgeLabel" class="{{ $timeBadgeClass }} text-white text-sm font-semibold" />
+                                                            <span class="font-bold text-slate-700">{{ $timeProgressPercent }}%</span>
+                                                        </div>
+                                                    </div>
+                                                    <progress class="progress {{ $timeProgressBarClass }} w-full h-2.5" value="{{ $timeProgressPercent }}" max="100"></progress>
+                                                </div>
+                                            @endif
                                         </div>
 
                                         <div x-show="showTargetCalc" x-collapse>
