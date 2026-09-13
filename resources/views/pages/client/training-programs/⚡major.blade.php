@@ -1262,7 +1262,7 @@ class extends Component {
 
                     $isEligible = (bool) ($graduationEvaluation['eligible'] ?? false);
                     $durationYears = (float) ($activeProgram->duration_time ?: 4);
-                    $maxAllowedYears = $durationYears * 2; // Khung đào tạo tối đa (ví dụ 4 năm -> tối đa 8 năm)
+                    $maxAllowedYears = $durationYears * 2; // Ví dụ: 4 * 2 = 8 năm
 
                     $firstSemester = $activeProgram->semesters->sortBy('semester_no')->first();
                     $lastSemester  = $activeProgram->semesters->sortByDesc('semester_no')->first();
@@ -1275,8 +1275,6 @@ class extends Component {
                         ? \Illuminate\Support\Carbon::parse($lastSemester->end_date)->endOfDay()
                         : ($activeProgram->school_year_end ? \Illuminate\Support\Carbon::createFromDate($activeProgram->school_year_end, 6, 30)->endOfDay() : null);
 
-                    $programMaxEndDate = $programStartDate ? (clone $programStartDate)->addYears($maxAllowedYears)->endOfDay() : null;
-
                     $now = now();
                     $timeProgressPercent = null;
                     $timeProgressLabel = null;
@@ -1284,45 +1282,65 @@ class extends Component {
                     $timeBadgeClass = '';
                     $timeProgressBarClass = 'progress-info';
 
-                    if ($programStartDate && $programStandardEndDate && $programStandardEndDate->greaterThan($programStartDate)) {
-                        $totalStandardDays = $programStartDate->diffInDays($programStandardEndDate) ?: 1;
+                    if ($programStartDate) {
+                        // Nhãn khoảng năm đào tạo chuẩn
+                        $timeProgressLabel = $programStartDate->format('m/Y') . ' - ' . ($programStandardEndDate ? $programStandardEndDate->format('m/Y') : 'N/A');
 
-                        if ($now->lessThan($programStartDate)) {
+                        // ============================================================
+                        // TRƯỜNG HỢP 1: ĐÃ TỐT NGHIỆP / ĐỦ ĐIỀU KIỆN TỐT NGHIỆP
+                        // ============================================================
+                        if ($isEligible) {
+                            $timeProgressPercent = 100;
+                            $timeBadgeLabel = __('Đã tốt nghiệp');
+                            $timeBadgeClass = 'badge-success';
+                            $timeProgressBarClass = 'progress-success';
+
+                        // ============================================================
+                        // TRƯỜNG HỢP 2: CHƯA ĐẾN NGÀY NHẬP HỌC
+                        // ============================================================
+                        } elseif ($now->lessThan($programStartDate)) {
                             $timeProgressPercent = 0;
                             $timeProgressLabel = __('Chưa bắt đầu');
-                            $timeBadgeLabel = __('Chưa bắt đầu khóa');
+                            $timeBadgeLabel = __('Chưa bắt đầu khóa (Năm 0)');
                             $timeBadgeClass = 'badge-ghost';
-                        } elseif ($programMaxEndDate && $now->greaterThan($programMaxEndDate)) {
-                            $timeProgressPercent = 100;
-                            $timeProgressLabel = __('Hết hạn tối đa');
-                            $timeBadgeLabel = $isEligible ? __('Đủ ĐK (Quá hạn tối đa)') : __('Hết hạn đào tạo tối đa');
-                            $timeBadgeClass = 'badge-error';
-                            $timeProgressBarClass = 'progress-error';
-                        } elseif ($now->greaterThan($programStandardEndDate)) {
-                            $timeProgressPercent = 100;
-                            $timeProgressLabel = $programStartDate->format('m/Y') . ' - ' . $programStandardEndDate->format('m/Y');
+                            $timeProgressBarClass = 'progress-ghost';
 
-                            if ($isEligible) {
-                                $timeBadgeLabel = __('Đúng hạn');
-                                $timeBadgeClass = 'badge-success';
-                                $timeProgressBarClass = 'progress-success';
-                            } else {
-                                $timeBadgeLabel = __('Đang kéo dài tiến độ');
+                        // ============================================================
+                        // TRƯỜNG HỢP 3: ĐANG HỌC HOẶC CHƯA TỐT NGHIỆP (XÉT THEO NĂM)
+                        // ============================================================
+                        } else {
+                            // Tính số năm thực tế đã trôi qua
+                            $yearsPassed = round($programStartDate->floatDiffInYears($now), 2);
+
+                            // Mốc > 8 năm (Bước sang năm thứ 9 trở đi - Quá hạn tối đa)
+                            if ($yearsPassed > $maxAllowedYears) {
+                                $timeProgressPercent = 100;
+//                                $timeProgressLabel = __('Hết hạn tối đa');
+                                $timeBadgeLabel = __('Hết hạn tối đa, buộc thôi học');
+                                $timeBadgeClass = 'badge-error';
+                                $timeProgressBarClass = 'progress-error';
+
+                            // Mốc từ 6 đến 8 năm (Năm thứ 7, 8)
+                            } elseif ($yearsPassed > 6) {
+                                $timeProgressPercent = 100;
+                                $timeBadgeLabel = __('Hệ vừa làm vừa học (Năm :year)', ['year' => ceil($yearsPassed)]);
+                                $timeBadgeClass = 'badge-error';
+                                $timeProgressBarClass = 'progress-error';
+
+                            // Mốc từ 4 đến 6 năm (Năm thứ 5, 6 - Kéo dài tiến độ)
+                            } elseif ($yearsPassed > $durationYears) {
+                                $timeProgressPercent = 100;
+                                $timeBadgeLabel = __('Kéo dài tiến độ (Năm :year)', ['year' => ceil($yearsPassed)]);
                                 $timeBadgeClass = 'badge-warning';
                                 $timeProgressBarClass = 'progress-warning';
-                            }
-                        } else {
-                            $passedDays = $programStartDate->diffInDays($now);
-                            $timeProgressPercent = min(100, max(0, round(($passedDays / $totalStandardDays) * 100, 1)));
-                            $timeProgressLabel = $programStartDate->format('m/Y') . ' - ' . $programStandardEndDate->format('m/Y');
 
-                            if ($isEligible) {
-                                $timeBadgeLabel = __('Đúng hạn');
-                                $timeBadgeClass = 'badge-success';
-                                $timeProgressBarClass = 'progress-success';
+                            // Mốc từ 0 đến 4 năm (Đang trong khung đào tạo chuẩn)
                             } else {
-                                $timeBadgeLabel = __('Trong thời gian đào tạo');
-                                $timeBadgeClass = 'badge-success';
+                                $timeProgressPercent = min(100, max(0, round(($yearsPassed / $durationYears) * 100, 1)));
+                                $currentYearIndex = max(1, (int) ceil($yearsPassed));
+
+                                $timeBadgeLabel = __('Đang đào tạo (Năm :year)', ['year' => $currentYearIndex]);
+                                $timeBadgeClass = 'badge-info';
                                 $timeProgressBarClass = 'progress-info';
                             }
                         }
