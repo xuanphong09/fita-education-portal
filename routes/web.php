@@ -202,19 +202,19 @@ Route::prefix('admin')->middleware(['auth', SetAdminLocale::class])->group(funct
     Route::livewire('/preview/lecturer/{slug}', 'pages::admin.preview.lecturer')->name('admin.preview.lecturer');
 });
 
-//Route::get('/fix-links', function () {
-//
-//    DB::statement("
-//        UPDATE posts
-//        SET content = REPLACE(
-//            content,
-//            'st-dse.vnua.edu.vn:6889',
-//            'st-dse.vnua.edu.vn'
-//        )
-//    ");
-//
-//    return 'Đã sửa xong!';
-//});
+Route::get('/fix-links', function () {
+
+   DB::statement("
+       UPDATE posts
+       SET content = REPLACE(
+           content,
+           'st-dse.vnua.edu.vn',
+           'fita.vnua.edu.vn/'
+       )
+   ");
+
+   return 'Đã sửa xong!';
+});
 
 //Route::get('/phpinfo-test', function () {
 //    phpinfo();
